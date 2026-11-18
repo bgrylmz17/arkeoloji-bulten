@@ -1,6 +1,6 @@
 {
-  "_aciklama": "Bulut toplayıcının ayarları. Değiştirince bir sonraki çalışmada geçerli olur. 'kazi' kısmına kendi kazınızın adını yazarsanız 'Kazım' sekmesinde o kazının haberleri çıkar (boş bırakmak için null yazın).",
-  "kazi": {"kaziAdi": "Kızılin", "kaziTuru": "", "yer": [], "sezon": ""},
+  "_aciklama": "Bulut toplayıcının ayarları. Değiştirince bir sonraki çalışmada geçerli olur. Telefon sürümünde 'Kazım' bölümü yok; 'kazi' boş (null) kalmalı.",
+  "kazi": null,
   "ek_kelimeler": [],
   "ek_akislar": [],
   "terimler": null,
