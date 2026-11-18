@@ -213,6 +213,8 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .alan input:focus { outline: 2px solid var(--okr); border-color: transparent; }
 .giris-hata { color: var(--rapor); min-height: 1.2em; margin: 4px 2px 10px; font-size: 0.88rem; }
 .iki-dugme { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ayrinti .iki-dugme .buyuk-dugme { padding: 14px 6px; }
+.cift-bag { text-align: center; margin: 10px 0 0; font-size: 0.88rem; }
 
 /* ---------- alt levha (iOS sheet / Android bottom sheet) */
 #tabaka { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 40; }

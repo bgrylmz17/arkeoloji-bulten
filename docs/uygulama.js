@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.1.0";
+const SURUM = "1.2.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 const TUR_COGUL = { Makale: "Makaleler", Tez: "Tezler", Haber: "Haberler", Rapor: "Raporlar" };
@@ -16,7 +16,7 @@ const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz",
 const D = Object.assign({
   fav: [], okundu: {}, notlar: {}, konular: [], kaynakca: [], kayitlar: {},
   gorulen: "", tema: "oto", palet: "kum", yazi: 1, bildirim: false, kurulumIpucu: true,
-  uid: null, esitleme: 0, girisSoruldu: false,
+  uid: null, esitleme: 0, girisSoruldu: false, hepTurkce: false,
 }, guvenliOku());
 
 function guvenliOku() {
@@ -264,7 +264,16 @@ function sayfaAyrinti(id) {
       <dl class="form-tablo">${satirlar.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
       ${ozet ? `<div class="metin">${esc(ozet)}</div>` : `<p class="aciklama">Bu kayıt için özet yok.</p>`}
       ${goster.tr && r.ot ? `<p class="ceviri-not">Makine çevirisidir; alıntı yapmadan önce özgün metne bakın.</p>` : ""}
-      <a class="buyuk-dugme" href="${esc(r.u)}" target="_blank" rel="noopener">${r.k === "Makale" || r.k === "Tez" ? "Yayını aç" : "Haberi aç"}</a>
+      ${(() => {
+        const ad = r.k === "Makale" || r.k === "Tez" ? "Yayını aç" : "Haberi aç";
+        if (!yabanci) return `<a class="buyuk-dugme" href="${esc(r.u)}" target="_blank" rel="noopener">${ad}</a>`;
+        const tr = turkceAdres(r.u);
+        return D.hepTurkce
+          ? `<a class="buyuk-dugme" href="${esc(tr)}" target="_blank" rel="noopener">${ad} (Türkçe)</a>
+             <p class="cift-bag"><a href="${esc(r.u)}" target="_blank" rel="noopener">Özgün dilinde aç</a></p>`
+          : `<div class="iki-dugme"><a class="buyuk-dugme" href="${esc(r.u)}" target="_blank" rel="noopener">${ad}</a>
+             <a class="buyuk-dugme ikinci" href="${esc(tr)}" target="_blank" rel="noopener">🌐 Türkçe aç</a></div>`;
+      })()}
       <div class="eylemler">
         <button class="eylem" data-e="fav" aria-pressed="${D.fav.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>Favori</button>
         ${yabanci ? `<button class="eylem" data-e="cevir" aria-pressed="${!!goster.tr}"><svg viewBox="0 0 24 24"><path d="M4 5h8M8 3v2m2 0c-1 4-3 7-6 9m2-5c1 2 3 4 5 5M13 21l4-10 4 10m-6.5-3h5"/></svg>${goster.tr ? "Özgün" : "Türkçe"}</button>` : ""}
@@ -310,6 +319,11 @@ async function eylem(ad, r, ciz, goster) {
   }
   else if (ad === "paylas") paylasLevhasi(kayitPaylasimi(r));
   else if (ad === "kunye") panoya(apaDuz(r), "APA 7 künyesi kopyalandı");
+}
+
+/* Yabancı sayfayı Google Çeviri ile Türkçe açar (sayfa düzeni korunur). */
+function turkceAdres(u) {
+  return `https://translate.google.com/translate?sl=auto&tl=tr&hl=tr&u=${encodeURIComponent(u)}`;
 }
 
 function favDegistir(r) {
@@ -644,6 +658,9 @@ function sayfaAyarlar() {
       <label class="satir">Toprak rengi<select id="palet"><option value="kum">Kum</option><option value="lacivert">Lacivert</option><option value="zeytin">Zeytin</option><option value="murdum">Mürdüm</option></select></label>
       <label class="satir">Yazı boyutu<select id="yazi"><option value="0.9">Küçük</option><option value="1">Normal</option><option value="1.12">Büyük</option><option value="1.25">Çok büyük</option></select></label>
     </div></div>
+    <div class="grup"><h3>Çeviri</h3><div class="kutu">
+      <label class="satir">Yabancı sayfaları Türkçe aç<input type="checkbox" class="anahtar" id="hep-turkce" ${D.hepTurkce ? "checked" : ""}></label>
+    </div><p class="aciklama">Açıkken İngilizce ve diğer dillerdeki haber ve makale sayfaları Google Çeviri ile Türkçe açılır. Kapalıyken yabancı kayıtlarda ayrıca "Türkçe aç" düğmesi görünür. Başlık ve özetler her durumda uygulama içinde Türkçe gösterilir.</p></div>
     <div class="grup"><h3>Bildirimler</h3><div class="kutu">
       <label class="satir">Yeni kayıt gelince haber ver<input type="checkbox" class="anahtar" id="bildirim-ac" ${D.bildirim && bildirimDestek && Notification.permission === "granted" ? "checked" : ""} ${bildirimDestek ? "" : "disabled"}></label>
     </div><p class="aciklama">${bildirimDestek
@@ -663,6 +680,7 @@ function sayfaAyarlar() {
     </div></div>`;
   if (typeof hesapGrubuBagla === "function") hesapGrubuBagla();
   const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
+  $("#hep-turkce").onchange = e => { D.hepTurkce = e.target.checked; kaydet(); bildir(D.hepTurkce ? "Yabancı sayfalar Türkçe açılacak" : "Sayfalar özgün dilinde açılacak"); };
   sec("tema", D.tema, v => D.tema = v);
   sec("palet", D.palet, v => D.palet = v);
   sec("yazi", D.yazi, v => D.yazi = Number(v));
