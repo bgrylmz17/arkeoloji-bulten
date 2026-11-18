@@ -97,13 +97,13 @@ def topla(depo: Depo, ayar: dict, paralel: int = 6) -> list[dict]:
     izinli = set(ayar.get("diller") or ["tr", "en", "de", "fr", "diger"])
     saglik = []
 
-    def calistir(is_):
+    def calistir(ad, is_):
         time.sleep(0.3)
         bas = time.time()
-        return is_(), time.time() - bas
+        return tarayici.dayanikli_calistir(ad, is_), time.time() - bas
 
     with ThreadPoolExecutor(max_workers=paralel) as havuz:
-        gelecek = {havuz.submit(calistir, is_): ad for ad, is_ in gorevler}
+        gelecek = {havuz.submit(calistir, ad, is_): ad for ad, is_ in gorevler}
         for g in as_completed(gelecek):
             ad = gelecek[g]
             try:
