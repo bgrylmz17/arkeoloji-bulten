@@ -37,6 +37,7 @@ jobs:
             echo "Değişiklik yok."
           else
             git commit -m "Bülten güncellendi $(date -u +%Y-%m-%dT%H:%MZ)"
-            git pull --rebase --autostash
+            # aynı anda iki toplama olursa yeni toplananın verisi geçerli olsun
+            git pull --rebase --autostash -X theirs
             git push
           fi
