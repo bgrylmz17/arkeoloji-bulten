@@ -208,7 +208,8 @@ def main() -> int:
     tum.sort(key=lambda k: (k.get("g", ""), k.get("t", "")), reverse=True)
     tum = tum[: int(kullanici.get("en_fazla", 2500))]
 
-    kavramlar = [{"id": k.kimlik, "ad": k.kisa, "en": k.en[0], "grup": k.grup} for k in terimler.TERIMLER]
+    kavramlar = [{"id": k.kimlik, "ad": k.kisa, "en": k.en[0], "grup": k.grup,
+                  "q": terimler.openalex_sorgusu(k)} for k in terimler.TERIMLER]
     kazi = ayar.get("harrix_kazi")
     if kazi:
         kavramlar.append({"id": "kazim", "ad": kazi["kaziAdi"], "en": kazi["kaziAdi"], "grup": "Kazım"})
