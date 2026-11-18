@@ -33,6 +33,7 @@ VARSAYILAN_AYARLAR = {
     "akislar": VARSAYILAN_AKISLAR,
     "gun": 30,
     "eposta": "",
+    "openalex_anahtar": "",
     "claude_anahtar": "",
     "acilista_kontrol": True,
     "acilis_sesi": True,
@@ -117,6 +118,7 @@ def gorevleri_olustur(ayar: dict) -> list[tuple[str, callable]]:
     kavramlar = kavramlari_al(ayar)
     gun = int(ayar.get("gun", 30))
     eposta = ayar.get("eposta", "")
+    anahtar = ayar.get("openalex_anahtar", "")
     gorevler = []
     for kav in kavramlar:
         if kav.grup == "Bölge":   # bölge tek başına aranmaz; puan önceliği verir
@@ -124,7 +126,7 @@ def gorevleri_olustur(ayar: dict) -> list[tuple[str, callable]]:
         if ayar.get("openalex", True):
             sorgu = terimler.openalex_sorgusu(kav)
             gorevler.append((f"OpenAlex: {kav.ad}",
-                             lambda s=sorgu: kaynaklar.openalex_ara(s, gun, kavramlar, eposta)))
+                             lambda s=sorgu: kaynaklar.openalex_ara(s, gun, kavramlar, eposta, anahtar)))
         if ayar.get("crossref", True):
             for terim in dict.fromkeys([kav.tr[0], kav.en[0]]):
                 gorevler.append((f"Crossref: {terim}",

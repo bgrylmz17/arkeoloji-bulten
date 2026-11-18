@@ -126,8 +126,14 @@ class Depo:
 
     def listele(self, kategori=None, favori=False, arama="", sadece_yeni_sonrasi=None,
                 min_puan=0, limit=600, etiket=None, sadece_pdf=False, dil=None, konu=None,
-                kaynakca=False) -> list[sqlite3.Row]:
+                kaynakca=False, literatur=None) -> list[sqlite3.Row]:
         q, p = "SELECT * FROM kayitlar WHERE 1=1", []
+        # Literatür aramasıyla gelen eski yayınlar bülten listelerine karışmasın;
+        # kişinin kendi seçtikleri (favori, konu, kaynakça, PDF) her yerde görünür.
+        if literatur is None:
+            literatur = bool(favori or konu or kaynakca or sadece_pdf or etiket == "literatur")
+        if not literatur:
+            q += " AND etiketler NOT LIKE '%,literatur,%'"
         if konu:
             q += " AND id IN (SELECT kayit_id FROM konu_kayit WHERE konu_id=?)"
             p.append(konu)
@@ -162,6 +168,39 @@ class Depo:
         p.append(limit)
         with self._bag() as c:
             return c.execute(q, p).fetchall()
+
+    def literatur_kaydet(self, kayitlar: list[dict]) -> None:
+        """Literatür arama sonuçlarını saklar. Yalnız yeni kayıtlar eklenir ve 'literatur'
+        etiketi alır; bültende zaten olan kayıtlara dokunulmaz."""
+        simdi = dt.datetime.now().isoformat(timespec="seconds")
+        with self._kilit, self._bag() as c:
+            for k in kayitlar:
+                if c.execute("SELECT 1 FROM kayitlar WHERE id=?", (k["id"],)).fetchone():
+                    if k.get("pdf_url"):
+                        c.execute("UPDATE kayitlar SET pdf_url=? WHERE id=? AND pdf_url=''",
+                                  (k["pdf_url"], k["id"]))
+                    continue
+                et = (k.get("etiketler") or ",").rstrip(",") + ",literatur,"
+                if not et.startswith(","):
+                    et = "," + et
+                c.execute(
+                    """INSERT INTO kayitlar (id,kategori,kaynak,baslik,yazarlar,yayin_yeri,tarih,
+                       url,doi,ozet,eslesen,puan,ilk_gorulme,etiketler,pdf_url,icerik,dil,okundu)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)""",
+                    (k["id"], k["kategori"], k["kaynak"], k["baslik"], k.get("yazarlar", ""),
+                     k.get("yayin_yeri", ""), k.get("tarih", ""), k.get("url", ""), k.get("doi", ""),
+                     k.get("ozet", ""), k.get("eslesen", ""), k.get("puan", 0), simdi,
+                     et, k.get("pdf_url", ""), k.get("icerik", ""), k.get("dil", "")),
+                )
+
+    def getir_cok(self, idler: list[str]) -> list[sqlite3.Row]:
+        """Verilen kimlikleri verilen sırayla döndürür."""
+        if not idler:
+            return []
+        with self._bag() as c:
+            satir = {r["id"]: r for r in c.execute(
+                f"SELECT * FROM kayitlar WHERE id IN ({','.join('?' * len(idler))})", idler)}
+        return [satir[i] for i in idler if i in satir]
 
     def getir(self, kid: str):
         with self._bag() as c:
@@ -283,18 +322,19 @@ class Depo:
 
     def sayilar(self, sonrasi: str | None = None) -> dict:
         q = "SELECT kategori, COUNT(*) n, SUM(okundu=0) okunmamis FROM kayitlar"
+        q += " WHERE etiketler NOT LIKE '%,literatur,%'"
         p = []
         if sonrasi:
-            q += " WHERE ilk_gorulme>=?"
+            q += " AND ilk_gorulme>=?"
             p.append(sonrasi)
         q += " GROUP BY kategori"
         with self._bag() as c:
             return {r["kategori"]: (r["n"], r["okunmamis"] or 0) for r in c.execute(q, p)}
 
     def dil_sayilari(self, sonrasi: str | None = None) -> dict:
-        q, p = "SELECT dil, COUNT(*) n FROM kayitlar", []
+        q, p = "SELECT dil, COUNT(*) n FROM kayitlar WHERE etiketler NOT LIKE '%,literatur,%'", []
         if sonrasi:
-            q += " WHERE ilk_gorulme>=?"
+            q += " AND ilk_gorulme>=?"
             p.append(sonrasi)
         with self._bag() as c:
             return {r["dil"] or "": r["n"] for r in c.execute(q + " GROUP BY dil", p)}

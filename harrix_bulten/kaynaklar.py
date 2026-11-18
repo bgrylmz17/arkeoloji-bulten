@@ -218,50 +218,109 @@ def _openalex_ozet(inv: dict | None) -> str:
     return " ".join(konum[i] for i in sorted(konum))
 
 
-def openalex_ara(sorgu: str, gun: int, kavramlar, eposta: str = "") -> list[dict]:
+def _openalex_kayit(w: dict, kavramlar) -> dict | None:
+    """OpenAlex 'work' nesnesini Bülten kaydına çevirir."""
+    baslik = html_temizle(w.get("display_name") or w.get("title") or "")
+    if not baslik:
+        return None
+    ozet = _openalex_ozet(w.get("abstract_inverted_index"))
+    puan, eslesen, etiket = puanla(baslik, ozet, kavramlar)
+    puan = max(puan, 1)  # arama zaten bu sorguyla eşleşti
+    loc = w.get("primary_location") or {}
+    kaynak_ad = ((loc.get("source") or {}).get("display_name")) or ""
+    doi = (w.get("doi") or "").replace("https://doi.org/", "")
+    url = w.get("doi") or loc.get("landing_page_url") or w.get("id")
+    en_iyi = w.get("best_oa_location") or {}
+    pdf = (en_iyi.get("pdf_url") or loc.get("pdf_url") or "")
+    yazarlar = "; ".join(
+        (a.get("author") or {}).get("display_name", "") for a in w.get("authorships", [])[:8]
+    )
+    tur = w.get("type") or ""
+    if tur == "dissertation":
+        kategori = "Tez"
+        if not kaynak_ad and w.get("authorships"):
+            inst = (w["authorships"][0].get("institutions") or [{}])
+            kaynak_ad = inst[0].get("display_name", "") if inst else ""
+    elif tur in ("book", "book-chapter", "monograph", "edited-book"):
+        kategori = "Kitap"
+    else:
+        kategori = "Makale"
+    return dict(
+        id=_kimlik(doi, url, baslik), kategori=kategori, kaynak="OpenAlex",
+        baslik=baslik, yazarlar=yazarlar, yayin_yeri=kaynak_ad,
+        tarih=w.get("publication_date") or str(w.get("publication_year") or ""), url=url, doi=doi, ozet=ozet,
+        eslesen=", ".join(eslesen), puan=puan, etiketler=_etiketler(baslik, ozet, etiket),
+        pdf_url=pdf, icerik="", dil=dil_normal(w.get("language")) or dil_tahmin(baslik, ozet),
+        atif=w.get("cited_by_count") or 0,
+    )
+
+
+def _openalex_parametre(params: dict, eposta: str = "", anahtar: str = "") -> dict:
+    if anahtar:
+        params["api_key"] = anahtar
+    elif eposta:
+        params["mailto"] = eposta
+    return params
+
+
+def openalex_ara(sorgu: str, gun: int, kavramlar, eposta: str = "", anahtar: str = "") -> list[dict]:
     baslangic = (dt.date.today() - dt.timedelta(days=gun)).isoformat()
-    params = {
+    params = _openalex_parametre({
         "search": sorgu,
         "filter": f"from_publication_date:{baslangic}",
         "sort": "publication_date:desc",
         "per-page": "50",
-    }
-    if eposta:
-        params["mailto"] = eposta
+    }, eposta, anahtar)
     veri = json.loads(_indir("https://api.openalex.org/works?" + urllib.parse.urlencode(params)))
-    sonuc = []
-    for w in veri.get("results", []):
-        baslik = html_temizle(w.get("display_name") or w.get("title") or "")
-        if not baslik:
-            continue
-        ozet = _openalex_ozet(w.get("abstract_inverted_index"))
-        puan, eslesen, etiket = puanla(baslik, ozet, kavramlar)
-        puan = max(puan, 1)  # arama zaten bu sorguyla eşleşti
-        loc = w.get("primary_location") or {}
-        kaynak_ad = ((loc.get("source") or {}).get("display_name")) or ""
-        doi = (w.get("doi") or "").replace("https://doi.org/", "")
-        url = w.get("doi") or loc.get("landing_page_url") or w.get("id")
-        en_iyi = w.get("best_oa_location") or {}
-        pdf = (en_iyi.get("pdf_url") or loc.get("pdf_url") or "")
-        yazarlar = "; ".join(
-            (a.get("author") or {}).get("display_name", "") for a in w.get("authorships", [])[:8]
-        )
-        tur = w.get("type") or ""
-        if tur == "dissertation":
-            kategori = "Tez"
-            if not kaynak_ad and w.get("authorships"):
-                inst = (w["authorships"][0].get("institutions") or [{}])
-                kaynak_ad = inst[0].get("display_name", "") if inst else ""
-        else:
-            kategori = "Makale"
-        sonuc.append(dict(
-            id=_kimlik(doi, url, baslik), kategori=kategori, kaynak="OpenAlex",
-            baslik=baslik, yazarlar=yazarlar, yayin_yeri=kaynak_ad,
-            tarih=w.get("publication_date") or "", url=url, doi=doi, ozet=ozet,
-            eslesen=", ".join(eslesen), puan=puan, etiketler=_etiketler(baslik, ozet, etiket),
-            pdf_url=pdf, icerik="", dil=dil_normal(w.get("language")) or dil_tahmin(baslik, ozet),
-        ))
-    return sonuc
+    kayitlar = [k for k in (_openalex_kayit(w, kavramlar) for w in veri.get("results", [])) if k]
+    for k in kayitlar:   # bültende kitaplar makale sekmesinde görünmeye devam etsin
+        if k["kategori"] == "Kitap":
+            k["kategori"] = "Makale"
+    return kayitlar
+
+
+LITERATUR_TURLERI = {"": "", "Makale": "type:article|review", "Tez": "type:dissertation",
+                     "Kitap": "type:book|book-chapter"}
+LITERATUR_SIRALARI = {"ilgi": "relevance_score:desc", "yeni": "publication_date:desc",
+                      "atif": "cited_by_count:desc"}
+
+
+def literatur_ara(sorgu: str, kavramlar, tur: str = "", yil1: int | None = None, yil2: int | None = None,
+                  dil: str = "", acik: bool = False, sirala: str = "ilgi", sayfa: int = 1,
+                  eposta: str = "", anahtar: str = "") -> tuple[list[dict], int]:
+    """Tarih sınırı olmadan bütün literatürde (OpenAlex, ~300 milyon yayın) arar.
+    Dönüş: (kayıtlar, toplam sonuç sayısı)."""
+    süzgeç = []
+    if LITERATUR_TURLERI.get(tur):
+        süzgeç.append(LITERATUR_TURLERI[tur])
+    if yil1:
+        süzgeç.append(f"from_publication_date:{int(yil1)}-01-01")
+    if yil2:
+        süzgeç.append(f"to_publication_date:{int(yil2)}-12-31")
+    if dil:
+        süzgeç.append(f"language:{dil}")
+    if acik:
+        süzgeç.append("is_oa:true")
+    params = {"search": sorgu, "per-page": "50", "page": str(sayfa)}
+    if süzgeç:
+        params["filter"] = ",".join(süzgeç)
+    if sirala != "ilgi" or not sorgu.strip():
+        params["sort"] = LITERATUR_SIRALARI.get(sirala, "cited_by_count:desc")
+    _openalex_parametre(params, eposta, anahtar)
+    veri = json.loads(_indir("https://api.openalex.org/works?" + urllib.parse.urlencode(params)))
+    kayitlar = [k for k in (_openalex_kayit(w, kavramlar) for w in veri.get("results", [])) if k]
+    return kayitlar, int((veri.get("meta") or {}).get("count") or 0)
+
+
+def openalex_doi(doi: str, eposta: str = "", anahtar: str = "") -> dict | None:
+    """Tek DOI için OpenAlex kaydı (açık erişim PDF'i bulmak için; tekil sorgu ücretsizdir)."""
+    params = _openalex_parametre({}, eposta, anahtar)
+    url = "https://api.openalex.org/works/doi:" + urllib.parse.quote(doi.strip()) + (
+        "?" + urllib.parse.urlencode(params) if params else "")
+    try:
+        return _openalex_kayit(json.loads(_indir(url)), [])
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------- Crossref

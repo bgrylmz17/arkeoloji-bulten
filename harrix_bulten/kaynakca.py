@@ -63,7 +63,7 @@ def kayittan_kunye(r) -> dict:
     if eski.get("baslik"):
         return eski
     kat = r["kategori"]
-    tur = {"Makale": "makale", "Tez": "tez"}.get(kat, "web")
+    tur = {"Makale": "makale", "Tez": "tez", "Kitap": "kitap"}.get(kat, "web")
     tarih = (r["tarih"] or "")
     k = {
         "tur": tur,
