@@ -24,7 +24,8 @@ from pathlib import Path
 KOK = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(KOK))
 
-from harrix_bulten import ceviri, harrix_hesap, kaynakca, kaynaklar, sozler, tarayici, terimler  # noqa: E402
+from harrix_bulten import ceviri, haber_kaynaklari, harrix_hesap, kaynakca, kaynaklar, sozler, tarayici, terimler  # noqa: E402
+from harrix_bulten.metin import arkeoloji_kesin  # noqa: E402
 from harrix_bulten.veritabani import Depo  # noqa: E402
 
 VERI = KOK / "docs" / "veri"
@@ -126,6 +127,13 @@ def main() -> int:
     durum = oku(VERI / "durum.json", {})
     eski = oku(VERI / "bulten.json", {})
     eski_kayitlar = {k["i"]: k for k in eski.get("kayitlar", [])}
+    # süzgeç sıkılaştıysa eski kayıtlara da uygula (ör. Phys.org'un arkeoloji dışı yazıları)
+    mod = {ad: m for ad, _u, m, _d in haber_kaynaklari.AKISLAR}
+
+    def gecerli(k):
+        m = mod.get(k.get("s"))
+        return m not in ("genel", "bilim") or arkeoloji_kesin(k.get("b", ""), k.get("o", ""), bilim=m == "bilim")
+    eski_kayitlar = {i: k for i, k in eski_kayitlar.items() if gecerli(k)}
     ayar = ayarlari_hazirla(kullanici, durum)
     calisma = simdi()
     print(f"Toplama başlıyor ({calisma}); eldeki kayıt: {len(eski_kayitlar)}", flush=True)
