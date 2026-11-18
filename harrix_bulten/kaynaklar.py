@@ -384,8 +384,8 @@ def rss_oku(url: str, kaynak_adi: str, kavramlar, kategori: str = "Haber",
         puan, eslesen, etiket = puanla(baslik, html_temizle(ham_icerik) or ozet, kavramlar)
         if not hepsini_al and puan == 0:
             continue
-        if baglam_gerekli == "siki":
-            if not arkeoloji_kesin(baslik, ozet):
+        if baglam_gerekli in ("siki", "bilim"):
+            if not arkeoloji_kesin(baslik, ozet, bilim=baglam_gerekli == "bilim"):
                 continue
         elif baglam_gerekli and not arkeoloji_mi(baslik, ozet):
             continue

@@ -136,9 +136,18 @@ _KESIN_DESENI = re.compile(
     r")")
 
 
-def arkeoloji_kesin(baslik: str, ozet: str = "") -> bool:
-    """Genel haber sitelerindeki yazılar için sıkı arkeoloji bağlamı denetimi."""
-    return bool(_KESIN_DESENI.search(_ascii(baslik + " " + ozet)))
+_ESKI_YAS = re.compile(r"\d[\d.,]*\s*(?:-|\s)?(?:year[- ]old|years?\s+ago|yillik|yil\s+once)"
+                       r"|(?<![a-z])(?:ancient|prehistoric|mummif|mumya|skeleton|iskelet|tomb|mezar)")
+
+
+def arkeoloji_kesin(baslik: str, ozet: str = "", bilim: bool = False) -> bool:
+    """Genel haber sitelerindeki yazılar için sıkı arkeoloji bağlamı denetimi.
+    bilim=True: bilim sitelerinin karışık akışları (Phys.org, ScienceDaily) için 'X bin yıllık',
+    'ancient', 'tomb' gibi ifadeler de yeterli sayılır."""
+    metin = _ascii(baslik + " " + ozet)
+    if _KESIN_DESENI.search(metin):
+        return True
+    return bilim and bool(_ESKI_YAS.search(metin)) and not re.search(r"dinozor|dinosaur", metin)
 
 
 def rapor_mu(baslik: str, ozet: str = "") -> bool:

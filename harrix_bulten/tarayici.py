@@ -176,7 +176,7 @@ def yayinci_gorevleri(ayar: dict, kavramlar, gun: int) -> list[tuple[str, callab
     for ad, url, mod, _dil in haber_kaynaklari.AKISLAR:
         if url in kendi:
             continue
-        baglam = False if mod == "arkeo" else "siki"
+        baglam = {"arkeo": False, "bilim": "bilim"}.get(mod, "siki")
         gorevler.append((f"Yayıncı: {ad}",
                          lambda ad=ad, url=url, b=baglam: kaynaklar.rss_oku(
                              url, ad, kavramlar, kategori="Haber", hepsini_al=True, gun=gun,

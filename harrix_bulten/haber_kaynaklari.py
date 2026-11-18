@@ -6,6 +6,8 @@ arkeoloji siteleri).
 
 mod:
   "arkeo" -> tamamen arkeoloji/tarih sitesi: her yazı alınır
+  "bilim" -> bilim sitesinin karışık akışı (Phys.org, ScienceDaily): arkeoloji ve "X bin yıllık",
+             "ancient" gibi ifadeler geçenler alınır
   "genel" -> genel haber sitesi: yalnızca arkeoloji bağlamı olan haberler alınır
              (arkeoloji, arkeolojik, höyük, kazı heyeti, antik kent, excavation… — metin.arkeoloji_mi)
 
@@ -27,10 +29,10 @@ AKISLAR = [
     # --- doğrudan arkeoloji / tarih
     ("Arkeofili", "https://arkeofili.com/feed/", "arkeo", "tr"),
     ("Arkeonews", "https://arkeonews.net/feed/", "arkeo", "en"),
-    ("ScienceDaily Arkeoloji", "https://www.sciencedaily.com/rss/fossils_ruins/archaeology.xml", "arkeo", "en"),
-    ("Phys.org Arkeoloji", "https://phys.org/rss-feed/science-news/archaeology/", "arkeo", "en"),
-    ("Live Science", "https://www.livescience.com/feeds.xml", "genel", "en"),
-    ("Smithsonian", "https://www.smithsonianmag.com/rss/latest_articles/", "genel", "en"),
+    ("ScienceDaily Arkeoloji", "https://www.sciencedaily.com/rss/fossils_ruins/archaeology.xml", "bilim", "en"),
+    ("Phys.org Arkeoloji", "https://phys.org/rss-feed/science-news/archaeology/", "bilim", "en"),
+    ("Live Science", "https://www.livescience.com/feeds.xml", "bilim", "en"),
+    ("Smithsonian", "https://www.smithsonianmag.com/rss/latest_articles/", "bilim", "en"),
     ("Archaeology Magazine", "https://archaeology.org/feed/", "arkeo", "en"),
     ("The Conversation", "https://theconversation.com/global/articles.atom", "genel", "en"),
     # --- Bundle'daki Türkçe yayıncılar (arkeoloji haberleri süzülür)
