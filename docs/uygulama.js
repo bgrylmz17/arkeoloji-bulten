@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.2.0";
+const SURUM = "1.3.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 const TUR_COGUL = { Makale: "Makaleler", Tez: "Tezler", Haber: "Haberler", Rapor: "Raporlar" };
@@ -125,7 +125,10 @@ function temaUygula() {
 function satirHtml(r, secenek = {}) {
   const tur = r.k || "Haber";
   const kaynak = r.k === "Haber" || r.k === "Rapor" ? (r.w || r.s) : (r.w || r.s);
-  const alt = secenek.not ? D.notlar[r.i] : (r.y && (r.k === "Makale" || r.k === "Tez") ? r.y.split(";").slice(0, 3).join(",") : (r.l !== "tr" && r.ot ? r.ot : r.o));
+  const yazar = r.y && ["Makale", "Tez", "Kitap"].includes(r.k) ? r.y.split(";").slice(0, 3).join(",") : "";
+  const alt = secenek.not ? D.notlar[r.i] : secenek.litAlt
+    ? [yazar, (r.t || "").slice(0, 4), r.atif ? `${r.atif} atıf` : ""].filter(Boolean).join(" · ")
+    : (yazar || (r.l !== "tr" && r.ot ? r.ot : r.o));
   const etiketler = (r.e || []).filter(e => KAVRAM.has(e) && e !== "kazim").slice(0, 3)
     .map(e => `<span class="etiket">${esc(KAVRAM.get(e).ad)}</span>`).join("");
   const dil = r.l && r.l !== "tr" ? `<span class="dil" title="${esc(DIL_AD[r.l] || r.l)}">${esc(r.l.toUpperCase())}</span>` : "";
@@ -164,7 +167,7 @@ function bosHtml(baslik, metin, dugme) {
 }
 
 /* ---------------------------------------------------------------- sayfalar */
-const S = { tur: "", donem: "", dil: "", arama: "", kitaplik: "fav" };
+const S = { tur: "", donem: "", dil: "", arama: "", kitaplik: "fav", mod: "bulten" };
 let gosterilecek = 60;
 
 function sayfaBugun() {
@@ -204,7 +207,7 @@ function suzulmus(temel) {
 function sayfaAkis(temel, baslikMetni, secenek = {}) {
   const donemler = VERI.kavramlar.filter(k => k.grup === "Dönem" && temel.some(r => r.e.includes(k.id)));
   const sonuc = suzulmus(temel);
-  $("#sayfa").innerHTML = `
+  $("#sayfa").innerHTML = (secenek.modDugmesi ? modDugmesiHtml() : "") + `
     <div class="bolumlu" role="group" aria-label="Tür">${["", ...TURLER].map(t =>
       `<button data-tur="${t}" aria-pressed="${S.tur === t}">${t ? (t === "Rapor" ? "Rapor" : t) : "Tümü"}</button>`).join("")}</div>
     <div class="arama-kutu"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
@@ -225,6 +228,7 @@ function sayfaAkis(temel, baslikMetni, secenek = {}) {
   let zaman;
   $("#ara").addEventListener("input", e => { S.arama = e.target.value; clearTimeout(zaman); zaman = setTimeout(yenile, 180); });
   if (secenek.odakla) $("#ara").focus();
+  if (secenek.modDugmesi) modDugmesiBagla();
   void baslikMetni;
 }
 function sonuclarHtml(sonuc, secenek) {
@@ -241,6 +245,169 @@ document.addEventListener("click", e => {
   if (e.target.id === "daha") { gosterilecek += 80; rota(true); }
   if (e.target.id === "suzgec-sifirla") { Object.assign(S, { tur: "", dil: "", donem: "", arama: "" }); rota(); }
 });
+
+/* ---------------------------------------------------------------- tüm literatür (OpenAlex)
+ * Bülten yalnız son günlerin yayınlarını toplar. Burada tarih sınırı olmadan bütün
+ * yıllardaki makale, tez ve kitaplarda aranır (OpenAlex; YÖK tezleri ve DergiPark dahil). */
+const L = { q: "", tur: "", donem: "", sirala: "ilgi", acik: false, ids: [], toplam: 0, sayfa: 0, yukleniyor: false, hata: "", aranan: "" };
+const LIT_TUR = { "": "", Makale: "type:article|review", Tez: "type:dissertation", Kitap: "type:book|book-chapter" };
+const LIT_SIRA = { ilgi: "relevance_score:desc", yeni: "publication_date:desc", atif: "cited_by_count:desc" };
+
+function modDugmesiHtml() {
+  return `<div class="bolumlu mod-secici" role="group" aria-label="Arama alanı">
+    <button data-mod="bulten" aria-pressed="${S.mod !== "lit"}">Bülten</button>
+    <button data-mod="lit" aria-pressed="${S.mod === "lit"}">Tüm literatür</button></div>`;
+}
+function modDugmesiBagla() {
+  $("#sayfa").querySelectorAll("[data-mod]").forEach(b => b.onclick = () => { S.mod = b.dataset.mod; titres(); rota(); });
+}
+
+function litSorgu() {
+  const k = L.donem && KAVRAM.get(L.donem);
+  const donem = k ? (k.q || `"${k.en}"`) : "";
+  const q = L.q.trim();
+  return q && donem ? `(${q}) AND (${donem})` : (q || donem);
+}
+
+async function sha1Kisa(metin) {
+  const b = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(metin));
+  return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, "0")).join("").slice(0, 20);
+}
+function oaOzet(inv) {
+  if (!inv) return "";
+  const s = [];
+  for (const [w, yerler] of Object.entries(inv)) for (const i of yerler) s[i] = w;
+  return s.filter(Boolean).join(" ");
+}
+async function oaKayit(w) {
+  const doi = (w.doi || "").replace("https://doi.org/", "");
+  const loc = w.primary_location || {};
+  const url = w.doi || loc.landing_page_url || w.id;
+  const anahtar = doi ? doi.toLowerCase() : url.split("?")[0].replace(/\/+$/, "").toLowerCase();
+  const id = await sha1Kisa(anahtar);           // masaüstü ve bültenle aynı kimlik
+  if (DIZIN.has(id)) return DIZIN.get(id);
+  const tur = w.type === "dissertation" ? "Tez" : /^(book|book-chapter|monograph|edited-book)$/.test(w.type) ? "Kitap" : "Makale";
+  const yazarlar = (w.authorships || []).slice(0, 8).map(a => (a.author || {}).display_name).filter(Boolean);
+  let yer = (loc.source || {}).display_name || "";
+  if (!yer && tur === "Tez") yer = (((w.authorships || [])[0] || {}).institutions || [{}])[0]?.display_name || "";
+  const en = w.best_oa_location || {};
+  const b = (w.display_name || "").replace(/<[^>]+>/g, "");
+  const o = oaOzet(w.abstract_inverted_index).slice(0, 1500);
+  const r = {
+    i: id, k: tur, s: "OpenAlex", b, y: yazarlar.join("; "), w: yer, t: w.publication_date || String(w.publication_year || ""),
+    u: url, d: doi, o, e: donemBul(b + " " + o), p: en.pdf_url || loc.pdf_url || "", l: (w.language || "").slice(0, 2),
+    g: "", lit: 1, atif: w.cited_by_count || 0,
+    ku: { yazarlar: yazarlar.map(ad => { const p = ad.trim().split(/\s+/); return [p.pop() || "", p.join(" ")]; }), yayin: yer,
+          cilt: (w.biblio || {}).volume || "", sayi: (w.biblio || {}).issue || "",
+          sayfa: [(w.biblio || {}).first_page, (w.biblio || {}).last_page].filter(Boolean).join("–"), universite: tur === "Tez" ? yer : "" },
+  };
+  DIZIN.set(id, r);
+  return r;
+}
+/* Başlık/özetten dönem etiketleri: bültenin kavram listesindeki TR ve EN adlarla basit eşleme. */
+function donemBul(metin) {
+  const m = katla(metin);
+  return VERI.kavramlar.filter(k => k.grup !== "Kazım" && [k.ad, k.en].some(t => t && m.includes(katla(t)))).map(k => k.id).slice(0, 4);
+}
+
+async function litAra(devam) {
+  const sorgu = litSorgu();
+  if (!sorgu) { bildir("Bir kelime yazın ya da bir dönem seçin"); return; }
+  if (L.yukleniyor) return;
+  L.yukleniyor = true; L.hata = "";
+  if (!devam) { L.ids = []; L.sayfa = 0; L.toplam = 0; L.aranan = sorgu; }
+  litCiz();
+  const filtre = [LIT_TUR[L.tur], L.acik ? "is_oa:true" : ""].filter(Boolean).join(",");
+  const p = new URLSearchParams({ search: L.aranan, "per-page": "25", page: String(L.sayfa + 1),
+    select: "id,doi,display_name,publication_date,publication_year,type,language,cited_by_count,authorships,primary_location,best_oa_location,abstract_inverted_index,biblio" });
+  if (filtre) p.set("filter", filtre);
+  if (L.sirala !== "ilgi") p.set("sort", LIT_SIRA[L.sirala]);
+  try {
+    const y = await fetch("https://api.openalex.org/works?" + p);
+    if (y.status === 429) throw new Error("sinir");
+    if (!y.ok) throw new Error(String(y.status));
+    const j = await y.json();
+    const kayitlar = await Promise.all((j.results || []).filter(w => w.display_name).map(oaKayit));
+    for (const r of kayitlar) if (!L.ids.includes(r.i)) L.ids.push(r.i);
+    L.toplam = (j.meta || {}).count || 0; L.sayfa += 1;
+  } catch (e) {
+    L.hata = e.message === "sinir" ? "Literatür arama sunucusu (OpenAlex) şu an çok yoğun ya da günlük ücretsiz sınır doldu. Biraz sonra yeniden deneyin."
+      : navigator.onLine ? "Arama yapılamadı. Biraz sonra yeniden deneyin." : "İnternet bağlantısı yok.";
+  }
+  L.yukleniyor = false;
+  if (location.hash.startsWith("#akis") && S.mod === "lit") litCiz(true);
+}
+
+function litBaglantilar() {
+  const q = encodeURIComponent(L.q.trim() || (L.donem && KAVRAM.get(L.donem) ? KAVRAM.get(L.donem).ad : ""));
+  return `<div class="dis-baglantilar"><span>Başka yerde ara:</span>
+    <a href="https://scholar.google.com/scholar?hl=tr&q=${q}" target="_blank" rel="noopener">Google Akademik</a>
+    <a href="https://tez.yok.gov.tr/UlusalTezMerkezi/" target="_blank" rel="noopener">YÖK Tez</a>
+    <a href="https://dergipark.org.tr/tr/search?q=${q}&section=articles" target="_blank" rel="noopener">DergiPark</a></div>`;
+}
+
+function litSonucHtml() {
+  if (L.yukleniyor && !L.ids.length) return `<p class="aciklama" style="text-align:center;margin:24px">Aranıyor…</p>`;
+  if (L.hata && !L.ids.length) return bosHtml("Arama yapılamadı", L.hata);
+  if (!L.aranan) return bosHtml("Bütün literatürde arayın",
+    "Bülten yalnız yeni yayınları toplar. Burada bütün yıllardaki makale, tez ve kitaplar aranır (OpenAlex; YÖK tezleri ve DergiPark dergilerinin çoğu dahil). Bir kelime yazın ya da dönem seçin.");
+  if (!L.ids.length) return bosHtml("Sonuç yok", "Daha genel bir kelime ya da İngilizce karşılığını deneyin.");
+  const liste = kayitlarDen(L.ids);
+  const daha = L.ids.length < Math.min(L.toplam, 10000);
+  return `<p class="lit-sayi">${L.toplam.toLocaleString("tr-TR")} yayın · ${liste.length} gösteriliyor</p>
+    <ul class="liste">${liste.map(r => satirHtml(r, { litAlt: true })).join("")}</ul>
+    ${L.hata ? `<p class="aciklama" style="text-align:center">${esc(L.hata)}</p>` : ""}
+    ${daha ? `<p style="text-align:center;margin:18px"><button class="ikincil-dugme" id="lit-daha"${L.yukleniyor ? " disabled" : ""}>${L.yukleniyor ? "Yükleniyor…" : "Daha fazla sonuç"}</button></p>` : ""}`;
+}
+
+function litCiz(sadeceSonuc) {
+  if (sadeceSonuc && $("#lit-sonuc")) { $("#lit-sonuc").innerHTML = litSonucHtml(); litSonucBagla(); kaydirmaBagla(); return; }
+  sayfaLiteratur();
+}
+function litSonucBagla() {
+  const d = $("#lit-daha"); if (d) d.onclick = () => litAra(true);
+}
+
+function sayfaLiteratur() {
+  const donemler = VERI.kavramlar.filter(k => k.grup === "Dönem");
+  $("#sayfa").innerHTML = modDugmesiHtml() + `
+    <div class="bolumlu" role="group" aria-label="Tür">${["", "Makale", "Tez", "Kitap"].map(t =>
+      `<button data-lit-tur="${t}" aria-pressed="${L.tur === t}">${t || "Tümü"}</button>`).join("")}</div>
+    <form class="arama-kutu" id="lit-form"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
+      <input id="lit-q" type="search" placeholder="Konu, buluntu yeri, yazar… (ör. Karain, Levallois)" value="${esc(L.q)}" enterkeyhint="search" autocomplete="off">
+      <button class="ara-git" type="submit">Ara</button></form>
+    ${donemler.length ? `<div class="suzgec" role="group" aria-label="Dönem">
+      <button class="cip" data-lit-donem="" aria-pressed="${!L.donem}">Her dönem</button>
+      ${donemler.map(k => `<button class="cip" data-lit-donem="${k.id}" aria-pressed="${L.donem === k.id}">${esc(k.ad)}</button>`).join("")}
+    </div>` : ""}
+    <div class="suzgec" role="group" aria-label="Sıralama">
+      ${[["ilgi", "En ilgili"], ["yeni", "En yeni"], ["atif", "En çok atıf"]].map(([k, ad]) =>
+        `<button class="cip" data-lit-sira="${k}" aria-pressed="${L.sirala === k}">${ad}</button>`).join("")}
+      <button class="cip" data-lit-acik aria-pressed="${L.acik}">Yalnız açık erişim</button>
+    </div>
+    ${litBaglantilar()}
+    <div id="lit-sonuc">${litSonucHtml()}</div>`;
+  modDugmesiBagla(); litSonucBagla();
+  const yeniden = () => { titres(); if (litSorgu()) litAra(false); else sayfaLiteratur(); };
+  $("#lit-form").onsubmit = e => { e.preventDefault(); L.q = $("#lit-q").value; $("#lit-q").blur(); litAra(false); };
+  $("#lit-q").oninput = e => { L.q = e.target.value; };
+  $("#sayfa").querySelectorAll("[data-lit-tur]").forEach(b => b.onclick = () => { L.tur = b.dataset.litTur; yeniden(); });
+  $("#sayfa").querySelectorAll("[data-lit-donem]").forEach(b => b.onclick = () => { L.donem = b.dataset.litDonem; L.q = $("#lit-q").value; yeniden(); });
+  $("#sayfa").querySelectorAll("[data-lit-sira]").forEach(b => b.onclick = () => { L.sirala = b.dataset.litSira; yeniden(); });
+  $("#sayfa").querySelector("[data-lit-acik]").onclick = () => { L.acik = !L.acik; yeniden(); };
+}
+
+/* Ayrıntıda PDF'i olmayan DOI'li kayıt için yasal açık erişim kopyası arar (OpenAlex tekil sorgu, ücretsiz). */
+async function acikKopyaAra(r) {
+  bildir("Açık erişim kopyası aranıyor…");
+  try {
+    const w = await (await fetch(`https://api.openalex.org/works/doi:${encodeURIComponent(r.d)}?select=best_oa_location,open_access`)).json();
+    const en = w.best_oa_location || {};
+    const adres = en.pdf_url || en.landing_page_url || (w.open_access || {}).oa_url;
+    if (adres) { r.p = en.pdf_url || ""; if (D.kayitlar[r.i]) D.kayitlar[r.i].p = r.p; kaydet(); window.open(adres, "_blank", "noopener"); rota(true); }
+    else bildir("Yasal açık erişim kopyası bulunamadı. Yazara ya da kütüphanenize sorabilirsiniz.");
+  } catch (e) { bildir("Bağlantı kurulamadı."); }
+}
 
 /* ---------------------------------------------------------------- ayrıntı */
 function sayfaAyrinti(id) {
@@ -281,7 +448,8 @@ function sayfaAyrinti(id) {
         <button class="eylem" data-e="not" aria-pressed="${!!D.notlar[r.i]}"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM8 12h8M8 16h5"/></svg>Not</button>
         <button class="eylem" data-e="kaynakca" aria-pressed="${D.kaynakca.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Kaynakça</button>
         <button class="eylem" data-e="paylas"><svg viewBox="0 0 24 24"><path d="M12 15V3m-4 4l4-4 4 4M5 12v8h14v-8"/></svg>Paylaş</button>
-        ${r.p ? `<a class="eylem" href="${esc(r.p)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 4v11m-4-4l4 4 4-4M5 20h14"/></svg>PDF</a>` : ""}
+        ${r.p ? `<a class="eylem" href="${esc(r.p)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 4v11m-4-4l4 4 4-4M5 20h14"/></svg>PDF</a>`
+          : r.d ? `<button class="eylem" data-e="acik"><svg viewBox="0 0 24 24"><path d="M12 4v11m-4-4l4 4 4-4M5 20h14"/></svg>Açık kopya ara</button>` : ""}
         <button class="eylem" data-e="kunye"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>APA kopyala</button>
       </div>
       ${D.notlar[r.i] ? `<div class="kunye"><b>Notunuz:</b> ${esc(D.notlar[r.i])}</div>` : ""}
@@ -299,6 +467,7 @@ function sayfaAyrinti(id) {
 async function eylem(ad, r, ciz, goster) {
   titres();
   if (ad === "fav") { favDegistir(r); ciz(); }
+  else if (ad === "acik") { acikKopyaAra(r); }
   else if (ad === "cevir") {
     if (!goster.tr && (!r.bt || (r.o && !r.ot))) {
       bildir("Çevriliyor…");
@@ -519,6 +688,7 @@ function apaParcalar(r) {
   const ku = r.ku || {};
   const doi = r.d ? `https://doi.org/${r.d.replace(/^https?:\/\/doi\.org\//, "")}` : r.u;
   if (r.k === "Tez") return [[`${yazar} (${yil}). `, 0], [r.b.replace(/\.$/, ""), 1], [` [${ku.tez_turu === "Doktora" ? "Doktora tezi" : "Yüksek lisans tezi"}${ku.universite || r.w ? ", " + (ku.universite || r.w) : ""}]. `, 0], [doi || "", 0]];
+  if (r.k === "Kitap") return [[`${yazar} (${yil}). `, 0], [r.b.replace(/\.$/, ""), 1], [`. ${r.w ? r.w + ". " : ""}`, 0], [r.d ? doi : "", 0]];
   if (r.k === "Makale") {
     const p = [[`${yazar} (${yil}). ${r.b.replace(/\.$/, "")}. `, 0]];
     if (ku.yayin || r.w) { p.push([ku.yayin || r.w, 1]); if (ku.cilt) { p.push([", ", 0]); p.push([ku.cilt, 1]); } if (ku.sayi) p.push([`(${ku.sayi})`, 0]); if (ku.sayfa) p.push([`, ${ku.sayfa}`, 0]); p.push([". ", 0]); }
@@ -780,7 +950,7 @@ function rota(kaydirmayiKoru) {
   $("#ara-ac").hidden = ad !== "bugun" && ad !== "akis";
   levhaKapat();
   if (ad === "bugun") sayfaBugun();
-  else if (ad === "akis") sayfaAkis(VERI.kayitlar, "Yayınlar");
+  else if (ad === "akis") { if (S.mod === "lit") sayfaLiteratur(); else sayfaAkis(VERI.kayitlar, "Yayınlar", { modDugmesi: true }); }
   else if (ad === "ara") { sayfaAkis(VERI.kayitlar, "Ara", { odakla: !kaydirmayiKoru }); }
   else if (ad === "kazim") { location.replace("#bugun"); return; }
   else if (ad === "kitaplik") sayfaKitaplik();

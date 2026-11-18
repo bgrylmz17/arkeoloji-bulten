@@ -253,3 +253,15 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   #sayfa { padding-top: 16px; }
   .kayit { border: 1px solid var(--cizgi); border-radius: 12px; margin: 8px 16px; }
 }
+
+/* tüm literatür */
+.mod-secici { margin-top: 12px; }
+.mod-secici button { font-size: 0.92rem; padding: 9px 4px; }
+#lit-form { display: flex; align-items: center; }
+#lit-form input { flex: 1; min-width: 0; }
+.ara-git { flex: none; border: 0; background: var(--eylem); color: var(--eylem-yazi); border-radius: 8px; padding: 7px 14px; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-left: 6px; min-height: 36px; }
+.dis-baglantilar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; margin: 6px 16px 4px; font-size: 0.86rem; }
+.dis-baglantilar span { color: var(--soluk); }
+.dis-baglantilar a { color: var(--eylem); font-weight: 600; text-decoration: none; }
+.lit-sayi { margin: 14px 16px 4px; font-size: 0.86rem; color: var(--soluk); }
+.tur[data-tur="Kitap"] { --tur-renk: var(--rapor); }
