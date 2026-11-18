@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arkeoloji Bülteni</title>
+<meta name="description" content="Arkeoloji makaleleri, tezler, kazı haberleri ve raporları — her gün güncellenir.">
+<meta name="theme-color" content="#eef0e9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161916" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Bülten">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="ikon/favicon-64.png" type="image/png">
+<link rel="apple-touch-icon" href="ikon/apple-touch-icon.png">
+<link rel="stylesheet" href="stil.css">
+</head>
+<body>
+<div id="acilis" aria-hidden="true">
+  <div class="acilis-katman k1"></div><div class="acilis-katman k2"></div><div class="acilis-katman k3"></div>
+  <img src="ikon/logo.svg" alt="" class="acilis-logo">
+</div>
+
+<header id="ust">
+  <button id="geri" class="ikon-dugme" aria-label="Geri" hidden>
+    <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+  </button>
+  <h1 id="baslik">Bugün</h1>
+  <button id="ara-ac" class="ikon-dugme" aria-label="Ara">
+    <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
+  </button>
+</header>
+
+<main id="sayfa" tabindex="-1"></main>
+
+<nav id="sekmeler" aria-label="Bölümler">
+  <a href="#bugun" data-sekme="bugun"><svg viewBox="0 0 24 24"><path d="M3 9h18M3 14h18M3 19h18M7 4l2 3m4-3l-1 3m5-3l-2 3"/></svg><span>Bugün</span></a>
+  <a href="#akis" data-sekme="akis"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg><span>Yayınlar</span></a>
+  <a href="#kazim" data-sekme="kazim"><svg viewBox="0 0 24 24"><path d="M14 3l7 7-3 1-5-5zM13 6L4 15l-1 6 6-1 9-9"/></svg><span>Kazım</span></a>
+  <a href="#kitaplik" data-sekme="kitaplik"><svg viewBox="0 0 24 24"><path d="M5 3h4v18H5zM11 3h4v18h-4zM16.5 4l3.8 1-4.3 16-3.8-1z"/></svg><span>Kitaplık</span></a>
+  <a href="#ayarlar" data-sekme="ayarlar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10l2.1 2.1M4.9 19.1L7 17m10-10l2.1-2.1"/></svg><span>Ayarlar</span></a>
+</nav>
+
+<div id="tabaka" hidden></div>
+<div id="levha" role="dialog" aria-modal="true" hidden></div>
+<div id="bildirim" role="status" aria-live="polite"></div>
+
+<script src="uygulama.js"></script>
+</body>
+</html>

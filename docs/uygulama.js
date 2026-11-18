@@ -1,0 +1,784 @@
+/* Harrix Arkeoloji Bülteni — telefon uygulaması (PWA)
+ * Veri: veri/bulten.json (GitHub Actions günde 4 kez günceller).
+ * Kişisel olanlar (favoriler, konular, notlar, kaynakça, okundu bilgisi) yalnızca bu cihazda,
+ * tarayıcının yerel deposunda tutulur; hiçbir sunucuya gitmez.
+ */
+"use strict";
+
+const SURUM = "1.0.0";
+const DEPO_ANAHTARI = "harrix-bulten";
+const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
+const TUR_COGUL = { Makale: "Makaleler", Tez: "Tezler", Haber: "Haberler", Rapor: "Raporlar" };
+const DIL_AD = { tr: "Türkçe", en: "İngilizce", de: "Almanca", fr: "Fransızca", it: "İtalyanca", es: "İspanyolca" };
+const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+
+/* ---------------------------------------------------------------- durum (yerel depo) */
+const D = Object.assign({
+  fav: [], okundu: {}, notlar: {}, konular: [], kaynakca: [], kayitlar: {},
+  gorulen: "", tema: "oto", palet: "kum", yazi: 1, bildirim: false, kurulumIpucu: true,
+}, guvenliOku());
+
+function guvenliOku() {
+  try { return JSON.parse(localStorage.getItem(DEPO_ANAHTARI)) || {}; } catch (e) { return {}; }
+}
+function kaydet() {
+  try { localStorage.setItem(DEPO_ANAHTARI, JSON.stringify(D)); }
+  catch (e) { bildir("Cihazda yer kalmadı; son değişiklik kaydedilemedi."); }
+}
+/* Kişisel listelerde geçen kayıtların bir kopyası saklanır: bülten eski kayıtları silse de kaybolmasın. */
+function kopyala(r) { if (r && !D.kayitlar[r.i]) D.kayitlar[r.i] = r; }
+function kullaniliyorMu(id) {
+  return D.fav.includes(id) || D.kaynakca.includes(id) || !!D.notlar[id] || D.konular.some(k => k.ids.includes(id));
+}
+function kopyaTemizle(id) { if (!kullaniliyorMu(id)) delete D.kayitlar[id]; }
+
+/* ---------------------------------------------------------------- veri */
+let VERI = { kayitlar: [], kavramlar: [], guncelleme: "", kazi: "" };
+let DIZIN = new Map();
+let KAVRAM = new Map();
+let SOZLER = [];
+let ESIK = D.gorulen;           // bu oturumda "yeni" sayılacakların eşiği
+let kurulumOlayi = null;
+
+async function veriYukle(sessiz) {
+  try {
+    const yanit = await fetch("veri/bulten.json", { cache: "no-cache" });
+    if (!yanit.ok) throw new Error(yanit.status);
+    const v = await yanit.json();
+    const onceki = VERI.guncelleme;
+    VERI = v;
+    DIZIN = new Map(v.kayitlar.map(r => [r.i, r]));
+    for (const id in D.kayitlar) if (!DIZIN.has(id)) DIZIN.set(id, D.kayitlar[id]);
+    KAVRAM = new Map(v.kavramlar.map(k => [k.id, k]));
+    if (onceki && onceki !== v.guncelleme && !sessiz) bildir(`Bülten güncellendi: ${v.yeni_sayisi} yeni kayıt`);
+    rozetGuncelle();
+    return true;
+  } catch (e) {
+    if (!sessiz) bildir("Bülten indirilemedi. İnternet bağlantınızı kontrol edin.");
+    for (const id in D.kayitlar) if (!DIZIN.has(id)) DIZIN.set(id, D.kayitlar[id]);
+    return false;
+  }
+}
+async function sozleriYukle() {
+  try { SOZLER = await (await fetch("veri/sozler.json")).json(); } catch (e) { SOZLER = []; }
+}
+
+/* ---------------------------------------------------------------- yardımcılar */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const katla = s => String(s || "").toLocaleLowerCase("tr").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i");
+const titres = ms => { if (navigator.vibrate) try { navigator.vibrate(ms || 8); } catch (e) {} };
+
+function tarihYaz(t) {
+  if (!t) return "";
+  const [y, a, g] = t.slice(0, 10).split("-").map(Number);
+  if (!a) return String(y);
+  return g ? `${g} ${AYLAR[a - 1]} ${y}` : `${AYLAR[a - 1]} ${y}`;
+}
+function gunAnahtari(r) { return (r.g || r.t || "").slice(0, 10); }
+function gunEtiketi(gun) {
+  const bugun = new Date(); bugun.setHours(0, 0, 0, 0);
+  const d = new Date(gun + "T00:00:00");
+  const fark = Math.round((bugun - d) / 86400000);
+  if (fark <= 0) return "Bugün";
+  if (fark === 1) return "Dün";
+  if (fark < 7) return d.toLocaleDateString("tr-TR", { weekday: "long" });
+  return tarihYaz(gun);
+}
+function saatYaz(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleString("tr-TR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+}
+const yeniMi = r => !!ESIK && (r.g || "") > ESIK && !D.okundu[r.i];
+const baslikGoster = r => (r.l && r.l !== "tr" && r.bt) ? r.bt : r.b;
+
+let bildirimZamani;
+function bildir(metin) {
+  const b = $("#bildirim");
+  b.textContent = metin;
+  b.classList.add("gorunur");
+  clearTimeout(bildirimZamani);
+  bildirimZamani = setTimeout(() => b.classList.remove("gorunur"), 2600);
+}
+
+function rozetGuncelle() {
+  const yeni = VERI.kayitlar.filter(r => (r.g || "") > (D.gorulen || "") && !D.okundu[r.i]).length;
+  if ("setAppBadge" in navigator) {
+    try { yeni ? navigator.setAppBadge(yeni) : navigator.clearAppBadge(); } catch (e) {}
+  }
+  const kazim = VERI.kayitlar.filter(r => r.e.includes("kazim") && yeniMi(r)).length;
+  const sekme = $('#sekmeler a[data-sekme="kazim"]');
+  let rz = sekme.querySelector(".rozet");
+  if (kazim) {
+    if (!rz) { rz = document.createElement("span"); rz.className = "rozet"; sekme.appendChild(rz); }
+    rz.textContent = kazim;
+  } else if (rz) rz.remove();
+}
+
+/* ---------------------------------------------------------------- tema */
+function temaUygula() {
+  const kok = document.documentElement;
+  if (D.tema === "oto") kok.removeAttribute("data-tema"); else kok.dataset.tema = D.tema;
+  if (D.palet === "kum") kok.removeAttribute("data-palet"); else kok.dataset.palet = D.palet;
+  kok.style.setProperty("--yazi-olcek", D.yazi);
+  const koyu = D.tema === "koyu" || (D.tema === "oto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute("content", koyu ? "#161916" : "#eef0e9"));
+}
+
+/* ---------------------------------------------------------------- kayıt satırı */
+function satirHtml(r, secenek = {}) {
+  const tur = r.k || "Haber";
+  const kaynak = r.k === "Haber" || r.k === "Rapor" ? (r.w || r.s) : (r.w || r.s);
+  const alt = secenek.not ? D.notlar[r.i] : (r.y && (r.k === "Makale" || r.k === "Tez") ? r.y.split(";").slice(0, 3).join(",") : (r.l !== "tr" && r.ot ? r.ot : r.o));
+  const etiketler = (r.e || []).filter(e => KAVRAM.has(e) && e !== "kazim").slice(0, 3)
+    .map(e => `<span class="etiket">${esc(KAVRAM.get(e).ad)}</span>`).join("");
+  const dil = r.l && r.l !== "tr" ? `<span class="dil" title="${esc(DIL_AD[r.l] || r.l)}">${esc(r.l.toUpperCase())}</span>` : "";
+  return `<li class="kayit${D.okundu[r.i] ? " okundu" : ""}" data-id="${esc(r.i)}">
+    <div class="kaydirma-arka">${D.fav.includes(r.i) ? "Favoriden çıkar" : "Favorilere ekle"}</div>
+    <a class="kayit-ic" href="#k/${encodeURIComponent(r.i)}">
+      <div class="kayit-ust">${yeniMi(r) ? '<span class="yeni-nokta" title="Yeni"></span>' : ""}<span class="tur" data-tur="${esc(tur)}">${esc(tur)}</span><span class="kaynak">${esc(kaynak || "")}</span>${D.fav.includes(r.i) ? "<span aria-label='Favori'>★</span>" : ""}${dil}</div>
+      <h3 class="kayit-baslik">${esc(baslikGoster(r))}</h3>
+      ${alt ? `<p class="kayit-alt">${esc(alt)}</p>` : ""}
+      ${etiketler ? `<div class="isaretler">${etiketler}</div>` : ""}
+    </a></li>`;
+}
+
+/* Günlere göre tabakalar: en üstte bugün, aşağı indikçe toprak koyulaşır. */
+function tabakalarHtml(kayitlar, secenek = {}) {
+  if (!kayitlar.length) return "";
+  const gruplar = new Map();
+  for (const r of kayitlar) {
+    const g = secenek.yayinTarihi ? (r.t || gunAnahtari(r)).slice(0, 10) : gunAnahtari(r);
+    if (!gruplar.has(g)) gruplar.set(g, []);
+    gruplar.get(g).push(r);
+  }
+  let i = 0, html = "";
+  for (const [gun, liste] of gruplar) {
+    const derinlik = Math.min(4, 1 + Math.floor(i / 2));
+    html += `<section class="tabaka" data-derinlik="${derinlik}">
+      <div class="tabaka-bas"><h2>${esc(gunEtiketi(gun))}</h2><small>${liste.length} kayıt</small></div>
+      <ul class="liste">${liste.map(r => satirHtml(r, secenek)).join("")}</ul></section>`;
+    i++;
+  }
+  return html;
+}
+
+function bosHtml(baslik, metin, dugme) {
+  return `<div class="bos"><strong>${esc(baslik)}</strong>${esc(metin)}${dugme ? `<p>${dugme}</p>` : ""}</div>`;
+}
+
+/* ---------------------------------------------------------------- sayfalar */
+const S = { tur: "", donem: "", dil: "", arama: "", kitaplik: "fav" };
+let gosterilecek = 60;
+
+function sayfaBugun() {
+  const soz = gununSozu();
+  const son = VERI.kayitlar.filter(r => (r.g || "").slice(0, 10) >= gunOnce(2));
+  const yeni = VERI.kayitlar.filter(yeniMi);
+  const say = t => (yeni.length ? yeni : son).filter(r => r.k === t).length;
+  const ust = `
+    ${soz ? `<blockquote class="soz">${esc(soz)}<span class="soz-kim">Günün sözü</span></blockquote>` : ""}
+    <p class="ozet">${!VERI.guncelleme ? "Bülten henüz ilk kez toplanmadı." : yeni.length
+      ? `Son bakışınızdan beri <b>${yeni.length} yeni kayıt</b> geldi.`
+      : `Son iki günde ${son.length} kayıt toplandı.`}${VERI.guncelleme ? ` Bülten ${esc(saatYaz(VERI.guncelleme))} güncellendi.` : ""}</p>
+    <div class="ozet-satir">${TURLER.map(t => `<a class="sayac" href="#akis" data-tur-git="${t}"><strong>${say(t)}</strong><span>${TUR_COGUL[t]}</span></a>`).join("")}</div>
+    ${kurulumIpucuHtml()}`;
+  const liste = (yeni.length ? yeni : son).slice(0, 80);
+  $("#sayfa").innerHTML = ust + (liste.length ? tabakalarHtml(liste)
+    : bosHtml("Henüz kayıt yok", "Bülten ilk kez toplanıyor olabilir; birkaç dakika sonra yeniden bakın."));
+  document.querySelectorAll("[data-tur-git]").forEach(a => a.addEventListener("click", () => { S.tur = a.dataset.turGit; }));
+  if (VERI.guncelleme && VERI.guncelleme > (D.gorulen || "")) { D.gorulen = VERI.guncelleme; kaydet(); }
+}
+function gunOnce(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
+function gununSozu() {
+  if (!SOZLER.length) return "";
+  const d = new Date(); const sira = Math.floor(d.getTime() / 86400000);
+  return SOZLER[sira % SOZLER.length];
+}
+
+function suzulmus(temel) {
+  const q = katla(S.arama.trim());
+  return temel.filter(r =>
+    (!S.tur || r.k === S.tur) &&
+    (!S.donem || (r.e || []).includes(S.donem)) &&
+    (!S.dil || (S.dil === "diger" ? !["tr", "en"].includes(r.l || "") : r.l === S.dil)) &&
+    (!q || katla([r.b, r.bt, r.o, r.ot, r.y, r.w].join(" ")).includes(q)));
+}
+
+function sayfaAkis(temel, baslikMetni, secenek = {}) {
+  const donemler = VERI.kavramlar.filter(k => k.grup === "Dönem" && temel.some(r => r.e.includes(k.id)));
+  const sonuc = suzulmus(temel);
+  $("#sayfa").innerHTML = `
+    <div class="bolumlu" role="group" aria-label="Tür">${["", ...TURLER].map(t =>
+      `<button data-tur="${t}" aria-pressed="${S.tur === t}">${t ? (t === "Rapor" ? "Rapor" : t) : "Tümü"}</button>`).join("")}</div>
+    <div class="arama-kutu"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
+      <input id="ara" type="search" placeholder="${esc(secenek.aramaYeri || "Başlık, yazar, özet içinde ara")}" value="${esc(S.arama)}" enterkeyhint="search" autocomplete="off"></div>
+    <div class="suzgec" role="group" aria-label="Dil">
+      ${[["", "Her dil"], ["tr", "Türkçe"], ["en", "İngilizce"], ["diger", "Diğer diller"]].map(([d, ad]) =>
+        `<button class="cip" data-dil="${d}" aria-pressed="${S.dil === d}">${ad}</button>`).join("")}
+    </div>
+    ${donemler.length ? `<div class="suzgec" role="group" aria-label="Dönem">
+      <button class="cip" data-donem="" aria-pressed="${!S.donem}">Bütün dönemler</button>
+      ${donemler.map(k => `<button class="cip" data-donem="${k.id}" aria-pressed="${S.donem === k.id}">${esc(k.ad)}</button>`).join("")}
+    </div>` : ""}
+    <div id="sonuclar">${sonuclarHtml(sonuc, secenek)}</div>`;
+  const yenile = () => { gosterilecek = 60; $("#sonuclar").innerHTML = sonuclarHtml(suzulmus(temel), secenek); kaydirmaBagla(); };
+  $("#sayfa").querySelectorAll("[data-tur]").forEach(b => b.onclick = () => { S.tur = b.dataset.tur; titres(); rota(); });
+  $("#sayfa").querySelectorAll("[data-dil]").forEach(b => b.onclick = () => { S.dil = b.dataset.dil; titres(); rota(); });
+  $("#sayfa").querySelectorAll("[data-donem]").forEach(b => b.onclick = () => { S.donem = b.dataset.donem; titres(); rota(); });
+  let zaman;
+  $("#ara").addEventListener("input", e => { S.arama = e.target.value; clearTimeout(zaman); zaman = setTimeout(yenile, 180); });
+  if (secenek.odakla) $("#ara").focus();
+  void baslikMetni;
+}
+function sonuclarHtml(sonuc, secenek) {
+  if (!sonuc.length) {
+    return S.arama || S.tur || S.dil || S.donem
+      ? bosHtml("Bu süzgeçlerle kayıt yok", "Süzgeçlerden birini kaldırmayı deneyin.", `<button class="ikincil-dugme" id="suzgec-sifirla">Süzgeçleri temizle</button>`)
+      : bosHtml(secenek.bosBaslik || "Kayıt yok", secenek.bosMetin || "");
+  }
+  const parca = sonuc.slice(0, gosterilecek);
+  return tabakalarHtml(parca, secenek) + (sonuc.length > gosterilecek
+    ? `<p style="text-align:center;margin:18px"><button class="ikincil-dugme" id="daha">${sonuc.length - gosterilecek} kayıt daha göster</button></p>` : "");
+}
+document.addEventListener("click", e => {
+  if (e.target.id === "daha") { gosterilecek += 80; rota(true); }
+  if (e.target.id === "suzgec-sifirla") { Object.assign(S, { tur: "", dil: "", donem: "", arama: "" }); rota(); }
+});
+
+function sayfaKazim() {
+  const temel = VERI.kayitlar.filter(r => r.e.includes("kazim"));
+  if (!VERI.kazi) {
+    $("#sayfa").innerHTML = bosHtml("Kazı tanımlı değil",
+      "Kazınızın haberlerini görmek için GitHub'daki toplayici/ayar.json dosyasında 'kazi' alanına kazının adını yazın.");
+    return;
+  }
+  $("#sayfa").innerHTML = "";
+  sayfaAkis(temel, "Kazım", { bosBaslik: "Henüz haber yok", bosMetin: `${VERI.kazi} ile ilgili yeni bir haber, makale ya da tez çıktığında burada görünür.`, aramaYeri: `${VERI.kazi} kayıtlarında ara` });
+  $("#sayfa").insertAdjacentHTML("afterbegin", `<p class="ozet"><b>${esc(VERI.kazi)}</b> için toplanan haber, makale ve tezler.</p>`);
+}
+
+/* ---------------------------------------------------------------- ayrıntı */
+function sayfaAyrinti(id) {
+  const r = DIZIN.get(id);
+  if (!r) { $("#sayfa").innerHTML = bosHtml("Kayıt bulunamadı", "Bu kayıt bültenden kaldırılmış olabilir."); return; }
+  if (!D.okundu[r.i]) { D.okundu[r.i] = 1; kaydet(); rozetGuncelle(); }
+  const yabanci = r.l && r.l !== "tr";
+  const cevrili = yabanci && (r.bt || r.ot);
+  const goster = { tr: cevrili, };
+  const ciz = () => {
+    const bas = goster.tr && r.bt ? r.bt : r.b;
+    const ozet = goster.tr && r.ot ? r.ot : r.o;
+    const etiketler = (r.e || []).filter(e => KAVRAM.has(e)).map(e => KAVRAM.get(e).ad);
+    const satirlar = [
+      ["Tür", r.k], ["Yazar", r.y], ["Yayın", r.w || r.s], ["Tarih", tarihYaz(r.t)],
+      ["Dil", DIL_AD[r.l] || r.l], ["Dönem / konu", etiketler.join(", ")], ["DOI", r.d], ["Kaynak", r.s],
+    ].filter(([, v]) => v);
+    $("#sayfa").innerHTML = `<article class="ayrinti">
+      <h2>${esc(bas)}</h2>
+      ${goster.tr && r.bt ? `<p class="ceviri-not">Özgün başlık: ${esc(r.b)}</p>` : ""}
+      <dl class="form-tablo">${satirlar.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+      ${ozet ? `<div class="metin">${esc(ozet)}</div>` : `<p class="aciklama">Bu kayıt için özet yok.</p>`}
+      ${goster.tr && r.ot ? `<p class="ceviri-not">Makine çevirisidir; alıntı yapmadan önce özgün metne bakın.</p>` : ""}
+      <a class="buyuk-dugme" href="${esc(r.u)}" target="_blank" rel="noopener">${r.k === "Makale" || r.k === "Tez" ? "Yayını aç" : "Haberi aç"}</a>
+      <div class="eylemler">
+        <button class="eylem" data-e="fav" aria-pressed="${D.fav.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>Favori</button>
+        ${yabanci ? `<button class="eylem" data-e="cevir" aria-pressed="${!!goster.tr}"><svg viewBox="0 0 24 24"><path d="M4 5h8M8 3v2m2 0c-1 4-3 7-6 9m2-5c1 2 3 4 5 5M13 21l4-10 4 10m-6.5-3h5"/></svg>${goster.tr ? "Özgün" : "Türkçe"}</button>` : ""}
+        <button class="eylem" data-e="konu"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg>Konuya ekle</button>
+        <button class="eylem" data-e="not" aria-pressed="${!!D.notlar[r.i]}"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM8 12h8M8 16h5"/></svg>Not</button>
+        <button class="eylem" data-e="kaynakca" aria-pressed="${D.kaynakca.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Kaynakça</button>
+        <button class="eylem" data-e="paylas"><svg viewBox="0 0 24 24"><path d="M12 15V3m-4 4l4-4 4 4M5 12v8h14v-8"/></svg>Paylaş</button>
+        ${r.p ? `<a class="eylem" href="${esc(r.p)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 4v11m-4-4l4 4 4-4M5 20h14"/></svg>PDF</a>` : ""}
+        <button class="eylem" data-e="kunye"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>APA kopyala</button>
+      </div>
+      ${D.notlar[r.i] ? `<div class="kunye"><b>Notunuz:</b> ${esc(D.notlar[r.i])}</div>` : ""}
+      <div class="kunye">${apaHtml(r)}</div>
+    </article>`;
+    $("#sayfa").querySelectorAll("[data-e]").forEach(b => b.onclick = () => eylem(b.dataset.e, r, ciz, goster));
+  };
+  ciz();
+  // başlık bulutta çevrilmiş ama özet çevrilmemişse özeti cihazda çevir
+  if (goster.tr && r.o && !r.ot) {
+    cevir(r.o, r.l).then(t => { r.ot = t; if (location.hash === "#k/" + encodeURIComponent(r.i)) ciz(); }).catch(() => {});
+  }
+}
+
+async function eylem(ad, r, ciz, goster) {
+  titres();
+  if (ad === "fav") { favDegistir(r); ciz(); }
+  else if (ad === "cevir") {
+    if (!goster.tr && (!r.bt || (r.o && !r.ot))) {
+      bildir("Çevriliyor…");
+      try {
+        if (!r.bt) r.bt = await cevir(r.b, r.l);
+        if (r.o && !r.ot) r.ot = await cevir(r.o, r.l);
+        if (kullaniliyorMu(r.i)) { D.kayitlar[r.i] = r; kaydet(); }
+      } catch (e) { bildir("Çeviri servisine ulaşılamadı. Biraz sonra yeniden deneyin."); return; }
+    }
+    goster.tr = !goster.tr; ciz();
+  }
+  else if (ad === "konu") konuLevhasi(r);
+  else if (ad === "not") notLevhasi(r, ciz);
+  else if (ad === "kaynakca") {
+    if (D.kaynakca.includes(r.i)) { D.kaynakca = D.kaynakca.filter(x => x !== r.i); kopyaTemizle(r.i); bildir("Kaynakçadan çıkarıldı"); }
+    else { kopyala(r); D.kaynakca.push(r.i); bildir("Kaynakçaya eklendi"); }
+    kaydet(); ciz();
+  }
+  else if (ad === "paylas") paylas({ title: baslikGoster(r), text: baslikGoster(r), url: r.u });
+  else if (ad === "kunye") panoya(apaDuz(r), "APA 7 künyesi kopyalandı");
+}
+
+function favDegistir(r) {
+  if (D.fav.includes(r.i)) { D.fav = D.fav.filter(x => x !== r.i); kopyaTemizle(r.i); bildir("Favorilerden çıkarıldı"); }
+  else { kopyala(r); D.fav.unshift(r.i); bildir("Favorilere eklendi"); }
+  kaydet();
+}
+
+async function paylas(veri) {
+  if (navigator.share) { try { await navigator.share(veri); } catch (e) {} }
+  else panoya(`${veri.title}\n${veri.url}`, "Bağlantı kopyalandı");
+}
+async function panoya(metin, mesaj) {
+  try { await navigator.clipboard.writeText(metin); bildir(mesaj); }
+  catch (e) {
+    const t = document.createElement("textarea"); t.value = metin; document.body.appendChild(t); t.select();
+    try { document.execCommand("copy"); bildir(mesaj); } catch (e2) { bildir("Kopyalanamadı"); }
+    t.remove();
+  }
+}
+
+/* Çeviri: bulut toplayıcı çevirmediyse cihazdan MyMemory'ye sorulur (ücretsiz, anahtarsız). */
+async function cevir(metin, dil) {
+  const parcalar = [];
+  let p = "";
+  for (const cumle of metin.split(/(?<=[.!?])\s+/)) {
+    if ((p + " " + cumle).length > 450 && p) { parcalar.push(p); p = cumle; } else p = p ? p + " " + cumle : cumle;
+  }
+  if (p) parcalar.push(p);
+  const sonuc = [];
+  for (const parca of parcalar.slice(0, 8)) {
+    const u = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(parca.slice(0, 480))}&langpair=${encodeURIComponent(dil || "en")}|tr`;
+    const j = await (await fetch(u)).json();
+    if (j.responseStatus !== 200 && j.responseStatus !== "200") throw new Error(j.responseDetails);
+    sonuc.push(j.responseData.translatedText);
+  }
+  return sonuc.join(" ");
+}
+
+/* ---------------------------------------------------------------- levhalar */
+function levhaAc(html, hazir) {
+  $("#levha").innerHTML = html;
+  $("#levha").hidden = false; $("#tabaka").hidden = false;
+  if (hazir) hazir($("#levha"));
+  const ilk = $("#levha").querySelector("input, textarea, button");
+  if (ilk) setTimeout(() => ilk.focus(), 60);
+}
+function levhaKapat() { $("#levha").hidden = true; $("#tabaka").hidden = true; $("#levha").innerHTML = ""; }
+$("#tabaka").addEventListener("click", levhaKapat);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#levha").hidden) levhaKapat(); });
+
+function konuLevhasi(r) {
+  levhaAc(`<h3>Konuya ekle</h3>
+    <div class="kutu">${D.konular.map(k => `<button class="satir" data-konu="${k.id}">${esc(k.ad)}<span class="sag">${k.ids.includes(r.i) ? "✓ Ekli" : k.ids.length + " kayıt"}</span></button>`).join("")
+      || '<p class="aciklama" style="padding:12px">Henüz konu yok. Aşağıdan ilk konuyu oluşturun.</p>'}</div>
+    <div class="arama-kutu" style="margin:12px 0"><input id="yeni-konu" placeholder="Yeni konu adı (ör. Ankara Paleolitiği)" enterkeyhint="done"></div>
+    <button class="buyuk-dugme" id="konu-olustur">Konuyu oluştur ve ekle</button>`, lv => {
+    lv.querySelectorAll("[data-konu]").forEach(b => b.onclick = () => {
+      const k = D.konular.find(x => x.id === b.dataset.konu);
+      if (k.ids.includes(r.i)) { k.ids = k.ids.filter(x => x !== r.i); kopyaTemizle(r.i); bildir(`"${k.ad}" konusundan çıkarıldı`); }
+      else { kopyala(r); k.ids.unshift(r.i); bildir(`"${k.ad}" konusuna eklendi`); }
+      kaydet(); levhaKapat();
+    });
+    const olustur = () => {
+      const ad = lv.querySelector("#yeni-konu").value.trim();
+      if (!ad) { bildir("Konuya bir ad verin"); return; }
+      kopyala(r);
+      D.konular.push({ id: "k" + Date.now().toString(36), ad, not: "", ids: [r.i] });
+      kaydet(); levhaKapat(); bildir(`"${ad}" konusu oluşturuldu`);
+    };
+    lv.querySelector("#konu-olustur").onclick = olustur;
+    lv.querySelector("#yeni-konu").addEventListener("keydown", e => { if (e.key === "Enter") olustur(); });
+  });
+}
+
+function notLevhasi(r, sonra) {
+  levhaAc(`<h3>Not</h3><p class="aciklama" style="margin:-6px 0 10px">${esc(baslikGoster(r))}</p>
+    <textarea class="not-alani" id="not-metni" placeholder="Bu kayıtla ilgili notunuz…">${esc(D.notlar[r.i] || "")}</textarea>
+    <p style="display:flex;gap:8px;margin:12px 0 0"><button class="buyuk-dugme" id="not-kaydet">Notu kaydet</button></p>
+    ${D.notlar[r.i] ? '<p style="text-align:center"><button class="ikincil-dugme" id="not-sil">Notu sil</button></p>' : ""}`, lv => {
+    lv.querySelector("#not-kaydet").onclick = () => {
+      const m = lv.querySelector("#not-metni").value.trim();
+      if (m) { kopyala(r); D.notlar[r.i] = m; } else { delete D.notlar[r.i]; kopyaTemizle(r.i); }
+      kaydet(); levhaKapat(); bildir(m ? "Not kaydedildi" : "Not silindi"); sonra && sonra();
+    };
+    const sil = lv.querySelector("#not-sil");
+    if (sil) sil.onclick = () => { delete D.notlar[r.i]; kopyaTemizle(r.i); kaydet(); levhaKapat(); bildir("Not silindi"); sonra && sonra(); };
+  });
+}
+
+/* ---------------------------------------------------------------- kitaplık */
+function kayitlarDen(ids) { return ids.map(id => DIZIN.get(id) || D.kayitlar[id]).filter(Boolean); }
+
+function sayfaKitaplik() {
+  const notlu = Object.keys(D.notlar);
+  $("#sayfa").innerHTML = `
+    <div class="grup"><h3>Toplananlar</h3><div class="kutu">
+      <a class="satir" href="#favoriler">★ Favoriler<span class="sag">${D.fav.length}</span></a>
+      <a class="satir" href="#notlar">Notlu kayıtlar<span class="sag">${notlu.length}</span></a>
+      <a class="satir" href="#kaynakca">Kaynakçam (APA 7)<span class="sag">${D.kaynakca.length}</span></a>
+    </div></div>
+    <div class="grup"><h3>Konular</h3><div class="kutu">
+      ${D.konular.map(k => `<a class="satir" href="#konu/${k.id}">${esc(k.ad)}<span class="sag">${k.ids.length}</span></a>`).join("")
+        || '<p class="aciklama" style="padding:12px 14px">Bir kaydın ayrıntısında "Konuya ekle"ye dokunarak tez bölümlerinize ya da araştırma başlıklarınıza göre kayıt toplayabilirsiniz.</p>'}
+    </div></div>`;
+}
+
+function sayfaListe(ids, bos, secenek = {}) {
+  const k = kayitlarDen(ids);
+  $("#sayfa").innerHTML = k.length ? `<ul class="liste" style="margin-top:8px">${k.map(r => satirHtml(r, secenek)).join("")}</ul>` : bos;
+}
+
+function sayfaKonu(id) {
+  const k = D.konular.find(x => x.id === id);
+  if (!k) { location.hash = "#kitaplik"; return; }
+  $("#baslik").textContent = k.ad;
+  const liste = kayitlarDen(k.ids);
+  $("#sayfa").innerHTML = `<div class="grup"><h3>Konu notu</h3>
+      <textarea class="not-alani" id="konu-not" placeholder="Bu konuyla ilgili düşünceleriniz, yapılacaklar…">${esc(k.not)}</textarea>
+      <p class="aciklama">Yazdıkça kaydedilir.</p></div>
+    <div class="grup"><h3>${liste.length} kayıt</h3></div>
+    ${liste.length ? `<ul class="liste">${liste.map(r => satirHtml(r)).join("")}</ul>` : bosHtml("Bu konu boş", "Bir kaydın ayrıntısında \"Konuya ekle\"ye dokunun.")}
+    <div class="grup" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="ikincil-dugme" id="konu-kaynakca">Kayıtları kaynakçaya ekle</button>
+      <button class="ikincil-dugme" id="konu-adlandir">Yeniden adlandır</button>
+      <button class="ikincil-dugme" id="konu-sil">Konuyu sil</button></div>`;
+  let zaman;
+  $("#konu-not").addEventListener("input", e => { clearTimeout(zaman); zaman = setTimeout(() => { k.not = e.target.value; kaydet(); }, 300); });
+  $("#konu-kaynakca").onclick = () => {
+    let n = 0;
+    for (const r of liste) if (!D.kaynakca.includes(r.i)) { D.kaynakca.push(r.i); n++; }
+    kaydet(); bildir(n ? `${n} kayıt kaynakçaya eklendi` : "Hepsi zaten kaynakçada");
+  };
+  $("#konu-adlandir").onclick = () => {
+    const ad = prompt("Konunun yeni adı", k.ad);
+    if (ad && ad.trim()) { k.ad = ad.trim(); kaydet(); rota(); }
+  };
+  $("#konu-sil").onclick = () => {
+    if (!confirm(`"${k.ad}" konusu silinsin mi? Kayıtlar silinmez, yalnızca konu kaldırılır.`)) return;
+    D.konular = D.konular.filter(x => x !== k); k.ids.forEach(kopyaTemizle); kaydet(); history.back();
+  };
+}
+
+/* ---------------------------------------------------------------- kaynakça */
+function yazarlarListesi(r) {
+  if (r.ku && r.ku.yazarlar && r.ku.yazarlar.length) return r.ku.yazarlar.map(([soyad, ad]) => ({ soyad, ad }));
+  return (r.y || "").split(";").map(s => s.trim()).filter(Boolean).map(t => {
+    if (t.includes(",")) { const [s, a] = t.split(","); return { soyad: s.trim(), ad: (a || "").trim() }; }
+    const p = t.split(/\s+/); return { soyad: p.pop(), ad: p.join(" ") };
+  });
+}
+const basHarf = ad => (ad || "").split(/[\s-]+/).filter(Boolean).map(p => p[0].toLocaleUpperCase("tr") + ".").join(" ");
+function apaParcalar(r) {
+  if (r.a) return null;
+  const y = yazarlarListesi(r).map(a => a.ad ? `${a.soyad}, ${basHarf(a.ad)}` : a.soyad);
+  const yazar = y.length <= 1 ? (y[0] || "") : y.length === 2 ? `${y[0]}, & ${y[1]}` : `${y.slice(0, -1).join(", ")}, & ${y[y.length - 1]}`;
+  const yil = (r.t || "").slice(0, 4) || "t.y.";
+  const ku = r.ku || {};
+  const doi = r.d ? `https://doi.org/${r.d.replace(/^https?:\/\/doi\.org\//, "")}` : r.u;
+  if (r.k === "Tez") return [[`${yazar} (${yil}). `, 0], [r.b.replace(/\.$/, ""), 1], [` [${ku.tez_turu === "Doktora" ? "Doktora tezi" : "Yüksek lisans tezi"}${ku.universite || r.w ? ", " + (ku.universite || r.w) : ""}]. `, 0], [doi || "", 0]];
+  if (r.k === "Makale") {
+    const p = [[`${yazar} (${yil}). ${r.b.replace(/\.$/, "")}. `, 0]];
+    if (ku.yayin || r.w) { p.push([ku.yayin || r.w, 1]); if (ku.cilt) { p.push([", ", 0]); p.push([ku.cilt, 1]); } if (ku.sayi) p.push([`(${ku.sayi})`, 0]); if (ku.sayfa) p.push([`, ${ku.sayfa}`, 0]); p.push([". ", 0]); }
+    p.push([doi || "", 0]); return p;
+  }
+  const t = (r.t || "").split("-").map(Number);
+  const tarih = t[1] ? `${t[0]}, ${t[2] ? t[2] + " " : ""}${AYLAR[t[1] - 1]}` : yil;
+  return yazar ? [[`${yazar} (${tarih}). `, 0], [r.b, 1], [`. ${r.w || r.s}. ${r.u}`, 0]] : [[r.b, 1], [` (${tarih}). ${r.w || r.s}. ${r.u}`, 0]];
+}
+function apaHtml(r) { const p = apaParcalar(r); return p ? p.map(([m, i]) => i ? `<i>${esc(m)}</i>` : esc(m)).join("") : r.a; }
+function apaDuz(r) { const d = document.createElement("div"); d.innerHTML = apaHtml(r); return d.textContent; }
+function apaSirala(liste) { return liste.slice().sort((a, b) => apaDuz(a).localeCompare(apaDuz(b), "tr")); }
+
+function ris(liste) {
+  return liste.map(r => {
+    const tur = r.k === "Makale" ? "JOUR" : r.k === "Tez" ? "THES" : "ELEC";
+    const s = [`TY  - ${tur}`, ...yazarlarListesi(r).map(a => `AU  - ${a.soyad}${a.ad ? ", " + a.ad : ""}`), `TI  - ${r.b}`];
+    if (r.t) s.push(`PY  - ${r.t.slice(0, 4)}`);
+    const ku = r.ku || {};
+    if (r.k === "Makale" && (ku.yayin || r.w)) s.push(`JO  - ${ku.yayin || r.w}`);
+    if (ku.cilt) s.push(`VL  - ${ku.cilt}`); if (ku.sayi) s.push(`IS  - ${ku.sayi}`);
+    if (r.k === "Tez" && (ku.universite || r.w)) s.push(`PB  - ${ku.universite || r.w}`);
+    if (r.d) s.push(`DO  - ${r.d}`);
+    if (r.u) s.push(`UR  - ${r.u}`);
+    if (r.o) s.push(`AB  - ${r.o.replace(/\s+/g, " ")}`);
+    s.push("ER  - ");
+    return s.join("\r\n");
+  }).join("\r\n\r\n");
+}
+function bibtex(liste) {
+  const kul = new Set();
+  return liste.map(r => {
+    const y = yazarlarListesi(r);
+    let anahtar = katla((y[0] || {}).soyad || "kayit").replace(/[^a-z0-9]/g, "") + ((r.t || "").slice(0, 4) || "ty");
+    while (kul.has(anahtar)) anahtar += "a"; kul.add(anahtar);
+    const tur = r.k === "Makale" ? "article" : r.k === "Tez" ? (r.ku && r.ku.tez_turu === "Doktora" ? "phdthesis" : "mastersthesis") : "online";
+    const a = { author: y.map(x => `${x.soyad}${x.ad ? ", " + x.ad : ""}`).join(" and "), title: r.b, year: (r.t || "").slice(0, 4) };
+    if (tur === "article") a.journal = (r.ku && r.ku.yayin) || r.w;
+    if (tur.endsWith("thesis")) a.school = (r.ku && r.ku.universite) || r.w;
+    if (r.d) a.doi = r.d; if (r.u) a.url = r.u;
+    return `@${tur}{${anahtar},\n` + Object.entries(a).filter(([, v]) => v).map(([k, v]) => `  ${k} = {${String(v).replace(/[{}]/g, "")}}`).join(",\n") + "\n}";
+  }).join("\n\n");
+}
+function dosyaIndir(ad, icerik, tur) {
+  const blob = new Blob([icerik], { type: tur });
+  const dosya = new File([blob], ad, { type: tur });
+  if (navigator.canShare && navigator.canShare({ files: [dosya] })) {
+    navigator.share({ files: [dosya], title: ad }).catch(() => {});
+    return;
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = ad;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+function sayfaKaynakca() {
+  const liste = apaSirala(kayitlarDen(D.kaynakca));
+  $("#sayfa").innerHTML = `
+    <div class="grup" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="ikincil-dugme" id="kc-kopyala" ${liste.length ? "" : "disabled"}>Tümünü kopyala</button>
+      <button class="ikincil-dugme" id="kc-ris" ${liste.length ? "" : "disabled"}>RIS (Zotero, Mendeley)</button>
+      <button class="ikincil-dugme" id="kc-bib" ${liste.length ? "" : "disabled"}>BibTeX</button>
+      <button class="ikincil-dugme" id="kc-doi">DOI ile ekle</button>
+    </div>
+    ${liste.length ? `<div class="grup"><h3>APA 7, alfabetik</h3>${liste.map(r => `
+      <div class="kunye" data-id="${esc(r.i)}">${apaHtml(r)}
+        <div style="margin-top:6px;display:flex;gap:14px;font-size:.8rem"><a href="#k/${encodeURIComponent(r.i)}">Ayrıntı</a>
+        <a href="#" data-cikar="${esc(r.i)}">Kaynakçadan çıkar</a></div></div>`).join("")}</div>`
+      : bosHtml("Kaynakçanız boş", "Bir yayının ayrıntısında \"Kaynakça\"ya dokunun ya da DOI ile ekleyin.")}`;
+  if (liste.length) {
+    $("#kc-kopyala").onclick = () => panoya(liste.map(apaDuz).join("\n\n"), `${liste.length} künye kopyalandı`);
+    $("#kc-ris").onclick = () => dosyaIndir("kaynakca.ris", ris(liste), "application/x-research-info-systems");
+    $("#kc-bib").onclick = () => dosyaIndir("kaynakca.bib", bibtex(liste), "application/x-bibtex");
+  }
+  $("#kc-doi").onclick = doiLevhasi;
+  $("#sayfa").querySelectorAll("[data-cikar]").forEach(a => a.onclick = e => {
+    e.preventDefault(); const id = a.dataset.cikar;
+    D.kaynakca = D.kaynakca.filter(x => x !== id); kopyaTemizle(id); kaydet(); rota();
+  });
+}
+
+function doiLevhasi() {
+  levhaAc(`<h3>DOI ile ekle</h3>
+    <div class="arama-kutu" style="margin:0 0 12px"><input id="doi" placeholder="10.xxxx/… ya da doi.org bağlantısı" inputmode="url" autocapitalize="off"></div>
+    <button class="buyuk-dugme" id="doi-ekle">Künyeyi getir ve ekle</button>
+    <p class="aciklama">Künye Crossref'ten alınır. DergiPark makalelerinin çoğunda DOI vardır.</p>`, lv => {
+    lv.querySelector("#doi-ekle").onclick = async () => {
+      const doi = lv.querySelector("#doi").value.trim().replace(/^https?:\/\/(dx\.)?doi\.org\//i, "");
+      if (!/^10\.\S+\/\S+/.test(doi)) { bildir("Geçerli bir DOI yazın (10. ile başlar)"); return; }
+      bildir("Crossref'e soruluyor…");
+      try {
+        const j = await (await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`)).json();
+        const m = j.message;
+        const parca = ((m.issued || {})["date-parts"] || [[]])[0];
+        const r = {
+          i: "doi-" + doi.toLowerCase(), k: /thesis|dissertation/.test(m.type) ? "Tez" : "Makale", s: "Crossref",
+          b: (m.title || [""])[0], y: (m.author || []).map(a => a.family ? `${a.family}, ${a.given || ""}` : a.name).join("; "),
+          w: (m["container-title"] || [""])[0], t: parca.filter(Boolean).map(n => String(n).padStart(2, "0")).join("-"),
+          u: `https://doi.org/${doi}`, d: doi, o: (m.abstract || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+          e: [], l: "", g: new Date().toISOString(),
+          ku: { yazarlar: (m.author || []).map(a => [a.family || a.name || "", a.given || ""]), yayin: (m["container-title"] || [""])[0],
+                cilt: m.volume || "", sayi: m.issue || "", sayfa: m.page || "" },
+        };
+        D.kayitlar[r.i] = r; DIZIN.set(r.i, r);
+        if (!D.kaynakca.includes(r.i)) D.kaynakca.push(r.i);
+        kaydet(); levhaKapat(); bildir("Kaynakçaya eklendi"); rota();
+      } catch (e) { bildir("Bu DOI Crossref'te bulunamadı ya da bağlantı yok."); }
+    };
+  });
+}
+
+/* ---------------------------------------------------------------- ayarlar */
+const iOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const kurulu = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+function kurulumIpucuHtml() {
+  if (kurulu() || !D.kurulumIpucu) return "";
+  const metin = iOS
+    ? "Uygulama gibi kullanmak için Safari'de Paylaş düğmesine, sonra “Ana Ekrana Ekle”ye dokunun."
+    : kurulumOlayi ? "" : "Uygulama gibi kullanmak için tarayıcı menüsünden “Ana ekrana ekle”yi seçin.";
+  return `<div class="grup"><div class="kutu" style="padding:12px 14px">
+    ${kurulumOlayi ? `<button class="buyuk-dugme" id="kur">Ana ekrana ekle</button>` : `<p style="margin:0">${metin}</p>`}
+    <p style="margin:8px 0 0;text-align:right"><a href="#" id="ipucu-kapat" style="font-size:.85rem">Bir daha gösterme</a></p></div></div>`;
+}
+document.addEventListener("click", async e => {
+  if (e.target.id === "ipucu-kapat") { e.preventDefault(); D.kurulumIpucu = false; kaydet(); rota(); }
+  if (e.target.id === "kur" && kurulumOlayi) { kurulumOlayi.prompt(); await kurulumOlayi.userChoice; kurulumOlayi = null; rota(); }
+});
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); kurulumOlayi = e; if (location.hash === "#bugun" || !location.hash) rota(true); });
+
+function sayfaAyarlar() {
+  const bildirimDestek = "Notification" in window && "serviceWorker" in navigator;
+  $("#sayfa").innerHTML = `
+    <div class="grup"><h3>Görünüm</h3><div class="kutu">
+      <label class="satir">Tema<select id="tema"><option value="oto">Telefona uy</option><option value="acik">Açık</option><option value="koyu">Koyu</option></select></label>
+      <label class="satir">Toprak rengi<select id="palet"><option value="kum">Kum</option><option value="lacivert">Lacivert</option><option value="zeytin">Zeytin</option><option value="murdum">Mürdüm</option></select></label>
+      <label class="satir">Yazı boyutu<select id="yazi"><option value="0.9">Küçük</option><option value="1">Normal</option><option value="1.12">Büyük</option><option value="1.25">Çok büyük</option></select></label>
+    </div></div>
+    <div class="grup"><h3>Bildirimler</h3><div class="kutu">
+      <label class="satir">Yeni kayıt gelince haber ver<input type="checkbox" class="anahtar" id="bildirim-ac" ${D.bildirim && bildirimDestek && Notification.permission === "granted" ? "checked" : ""} ${bildirimDestek ? "" : "disabled"}></label>
+    </div><p class="aciklama">${bildirimDestek
+      ? (iOS ? "iPhone'da bildirimler yalnızca uygulama ana ekrana eklendiyse çalışır (iOS 16.4 ve sonrası). Uygulama simgesindeki sayı yeni kayıtları gösterir."
+             : "Android'de uygulama ana ekrana eklendiğinde Chrome, bülteni arka planda günde birkaç kez yoklayıp yeni kayıt varsa bildirir.")
+      : "Bu tarayıcı bildirimleri desteklemiyor."}</p></div>
+    <div class="grup"><h3>Bülten</h3><div class="kutu">
+      <a class="satir" href="#durum">Kaynakların durumu<span class="sag">${esc(saatYaz(VERI.guncelleme))}</span></a>
+      <button class="satir" id="yenile">Şimdi yenile</button>
+    </div><p class="aciklama">Kayıtlar her gün 06.17, 12.17, 18.17 ve 00.17'de GitHub'da toplanır: OpenAlex, Crossref, DergiPark, Google Haberler ve Bundle'daki haber siteleri.</p></div>
+    <div class="grup"><h3>Verileriniz</h3><div class="kutu">
+      <button class="satir" id="yedek-al">Yedeği dışa aktar<span class="sag">${D.fav.length + D.kaynakca.length + Object.keys(D.notlar).length} öge</span></button>
+      <label class="satir" style="cursor:pointer">Yedeği içe aktar<input type="file" id="yedek-yukle" accept="application/json,.json" hidden></label>
+    </div><p class="aciklama">Favoriler, konular, notlar ve kaynakça yalnızca bu telefonda tutulur. Telefon değiştirirken yedeği dışa aktarıp yenisine yükleyin.</p></div>
+    <div class="grup"><h3>Hakkında</h3><div class="kutu">
+      <div class="satir">Harrix Arkeoloji Bülteni<span class="sag">${SURUM}</span></div>
+    </div></div>`;
+  const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
+  sec("tema", D.tema, v => D.tema = v);
+  sec("palet", D.palet, v => D.palet = v);
+  sec("yazi", D.yazi, v => D.yazi = Number(v));
+  $("#yenile").onclick = async () => { bildir("Yenileniyor…"); if (await veriYukle(true)) bildir(`Bülten ${saatYaz(VERI.guncelleme)} tarihli`); };
+  $("#bildirim-ac").onchange = async e => {
+    if (e.target.checked) {
+      const izin = await Notification.requestPermission();
+      if (izin !== "granted") { e.target.checked = false; bildir("Bildirim izni verilmedi. Telefon ayarlarından açabilirsiniz."); return; }
+      D.bildirim = true; await arkaPlanKaydi();
+      bildir("Yeni kayıtlar için bildirim açık");
+    } else D.bildirim = false;
+    kaydet();
+  };
+  $("#yedek-al").onclick = () => dosyaIndir(`harrix-bulten-yedek-${new Date().toISOString().slice(0, 10)}.json`,
+    JSON.stringify({ uygulama: "harrix-bulten", surum: 1, fav: D.fav, notlar: D.notlar, konular: D.konular, kaynakca: D.kaynakca, kayitlar: D.kayitlar, okundu: D.okundu }), "application/json");
+  $("#yedek-yukle").onchange = async e => {
+    try {
+      const y = JSON.parse(await e.target.files[0].text());
+      if (y.uygulama !== "harrix-bulten") throw new Error();
+      D.fav = [...new Set([...D.fav, ...(y.fav || [])])];
+      D.kaynakca = [...new Set([...D.kaynakca, ...(y.kaynakca || [])])];
+      Object.assign(D.notlar, y.notlar || {}); Object.assign(D.kayitlar, y.kayitlar || {}); Object.assign(D.okundu, y.okundu || {});
+      for (const k of y.konular || []) if (!D.konular.some(x => x.id === k.id)) D.konular.push(k);
+      for (const id in D.kayitlar) if (!DIZIN.has(id)) DIZIN.set(id, D.kayitlar[id]);
+      kaydet(); bildir("Yedek yüklendi"); rota();
+    } catch (err) { bildir("Bu dosya bir Bülten yedeği değil."); }
+  };
+}
+
+async function sayfaDurum() {
+  $("#sayfa").innerHTML = bosHtml("Yükleniyor", "");
+  try {
+    const d = await (await fetch("veri/durum.json", { cache: "no-cache" })).json();
+    const sirali = d.kaynaklar.slice().sort((a, b) => (!!b.hata - !!a.hata) || b.adet - a.adet);
+    $("#sayfa").innerHTML = `<p class="ozet">Son toplama ${esc(saatYaz(d.guncelleme))}: ${d.kaynak_sayisi} kaynak tarandı, <b>${d.yeni} yeni kayıt</b> geldi${d.hatali_kaynak ? `, ${d.hatali_kaynak} kaynağa ulaşılamadı` : ""}.</p>
+      <div class="grup"><div class="kutu">${sirali.map(s => `<div class="satir" style="align-items:flex-start">
+        <span style="min-width:0">${esc(s.ad)}${s.hata ? `<br><small style="color:var(--rapor)">${esc(s.hata)}</small>` : ""}</span>
+        <span class="sag">${s.hata ? "hata" : s.adet}</span></div>`).join("")}</div></div>`;
+  } catch (e) { $("#sayfa").innerHTML = bosHtml("Durum bilgisi alınamadı", "İnternet bağlantınızı kontrol edin."); }
+}
+
+/* Android Chrome: kurulu uygulama arka planda bülteni yoklar (Periodic Background Sync). */
+async function arkaPlanKaydi() {
+  try {
+    const kayit = await navigator.serviceWorker.ready;
+    if ("periodicSync" in kayit) {
+      const izin = await navigator.permissions.query({ name: "periodic-background-sync" });
+      if (izin.state === "granted") await kayit.periodicSync.register("bulten-yokla", { minInterval: 6 * 3600 * 1000 });
+    }
+    navigator.serviceWorker.controller && navigator.serviceWorker.controller.postMessage({ tur: "esik", deger: VERI.guncelleme });
+  } catch (e) { /* desteklemeyen tarayıcılar sessizce geçer */ }
+}
+
+/* ---------------------------------------------------------------- yana kaydırma: favori */
+function kaydirmaBagla() {
+  document.querySelectorAll(".kayit-ic").forEach(el => {
+    if (el.dataset.bagli) return; el.dataset.bagli = 1;
+    let x0 = 0, y0 = 0, dx = 0, aktif = false, yatay = null;
+    el.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; aktif = true; yatay = null; }, { passive: true });
+    el.addEventListener("touchmove", e => {
+      if (!aktif) return;
+      const ddx = e.touches[0].clientX - x0, ddy = e.touches[0].clientY - y0;
+      if (yatay === null && (Math.abs(ddx) > 8 || Math.abs(ddy) > 8)) yatay = Math.abs(ddx) > Math.abs(ddy) && ddx < 0;
+      if (!yatay) return;
+      dx = Math.max(-140, Math.min(0, ddx));
+      el.style.transition = "none"; el.style.transform = `translateX(${dx}px)`;
+    }, { passive: true });
+    el.addEventListener("touchend", () => {
+      aktif = false; el.style.transition = ""; el.style.transform = "";
+      if (yatay && dx < -90) {
+        const r = DIZIN.get(el.closest(".kayit").dataset.id);
+        if (r) { titres(14); favDegistir(r); setTimeout(() => rota(true), 200); }
+      }
+    });
+    el.addEventListener("click", e => { if (yatay && Math.abs(dx) > 6) e.preventDefault(); });
+  });
+}
+
+/* ---------------------------------------------------------------- yönlendirme */
+const UST = { bugun: "Bugün", akis: "Yayınlar", kazim: "Kazım", kitaplik: "Kitaplık", ayarlar: "Ayarlar",
+  favoriler: "Favoriler", notlar: "Notlu kayıtlar", kaynakca: "Kaynakçam", durum: "Kaynakların durumu", ara: "Ara", konu: "Konu", k: "" };
+const ALT_SAYFA = { favoriler: "kitaplik", notlar: "kitaplik", kaynakca: "kitaplik", konu: "kitaplik", durum: "ayarlar", k: null, ara: "akis" };
+let sonSekme = "bugun";
+
+function rota(kaydirmayiKoru) {
+  const y = window.scrollY;
+  const h = decodeURIComponent(location.hash.slice(1)) || "bugun";
+  const [ad, ...kalan] = h.split("/");
+  const arg = kalan.join("/");
+  const sekme = ad in ALT_SAYFA ? (ALT_SAYFA[ad] || sonSekme) : ad;
+  if (!(ad in ALT_SAYFA)) sonSekme = sekme;
+  document.querySelectorAll("#sekmeler a").forEach(a => {
+    if (a.dataset.sekme === sekme) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  $("#geri").hidden = !(ad in ALT_SAYFA);
+  $("#baslik").textContent = UST[ad] ?? "Bülten";
+  $("#ara-ac").hidden = ad !== "bugun" && ad !== "akis" && ad !== "kazim";
+  levhaKapat();
+  if (ad === "bugun") sayfaBugun();
+  else if (ad === "akis") sayfaAkis(VERI.kayitlar, "Yayınlar");
+  else if (ad === "ara") { sayfaAkis(VERI.kayitlar, "Ara", { odakla: !kaydirmayiKoru }); }
+  else if (ad === "kazim") sayfaKazim();
+  else if (ad === "kitaplik") sayfaKitaplik();
+  else if (ad === "favoriler") sayfaListe(D.fav, bosHtml("Favori yok", "Bir kaydı sola kaydırarak ya da ayrıntısındaki yıldıza dokunarak favorilere ekleyin."));
+  else if (ad === "notlar") sayfaListe(Object.keys(D.notlar), bosHtml("Not yok", "Bir kaydın ayrıntısında \"Not\"a dokunun."), { not: true });
+  else if (ad === "kaynakca") sayfaKaynakca();
+  else if (ad === "konu") sayfaKonu(arg);
+  else if (ad === "ayarlar") sayfaAyarlar();
+  else if (ad === "durum") sayfaDurum();
+  else if (ad === "k") sayfaAyrinti(arg);
+  else { location.hash = "#bugun"; return; }
+  kaydirmaBagla();
+  window.scrollTo(0, kaydirmayiKoru ? y : 0);
+}
+
+$("#geri").addEventListener("click", () => { if (history.length > 1) history.back(); else location.hash = "#" + sonSekme; });
+$("#ara-ac").addEventListener("click", () => { location.hash = "#ara"; });
+window.addEventListener("hashchange", () => rota());
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState === "visible") {
+    const onceki = VERI.guncelleme;
+    if (await veriYukle(true) && VERI.guncelleme !== onceki) { bildir(`${VERI.yeni_sayisi} yeni kayıt geldi`); rota(true); }
+  }
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", temaUygula);
+
+/* ---------------------------------------------------------------- başlangıç */
+(async function baslat() {
+  temaUygula();
+  const acilis = $("#acilis");
+  const sure = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 950;
+  const bekle = new Promise(r => setTimeout(r, sure));
+  await Promise.all([veriYukle(true), sozleriYukle(), bekle]);
+  rota();
+  acilis.classList.add("bitti");
+  setTimeout(() => acilis.remove(), 600);
+  if ("serviceWorker" in navigator) {
+    try { await navigator.serviceWorker.register("sw.js"); if (D.bildirim) arkaPlanKaydi(); } catch (e) {}
+  }
+})();

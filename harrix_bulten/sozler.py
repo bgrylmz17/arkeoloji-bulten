@@ -1,0 +1,58 @@
+"""Günün motivasyon sözleri — arkeologlar için.
+
+Sözler bu uygulama için yazıldı; istediğiniz kadar ekleyip çıkarabilirsiniz.
+Her gün yılın gününe göre bir söz seçilir, gün içinde değişmez.
+"""
+from __future__ import annotations
+import datetime as dt
+import random
+
+SOZLER = [
+    "Toprak sabırlıdır; binlerce yıl bekledi, senin bir gün daha dikkatli olmanı da bekler.",
+    "Her açma bir soru, her tabaka bir cevaptır. Bugün iyi sorular sor.",
+    "Bir yonga bile anlatır: kim, nasıl ve neden vurdu. Dinlemeyi bil.",
+    "Kazı defteri, gelecekteki arkeoloğa yazılmış bir mektuptur. Okunaklı yaz.",
+    "Bulunmayan da bir bulgudur; boş açma, yanlış hipotezi eler.",
+    "Bugün kazdığın santimetre, yarın bir makalenin paragrafı olacak.",
+    "Geçmişi anlamak için acele etme; tabakalar da yavaş oluştu.",
+    "Mala küçük, ama açtığı pencere on bin yıl genişliğinde.",
+    "Belgelenmeyen buluntu ikinci kez kaybolmuş sayılır.",
+    "Bir çekirdeğin üzerindeki her negatif, bir kararın izidir. Senin kararların da iz bırakır.",
+    "Arkeoloji sabır, gözlem ve merakın kesişim noktasıdır. Bugün üçünü de yanına al.",
+    "Ölçek çubuğunu koymayı unutma; gerçek büyüklük her zaman önemlidir.",
+    "En değerli buluntu bazen bir eser değil, doğru bağlamdır.",
+    "Elek sabrın aletidir; küçük olan önemsiz değildir.",
+    "Tez de bir kazı gibidir: önce yüzey temizliği, sonra tabaka tabaka derinleşme.",
+    "Okuduğun her makale, kendi buluntunu yorumlamak için bir karşılaştırma koleksiyonu.",
+    "Dünün insanı da plan yaptı, hata yaptı, yeniden denedi. Sen de dene.",
+    "Bir alet yapımcısı yüzlerce darbeyle şekil verdi; büyük işler küçük darbelerle biter.",
+    "Toprağın rengi değişiyorsa dur ve bak. Hayatta da öyle.",
+    "Arşiv de bir kazı alanıdır; tozunu almaktan çekinme.",
+    "Ekip olmadan kazı olmaz. Bugün birine teşekkür et.",
+    "Yeni bir veri, eski bir kesinliği sarsabilir. Buna sevinmeyi öğren.",
+    "Çizim yaparken gözün eğitilir; gözün eğitildikçe daha çok görürsün.",
+    "Her sezon sonu raporu, bir sonraki sezonun pusulasıdır.",
+    "Anadolu'nun her tepesi bir soru taşır; birini sen cevaplayabilirsin.",
+    "Merak kürektir, yöntem eleği; ikisi birlikte çalışınca buluntu gelir.",
+    "Kronoloji sabırla kurulur; tek bir tarih bütün resmi çizmez.",
+    "Bugün yazdığın bir sayfa, yarın okunacak bir kaynak olacak.",
+    "Geçmişe saygı, onu doğru kaydetmekle başlar.",
+    "Yorgunluk geçer, iyi belgelenmiş bir kesit kalır.",
+    "Hammaddeyi tanı, tekniği anlarsın; tekniği anla, insanı tanırsın.",
+    "En derin tabakaya ulaşmak için önce üsttekini dikkatle kaldırmak gerekir.",
+    "Bir buluntunun hikâyesi, onu bulanın dikkati kadar uzundur.",
+    "Hipotezini sev ama verine sadık kal.",
+    "Bugün bir şey öğrenmeden toprağı terk etme.",
+    "Arazi dersi verir, kütüphane anlamını; ikisini de ihmal etme.",
+    "Küçük bir yonga, büyük bir göçün izini taşıyabilir.",
+    "Kazı biter, merak bitmez.",
+    "Dikkatli bir göz, pahalı bir aletten daha çok şey bulur.",
+    "Geçmiş sessiz değildir; sadece sabırla dinleyeni bekler.",
+]
+
+
+def gunun_sozu(tarih: dt.date | None = None) -> str:
+    """Aynı gün hep aynı sözü döndürür."""
+    tarih = tarih or dt.date.today()
+    rastgele = random.Random(tarih.toordinal())
+    return rastgele.choice(SOZLER)
