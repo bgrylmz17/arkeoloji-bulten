@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.0.0";
+const SURUM = "1.1.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 const TUR_COGUL = { Makale: "Makaleler", Tez: "Tezler", Haber: "Haberler", Rapor: "Raporlar" };
@@ -16,6 +16,7 @@ const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz",
 const D = Object.assign({
   fav: [], okundu: {}, notlar: {}, konular: [], kaynakca: [], kayitlar: {},
   gorulen: "", tema: "oto", palet: "kum", yazi: 1, bildirim: false, kurulumIpucu: true,
+  uid: null, esitleme: 0, girisSoruldu: false,
 }, guvenliOku());
 
 function guvenliOku() {
@@ -24,6 +25,7 @@ function guvenliOku() {
 function kaydet() {
   try { localStorage.setItem(DEPO_ANAHTARI, JSON.stringify(D)); }
   catch (e) { bildir("Cihazda yer kalmadı; son değişiklik kaydedilemedi."); }
+  if (typeof hesapDegisti === "function") hesapDegisti();   // giriş yapıldıysa hesaba da yaz
 }
 /* Kişisel listelerde geçen kayıtların bir kopyası saklanır: bülten eski kayıtları silse de kaybolmasın. */
 function kopyala(r) { if (r && !D.kayitlar[r.i]) D.kayitlar[r.i] = r; }
@@ -107,13 +109,6 @@ function rozetGuncelle() {
   if ("setAppBadge" in navigator) {
     try { yeni ? navigator.setAppBadge(yeni) : navigator.clearAppBadge(); } catch (e) {}
   }
-  const kazim = VERI.kayitlar.filter(r => r.e.includes("kazim") && yeniMi(r)).length;
-  const sekme = $('#sekmeler a[data-sekme="kazim"]');
-  let rz = sekme.querySelector(".rozet");
-  if (kazim) {
-    if (!rz) { rz = document.createElement("span"); rz.className = "rozet"; sekme.appendChild(rz); }
-    rz.textContent = kazim;
-  } else if (rz) rz.remove();
 }
 
 /* ---------------------------------------------------------------- tema */
@@ -247,18 +242,6 @@ document.addEventListener("click", e => {
   if (e.target.id === "suzgec-sifirla") { Object.assign(S, { tur: "", dil: "", donem: "", arama: "" }); rota(); }
 });
 
-function sayfaKazim() {
-  const temel = VERI.kayitlar.filter(r => r.e.includes("kazim"));
-  if (!VERI.kazi) {
-    $("#sayfa").innerHTML = bosHtml("Kazı tanımlı değil",
-      "Kazınızın haberlerini görmek için GitHub'daki toplayici/ayar.json dosyasında 'kazi' alanına kazının adını yazın.");
-    return;
-  }
-  $("#sayfa").innerHTML = "";
-  sayfaAkis(temel, "Kazım", { bosBaslik: "Henüz haber yok", bosMetin: `${VERI.kazi} ile ilgili yeni bir haber, makale ya da tez çıktığında burada görünür.`, aramaYeri: `${VERI.kazi} kayıtlarında ara` });
-  $("#sayfa").insertAdjacentHTML("afterbegin", `<p class="ozet"><b>${esc(VERI.kazi)}</b> için toplanan haber, makale ve tezler.</p>`);
-}
-
 /* ---------------------------------------------------------------- ayrıntı */
 function sayfaAyrinti(id) {
   const r = DIZIN.get(id);
@@ -325,7 +308,7 @@ async function eylem(ad, r, ciz, goster) {
     else { kopyala(r); D.kaynakca.push(r.i); bildir("Kaynakçaya eklendi"); }
     kaydet(); ciz();
   }
-  else if (ad === "paylas") paylas({ title: baslikGoster(r), text: baslikGoster(r), url: r.u });
+  else if (ad === "paylas") paylasLevhasi(kayitPaylasimi(r));
   else if (ad === "kunye") panoya(apaDuz(r), "APA 7 künyesi kopyalandı");
 }
 
@@ -335,9 +318,41 @@ function favDegistir(r) {
   kaydet();
 }
 
-async function paylas(veri) {
-  if (navigator.share) { try { await navigator.share(veri); } catch (e) {} }
-  else panoya(`${veri.title}\n${veri.url}`, "Bağlantı kopyalandı");
+/* Paylaşım: WhatsApp, Telegram, X, e-posta, kopyala ve telefonun kendi paylaşım menüsü */
+function kayitPaylasimi(r) {
+  const yer = [r.w || r.s, tarihYaz(r.t)].filter(Boolean).join(", ");
+  const baslik = baslikGoster(r);
+  return { baslik, url: r.u, metin: `${baslik}${yer ? "\n" + yer : ""}` };
+}
+const PAYLAS_IKON = {
+  whatsapp: '<svg viewBox="0 0 24 24"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19.1z"/><path d="M9 8.5c.5 2.7 2.8 5 5.5 5.5l1-1.4-1.8-.9-.8.8a4.6 4.6 0 0 1-2-2l.8-.8-.9-1.8z"/></svg>',
+  telegram: '<svg viewBox="0 0 24 24"><path d="M21 4L3 11l6 2 2 6 3-4 5 4z"/><path d="M9 13l9-7"/></svg>',
+  x: '<svg viewBox="0 0 24 24"><path d="M4 4l16 16M20 4L4 20"/></svg>',
+  eposta: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+  kopyala: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>',
+  diger: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+};
+function paylasLevhasi({ baslik, url, metin }) {
+  const tam = url ? `${metin}\n${url}` : metin;
+  const e = encodeURIComponent;
+  const hedefler = [
+    ["whatsapp", "WhatsApp", `https://wa.me/?text=${e(tam)}`],
+    ["telegram", "Telegram", `https://t.me/share/url?url=${e(url || "")}&text=${e(metin)}`],
+    ["x", "X", `https://x.com/intent/post?text=${e(metin)}${url ? "&url=" + e(url) : ""}`],
+    ["eposta", "E-posta", `mailto:?subject=${e(baslik)}&body=${e(tam)}`],
+  ];
+  levhaAc(`<h3>Paylaş</h3>
+    <p class="aciklama" style="margin:-6px 0 12px">${esc(baslik)}</p>
+    <div class="paylas-izgara">
+      ${hedefler.map(([k, ad, u]) => `<a class="paylas-hedef" data-k="${k}" href="${esc(u)}" target="_blank" rel="noopener">${PAYLAS_IKON[k]}<span>${ad}</span></a>`).join("")}
+      <button class="paylas-hedef" id="pl-kopyala">${PAYLAS_IKON.kopyala}<span>Kopyala</span></button>
+      ${navigator.share ? `<button class="paylas-hedef" id="pl-diger">${PAYLAS_IKON.diger}<span>Diğer</span></button>` : ""}
+    </div>`, lv => {
+    lv.querySelectorAll("a.paylas-hedef").forEach(a => a.addEventListener("click", () => setTimeout(levhaKapat, 300)));
+    lv.querySelector("#pl-kopyala").onclick = () => { panoya(tam, "Kopyalandı"); levhaKapat(); };
+    const d = lv.querySelector("#pl-diger");
+    if (d) d.onclick = async () => { try { await navigator.share({ title: baslik, text: metin, url }); } catch (er) {} levhaKapat(); };
+  });
 }
 async function panoya(metin, mesaj) {
   try { await navigator.clipboard.writeText(metin); bildir(mesaj); }
@@ -450,11 +465,14 @@ function sayfaKonu(id) {
     <div class="grup"><h3>${liste.length} kayıt</h3></div>
     ${liste.length ? `<ul class="liste">${liste.map(r => satirHtml(r)).join("")}</ul>` : bosHtml("Bu konu boş", "Bir kaydın ayrıntısında \"Konuya ekle\"ye dokunun.")}
     <div class="grup" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="ikincil-dugme" id="konu-paylas">Paylaş</button>
       <button class="ikincil-dugme" id="konu-kaynakca">Kayıtları kaynakçaya ekle</button>
       <button class="ikincil-dugme" id="konu-adlandir">Yeniden adlandır</button>
       <button class="ikincil-dugme" id="konu-sil">Konuyu sil</button></div>`;
   let zaman;
   $("#konu-not").addEventListener("input", e => { clearTimeout(zaman); zaman = setTimeout(() => { k.not = e.target.value; kaydet(); }, 300); });
+  $("#konu-paylas").onclick = () => paylasLevhasi({ baslik: k.ad, url: "",
+    metin: `${k.ad}\n\n` + (k.not ? k.not + "\n\n" : "") + liste.map((r, i) => `${i + 1}. ${baslikGoster(r)}\n${r.u}`).join("\n\n") });
   $("#konu-kaynakca").onclick = () => {
     let n = 0;
     for (const r of liste) if (!D.kaynakca.includes(r.i)) { D.kaynakca.push(r.i); n++; }
@@ -545,6 +563,7 @@ function sayfaKaynakca() {
   const liste = apaSirala(kayitlarDen(D.kaynakca));
   $("#sayfa").innerHTML = `
     <div class="grup" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="ikincil-dugme" id="kc-paylas" ${liste.length ? "" : "disabled"}>Paylaş</button>
       <button class="ikincil-dugme" id="kc-kopyala" ${liste.length ? "" : "disabled"}>Tümünü kopyala</button>
       <button class="ikincil-dugme" id="kc-ris" ${liste.length ? "" : "disabled"}>RIS (Zotero, Mendeley)</button>
       <button class="ikincil-dugme" id="kc-bib" ${liste.length ? "" : "disabled"}>BibTeX</button>
@@ -557,6 +576,7 @@ function sayfaKaynakca() {
       : bosHtml("Kaynakçanız boş", "Bir yayının ayrıntısında \"Kaynakça\"ya dokunun ya da DOI ile ekleyin.")}`;
   if (liste.length) {
     $("#kc-kopyala").onclick = () => panoya(liste.map(apaDuz).join("\n\n"), `${liste.length} künye kopyalandı`);
+    $("#kc-paylas").onclick = () => paylasLevhasi({ baslik: "Kaynakça", url: "", metin: "Kaynakça (APA 7)\n\n" + liste.map(apaDuz).join("\n\n") });
     $("#kc-ris").onclick = () => dosyaIndir("kaynakca.ris", ris(liste), "application/x-research-info-systems");
     $("#kc-bib").onclick = () => dosyaIndir("kaynakca.bib", bibtex(liste), "application/x-bibtex");
   }
@@ -618,7 +638,7 @@ window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); kurulu
 
 function sayfaAyarlar() {
   const bildirimDestek = "Notification" in window && "serviceWorker" in navigator;
-  $("#sayfa").innerHTML = `
+  $("#sayfa").innerHTML = `${typeof hesapGrubuHtml === "function" ? hesapGrubuHtml() : ""}
     <div class="grup"><h3>Görünüm</h3><div class="kutu">
       <label class="satir">Tema<select id="tema"><option value="oto">Telefona uy</option><option value="acik">Açık</option><option value="koyu">Koyu</option></select></label>
       <label class="satir">Toprak rengi<select id="palet"><option value="kum">Kum</option><option value="lacivert">Lacivert</option><option value="zeytin">Zeytin</option><option value="murdum">Mürdüm</option></select></label>
@@ -641,6 +661,7 @@ function sayfaAyarlar() {
     <div class="grup"><h3>Hakkında</h3><div class="kutu">
       <div class="satir">Harrix Arkeoloji Bülteni<span class="sag">${SURUM}</span></div>
     </div></div>`;
+  if (typeof hesapGrubuBagla === "function") hesapGrubuBagla();
   const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
   sec("tema", D.tema, v => D.tema = v);
   sec("palet", D.palet, v => D.palet = v);
@@ -721,9 +742,9 @@ function kaydirmaBagla() {
 }
 
 /* ---------------------------------------------------------------- yönlendirme */
-const UST = { bugun: "Bugün", akis: "Yayınlar", kazim: "Kazım", kitaplik: "Kitaplık", ayarlar: "Ayarlar",
+const UST = { bugun: "Bugün", akis: "Yayınlar", kitaplik: "Kitaplık", ayarlar: "Ayarlar", giris: "Giriş",
   favoriler: "Favoriler", notlar: "Notlu kayıtlar", kaynakca: "Kaynakçam", durum: "Kaynakların durumu", ara: "Ara", konu: "Konu", k: "" };
-const ALT_SAYFA = { favoriler: "kitaplik", notlar: "kitaplik", kaynakca: "kitaplik", konu: "kitaplik", durum: "ayarlar", k: null, ara: "akis" };
+const ALT_SAYFA = { giris: "ayarlar", favoriler: "kitaplik", notlar: "kitaplik", kaynakca: "kitaplik", konu: "kitaplik", durum: "ayarlar", k: null, ara: "akis" };
 let sonSekme = "bugun";
 
 function rota(kaydirmayiKoru) {
@@ -738,18 +759,19 @@ function rota(kaydirmayiKoru) {
   });
   $("#geri").hidden = !(ad in ALT_SAYFA);
   $("#baslik").textContent = UST[ad] ?? "Bülten";
-  $("#ara-ac").hidden = ad !== "bugun" && ad !== "akis" && ad !== "kazim";
+  $("#ara-ac").hidden = ad !== "bugun" && ad !== "akis";
   levhaKapat();
   if (ad === "bugun") sayfaBugun();
   else if (ad === "akis") sayfaAkis(VERI.kayitlar, "Yayınlar");
   else if (ad === "ara") { sayfaAkis(VERI.kayitlar, "Ara", { odakla: !kaydirmayiKoru }); }
-  else if (ad === "kazim") sayfaKazim();
+  else if (ad === "kazim") { location.replace("#bugun"); return; }
   else if (ad === "kitaplik") sayfaKitaplik();
   else if (ad === "favoriler") sayfaListe(D.fav, bosHtml("Favori yok", "Bir kaydı sola kaydırarak ya da ayrıntısındaki yıldıza dokunarak favorilere ekleyin."));
   else if (ad === "notlar") sayfaListe(Object.keys(D.notlar), bosHtml("Not yok", "Bir kaydın ayrıntısında \"Not\"a dokunun."), { not: true });
   else if (ad === "kaynakca") sayfaKaynakca();
   else if (ad === "konu") sayfaKonu(arg);
   else if (ad === "ayarlar") sayfaAyarlar();
+  else if (ad === "giris") { if (typeof sayfaGiris === "function") sayfaGiris(); else location.replace("#ayarlar"); }
   else if (ad === "durum") sayfaDurum();
   else if (ad === "k") sayfaAyrinti(arg);
   else { location.hash = "#bugun"; return; }
@@ -775,6 +797,11 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", temaUygula
   const sure = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 950;
   const bekle = new Promise(r => setTimeout(r, sure));
   await Promise.all([veriYukle(true), sozleriYukle(), bekle]);
+  // ilk açılışta bir kez giriş ekranını göster (isteyen "Giriş yapmadan devam et" der)
+  if (!D.girisSoruldu && !D.uid && window.FIREBASE_AYAR && window.FIREBASE_AYAR.apiKey) {
+    D.girisSoruldu = true; kaydet();
+    history.replaceState(null, "", "#bugun"); location.hash = "#giris";
+  }
   rota();
   acilis.classList.add("bitti");
   setTimeout(() => acilis.remove(), 600);

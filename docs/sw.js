@@ -1,8 +1,8 @@
 /* Harrix Arkeoloji Bülteni — servis çalışanı
  * Uygulama dosyaları önbellekten (internetsiz açılır), bülten verisi önce ağdan, olmazsa önbellekten.
  * Android'de kurulu uygulama için arka planda yoklayıp yeni kayıt varsa bildirim gösterir. */
-const SURUM = "bulten-1.0.0";
-const KABUK = ["./", "index.html", "stil.css", "uygulama.js", "manifest.webmanifest",
+const SURUM = "bulten-1.1.0";
+const KABUK = ["./", "index.html", "stil.css", "uygulama.js", "hesap.js", "firebase-ayar.js", "manifest.webmanifest",
   "ikon/logo.svg", "ikon/ikon-192.png", "ikon/ikon-512.png", "ikon/apple-touch-icon.png", "ikon/favicon-64.png"];
 
 self.addEventListener("install", e => {
@@ -66,10 +66,9 @@ async function yokla() {
   await esikYaz(v.guncelleme);
   if (!yeniler.length) return;
   if (self.navigator.setAppBadge) self.navigator.setAppBadge(yeniler.length).catch(() => {});
-  const kazim = yeniler.filter(r => (r.e || []).includes("kazim"));
-  const ilk = (kazim[0] || yeniler[0]);
+  const ilk = yeniler[0];
   await self.registration.showNotification(
-    kazim.length ? `${v.kazi}: ${kazim.length} yeni kayıt` : `${yeniler.length} yeni arkeoloji kaydı`,
+    `${yeniler.length} yeni arkeoloji kaydı`,
     { body: (ilk.bt || ilk.b), icon: "ikon/ikon-192.png", badge: "ikon/favicon-64.png", tag: "bulten",
       data: { url: `./#k/${encodeURIComponent(ilk.i)}` } });
 }

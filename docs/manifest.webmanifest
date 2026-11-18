@@ -18,7 +18,6 @@
     { "src": "ikon/maskelenebilir-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Kazım", "url": "./#kazim", "icons": [{ "src": "ikon/ikon-192.png", "sizes": "192x192" }] },
     { "name": "Kaynakçam", "url": "./#kaynakca", "icons": [{ "src": "ikon/ikon-192.png", "sizes": "192x192" }] },
     { "name": "Ara", "url": "./#ara", "icons": [{ "src": "ikon/ikon-192.png", "sizes": "192x192" }] }
   ]
