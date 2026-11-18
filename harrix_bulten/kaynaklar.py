@@ -168,6 +168,33 @@ def _indir(url: str) -> bytes:
     return indir(url, api=("api." in url))[0]
 
 
+_HTML_VARLIK = {"nbsp": "&#160;", "rsquo": "&#8217;", "lsquo": "&#8216;", "rdquo": "&#8221;",
+                "ldquo": "&#8220;", "ndash": "&#8211;", "mdash": "&#8212;", "hellip": "&#8230;",
+                "laquo": "&#171;", "raquo": "&#187;", "copy": "&#169;", "reg": "&#174;", "deg": "&#176;"}
+
+
+def xml_coz(veri: bytes):
+    """XML'i çözer; bozuksa (HTML varlıkları, çıplak &, denetim karakterleri) onarıp yeniden dener."""
+    try:
+        return ET.fromstring(veri)
+    except ET.ParseError:
+        pass
+    metin = veri.decode("utf-8", "replace").lstrip("\ufeff \r\n\t")
+    if not metin.startswith("<"):
+        bas = metin.find("<")
+        metin = metin[bas:] if bas >= 0 else metin
+    if re.match(r"(?is)<!doctype html|<html", metin):
+        raise ValueError("akış yerine web sayfası döndü (bot koruması ya da adres değişmiş)")
+    metin = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", metin)
+    metin = re.sub(r"&([a-zA-Z]+);", lambda m: _HTML_VARLIK.get(m.group(1).lower(), m.group(0))
+                   if m.group(1) not in ("amp", "lt", "gt", "quot", "apos") else m.group(0), metin)
+    metin = re.sub(r"&(?!#?\w+;)", "&amp;", metin)
+    metin = re.sub(r"&([a-zA-Z]+);", lambda m: m.group(0) if m.group(1) in ("amp", "lt", "gt", "quot", "apos")
+                   else "", metin)
+    metin = re.sub(r"^<\?xml[^>]*\?>", "", metin.strip())
+    return ET.fromstring(metin.encode("utf-8"))
+
+
 def _kimlik(doi: str = "", url: str = "", baslik: str = "") -> str:
     anahtar = (doi or "").lower().replace("https://doi.org/", "").strip()
     if not anahtar:
@@ -322,7 +349,7 @@ def rss_oku(url: str, kaynak_adi: str, kavramlar, kategori: str = "Haber",
     baglam_gerekli="siki" -> genel haber sitesi (Hürriyet, NTV…): daha sıkı arkeoloji denetimi.
     Akış yazının tamamını veriyorsa (content:encoded) uygulama içi okuyucu için saklanır.
     """
-    kok = ET.fromstring(_indir(url))
+    kok = xml_coz(_indir(url))
     sinir = (dt.date.today() - dt.timedelta(days=gun)).isoformat()
     ogeler = [e for e in kok.iter() if _yerel(e.tag) in ("item", "entry")]
     # akışın dili: <language>tr-TR</language>, xml:lang ya da Google Haberler'in hl= parametresi

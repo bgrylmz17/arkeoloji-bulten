@@ -13,6 +13,9 @@ Doğrulama (18 Kasım 2026, tarayıcıdan): Arkeofili, ScienceDaily, Phys.org, L
 Archaeology Magazine, TRT Haber, Hürriyet, Milliyet, Sabah, NTV, CNN Türk, Habertürk, Cumhuriyet, Sözcü,
 Euronews akışları çalışıyor. Arkeonews ve HeritageDaily bot korumalı olabilir; onlar ve Arkeolojik Haber
 (akışı yok) ayrıca Google Haberler site sorgusuyla taranır.
+İlk bulut toplamasında (18 Kasım 2026) çalışmayan ve çıkarılan akışlar: Anadolu Ajansı Kültür, Gazete
+Oksijen, Notbir (404), Ekşi Şeyler (403), HeritageDaily (bağlantı kesiliyor), T24, İHA (akış değil);
+bunların haberleri Google Haberler site gruplarından gelir.
 
 Bir akış kapanır ya da adres değişirse toplayıcı onu atlar ve kaynak_durumu'na hata olarak yazar;
 diğerleri etkilenmez.
@@ -24,7 +27,6 @@ AKISLAR = [
     # --- doğrudan arkeoloji / tarih
     ("Arkeofili", "https://arkeofili.com/feed/", "arkeo", "tr"),
     ("Arkeonews", "https://arkeonews.net/feed/", "arkeo", "en"),
-    ("HeritageDaily", "https://www.heritagedaily.com/feed", "arkeo", "en"),
     ("ScienceDaily Arkeoloji", "https://www.sciencedaily.com/rss/fossils_ruins/archaeology.xml", "arkeo", "en"),
     ("Phys.org Arkeoloji", "https://phys.org/rss-feed/science-news/archaeology/", "arkeo", "en"),
     ("Live Science", "https://www.livescience.com/feeds.xml", "genel", "en"),
@@ -34,7 +36,6 @@ AKISLAR = [
     # --- Bundle'daki Türkçe yayıncılar (arkeoloji haberleri süzülür)
     ("TRT Haber Kültür-Sanat", "https://www.trthaber.com/kultur_sanat_articles.rss", "genel", "tr"),
     ("TRT Haber Bilim", "https://www.trthaber.com/bilim_teknoloji_articles.rss", "genel", "tr"),
-    ("Anadolu Ajansı Kültür", "https://www.aa.com.tr/tr/rss/default?cat=kultur-sanat", "genel", "tr"),
     ("Anadolu Ajansı Güncel", "https://www.aa.com.tr/tr/rss/default?cat=guncel", "genel", "tr"),
     ("Hürriyet", "https://www.hurriyet.com.tr/rss/anasayfa", "genel", "tr"),
     ("Milliyet", "https://www.milliyet.com.tr/rss/rssnew/gundemrss.xml", "genel", "tr"),
@@ -49,17 +50,12 @@ AKISLAR = [
     ("Euronews Türkçe", "https://tr.euronews.com/rss", "genel", "tr"),
     ("Independent Türkçe", "https://www.indyturk.com/rss.xml", "genel", "tr"),
     ("Sputnik Türkiye", "https://anlatilaninotesi.com.tr/export/rss2/archive/index.xml", "genel", "tr"),
-    ("T24", "https://t24.com.tr/rss", "genel", "tr"),
-    ("Gazete Oksijen", "https://gazeteoksijen.com/rss", "genel", "tr"),
-    ("Notbir", "https://notbir.com.tr/rss", "genel", "tr"),
     ("GZT", "https://www.gzt.com/rss", "genel", "tr"),
     ("Haberler.com", "https://rss.haberler.com/rss.asp", "genel", "tr"),
     ("Dünya", "https://www.dunya.com/rss", "genel", "tr"),
     ("Yeni Şafak", "https://www.yenisafak.com/rss", "genel", "tr"),
-    ("İHA", "https://www.iha.com.tr/rss", "genel", "tr"),
     ("Evrim Ağacı", "https://evrimagaci.org/rss.xml", "genel", "tr"),
     ("Bant Mag", "https://bantmag.com/feed/", "genel", "tr"),
-    ("Ekşi Şeyler", "https://eksiseyler.com/rss", "genel", "tr"),
     # --- Türkiye'den İngilizce yayınlar (Anadolu kazıları sık geçer)
     ("Türkiye Today", "https://www.turkiyetoday.com/feed", "genel", "en"),
     ("Hürriyet Daily News", "https://www.hurriyetdailynews.com/rss", "genel", "en"),
@@ -74,6 +70,7 @@ SITE_GRUPLARI = [
     ["bbc.com/turkce", "dw.com/tr", "tr.euronews.com", "indyturk.com", "t24.com.tr"],
     ["gazeteoksijen.com", "notbir.com.tr", "nationalgeographic.com.tr", "atlasdergisi.com", "arkeofili.com"],
     ["dha.com.tr", "iha.com.tr", "haberler.com", "gzt.com", "yenisafak.com"],
+    ["t24.com.tr", "gazeteoksijen.com", "notbir.com.tr", "eksiseyler.com", "aa.com.tr"],
     ["arkeolojikhaber.com", "arkeonews.net", "heritagedaily.com", "turkiyetoday.com", "dailysabah.com"],
 ]
 SITE_SORGUSU = "(arkeoloji OR arkeolojik OR kazı OR höyük OR \"antik kent\")"

@@ -1,5 +1,6 @@
 """Tüm kaynakları dolaşıp yeni kayıtları veritabanına yazan kontrol motoru."""
 from __future__ import annotations
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -189,6 +190,32 @@ def yayinci_gorevleri(ayar: dict, kavramlar, gun: int) -> list[tuple[str, callab
     return gorevler
 
 
+_CROSSREF_KILIDI = threading.Semaphore(1)   # Crossref aynı anda çok istek görünce 429 veriyor
+
+
+def dayanikli_calistir(ad: str, is_, deneme: int = 3):
+    """Görevi çalıştırır; sunucu 'çok fazla istek' (429) ya da 'meşgul' (502/503/504) derse
+    bekleyip yeniden dener. Crossref görevleri sırayla çalışır."""
+    import urllib.error
+    kilit = _CROSSREF_KILIDI if ad.startswith("Crossref") else None
+    for i in range(deneme):
+        try:
+            if kilit:
+                with kilit:
+                    time.sleep(1.0)
+                    return is_()
+            return is_()
+        except urllib.error.HTTPError as e:
+            if e.code not in (429, 502, 503, 504) or i == deneme - 1:
+                raise
+            bekle = 8 * (i + 1)
+            try:
+                bekle = max(bekle, min(60, int(e.headers.get("Retry-After", 0))))
+            except (TypeError, ValueError):
+                pass
+            time.sleep(bekle)
+
+
 def dil_izinli(dil: str, izinli: set) -> bool:
     """Dili bilinmeyen kayıtlar her zaman alınır; bilinenler ayardaki dillere göre süzülür."""
     if not dil:
@@ -229,7 +256,7 @@ def tam_kontrol(depo: Depo, ayar: dict, bildir=lambda mesaj: None, paralel: int 
 
     def calistir(ad, is_):
         time.sleep(0.2)  # sunuculara nazik davran
-        return is_()
+        return dayanikli_calistir(ad, is_)
 
     with ThreadPoolExecutor(max_workers=paralel) as havuz:
         gelecek = {havuz.submit(calistir, ad, is_): ad for ad, is_ in gorevler}
