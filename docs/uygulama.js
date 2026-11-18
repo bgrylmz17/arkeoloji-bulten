@@ -16,7 +16,7 @@ const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz",
 const D = Object.assign({
   fav: [], okundu: {}, notlar: {}, konular: [], kaynakca: [], kayitlar: {},
   gorulen: "", tema: "oto", palet: "kum", yazi: 1, bildirim: false, kurulumIpucu: true,
-  uid: null, esitleme: 0, girisSoruldu: false, hepTurkce: false,
+  uid: null, esitleme: 0, girisSoruldu: false, hepTurkce: false, oaAnahtar: "",
 }, guvenliOku());
 
 function guvenliOku() {
@@ -322,16 +322,19 @@ async function litAra(devam) {
     select: "id,doi,display_name,publication_date,publication_year,type,language,cited_by_count,authorships,primary_location,best_oa_location,abstract_inverted_index,biblio" });
   if (filtre) p.set("filter", filtre);
   if (L.sirala !== "ilgi") p.set("sort", LIT_SIRA[L.sirala]);
+  if (D.oaAnahtar) p.set("api_key", D.oaAnahtar);
   try {
-    const y = await fetch("https://api.openalex.org/works?" + p);
-    if (y.status === 429) throw new Error("sinir");
+    let y = await fetch("https://api.openalex.org/works?" + p);
+    if (y.status === 503) { await new Promise(r => setTimeout(r, 2500)); y = await fetch("https://api.openalex.org/works?" + p); }
+    if (y.status === 429 || y.status === 503) throw new Error("sinir");
     if (!y.ok) throw new Error(String(y.status));
     const j = await y.json();
     const kayitlar = await Promise.all((j.results || []).filter(w => w.display_name).map(oaKayit));
     for (const r of kayitlar) if (!L.ids.includes(r.i)) L.ids.push(r.i);
     L.toplam = (j.meta || {}).count || 0; L.sayfa += 1;
   } catch (e) {
-    L.hata = e.message === "sinir" ? "Literatür arama sunucusu (OpenAlex) şu an çok yoğun ya da günlük ücretsiz sınır doldu. Biraz sonra yeniden deneyin."
+    L.hata = e.message === "sinir" ? (D.oaAnahtar ? "Literatür arama sunucusu (OpenAlex) şu an yanıt vermiyor. Biraz sonra yeniden deneyin."
+        : "Literatür arama sunucusu (OpenAlex) anahtarsız aramaları şu an durdurmuş ya da günlük ücretsiz sınır doldu. Biraz sonra yeniden deneyin ya da Ayarlar'a ücretsiz bir OpenAlex anahtarı girin.")
       : navigator.onLine ? "Arama yapılamadı. Biraz sonra yeniden deneyin." : "İnternet bağlantısı yok.";
   }
   L.yukleniyor = false;
@@ -831,6 +834,9 @@ function sayfaAyarlar() {
     <div class="grup"><h3>Çeviri</h3><div class="kutu">
       <label class="satir">Yabancı sayfaları Türkçe aç<input type="checkbox" class="anahtar" id="hep-turkce" ${D.hepTurkce ? "checked" : ""}></label>
     </div><p class="aciklama">Açıkken İngilizce ve diğer dillerdeki haber ve makale sayfaları Google Çeviri ile Türkçe açılır. Kapalıyken yabancı kayıtlarda ayrıca "Türkçe aç" düğmesi görünür. Başlık ve özetler her durumda uygulama içinde Türkçe gösterilir.</p></div>
+    <div class="grup"><h3>Literatür araması</h3><div class="kutu">
+      <label class="satir">OpenAlex anahtarı<input id="oa-anahtar" type="password" autocomplete="off" placeholder="isteğe bağlı" value="${esc(D.oaAnahtar)}" style="max-width:55%"></label>
+    </div><p class="aciklama">Tüm literatür araması anahtarsız da çalışır, ama OpenAlex yoğun saatlerde anahtarsız aramaları durdurabiliyor. openalex.org'dan ücretsiz alınan anahtarı buraya yazarsanız arama kesintisiz olur. Anahtar yalnız bu telefonda saklanır.</p></div>
     <div class="grup"><h3>Bildirimler</h3><div class="kutu">
       <label class="satir">Yeni kayıt gelince haber ver<input type="checkbox" class="anahtar" id="bildirim-ac" ${D.bildirim && bildirimDestek && Notification.permission === "granted" ? "checked" : ""} ${bildirimDestek ? "" : "disabled"}></label>
     </div><p class="aciklama">${bildirimDestek
@@ -850,6 +856,7 @@ function sayfaAyarlar() {
     </div></div>`;
   if (typeof hesapGrubuBagla === "function") hesapGrubuBagla();
   const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
+  $("#oa-anahtar").onchange = e => { D.oaAnahtar = e.target.value.trim(); kaydet(); bildir(D.oaAnahtar ? "OpenAlex anahtarı kaydedildi" : "OpenAlex anahtarı kaldırıldı"); };
   $("#hep-turkce").onchange = e => { D.hepTurkce = e.target.checked; kaydet(); bildir(D.hepTurkce ? "Yabancı sayfalar Türkçe açılacak" : "Sayfalar özgün dilinde açılacak"); };
   sec("tema", D.tema, v => D.tema = v);
   sec("palet", D.palet, v => D.palet = v);
