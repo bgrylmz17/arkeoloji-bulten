@@ -1,7 +1,7 @@
 /* Harrix Arkeoloji Bülteni — servis çalışanı
  * Uygulama dosyaları önbellekten (internetsiz açılır), bülten verisi önce ağdan, olmazsa önbellekten.
  * Android'de kurulu uygulama için arka planda yoklayıp yeni kayıt varsa bildirim gösterir. */
-const SURUM = "bulten-1.3.0";
+const SURUM = "bulten-1.4.0";
 const KABUK = ["./", "index.html", "stil.css", "uygulama.js", "hesap.js", "firebase-ayar.js", "manifest.webmanifest",
   "ikon/logo.svg", "ikon/ikon-192.png", "ikon/ikon-512.png", "ikon/apple-touch-icon.png", "ikon/favicon-64.png"];
 

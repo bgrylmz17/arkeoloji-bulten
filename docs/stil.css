@@ -265,3 +265,13 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .dis-baglantilar a { color: var(--eylem); font-weight: 600; text-decoration: none; }
 .lit-sayi { margin: 14px 16px 4px; font-size: 0.86rem; color: var(--soluk); }
 .tur[data-tur="Kitap"] { --tur-renk: var(--rapor); }
+
+/* sesli okuma */
+.dinle-satir { display: flex; align-items: center; gap: 10px; margin: 10px 16px 2px; flex-wrap: wrap; }
+.dinle-dugme { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px; border: 1px solid var(--okr); background: var(--okr-zemin); color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+.dinle-dugme svg { width: 22px; height: 22px; }
+.dinle-dugme svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#ses-cubuk { position: fixed; left: 10px; right: 10px; bottom: calc(70px + env(safe-area-inset-bottom)); z-index: 60; display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px 8px 14px; border-radius: 14px; background: var(--okr); color: #fff; box-shadow: 0 6px 22px rgba(0,0,0,.25); }
+#ses-cubuk .ses-baslik { flex: 1; font-weight: 600; font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#ses-cubuk button { width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255,255,255,.18); color: #fff; font-size: 1.05rem; cursor: pointer; }

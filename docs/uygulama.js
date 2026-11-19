@@ -5,18 +5,103 @@
  */
 "use strict";
 
-const SURUM = "1.3.0";
+const SURUM = "1.4.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 const TUR_COGUL = { Makale: "Makaleler", Tez: "Tezler", Haber: "Haberler", Rapor: "Raporlar" };
 const DIL_AD = { tr: "Türkçe", en: "İngilizce", de: "Almanca", fr: "Fransızca", it: "İtalyanca", es: "İspanyolca" };
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
+/* ---------------------------------------------------------------- sesli okuma (telefonun kendi Türkçe sesi) */
+// Uzun metin cümle öbeklerine bölünür: bazı tarayıcılar 15 saniyeyi aşan tek konuşmayı yarıda keser.
+const SES = {
+  destek: "speechSynthesis" in window && "SpeechSynthesisUtterance" in window,
+  kuyruk: [], calisiyor: false, baslik: "", kusak: 0,
+  ses() { const l = speechSynthesis.getVoices(); return l.find(v => /^tr/i.test(v.lang) && v.localService) || l.find(v => /^tr/i.test(v.lang)) || null; },
+  sesAdi() { try { const v = this.ses(); return v ? v.name : ""; } catch (e) { return ""; } },
+  obekler(metinler) {
+    const out = [];
+    for (const m of metinler) {
+      const temiz = String(m || "").replace(/https?:\/\/\S+/g, "").replace(/(^|\s)MÖ(?=[\s.,;]|$)/g, "$1milattan önce").replace(/\bMS\b/g, "milattan sonra").replace(/\s+/g, " ").trim();
+      let cari = "";
+      for (const c0 of temiz.match(/.+?(?:[.!?…]+(?=\s|$)|$)/g) || []) { const c = c0.trim(); if (!c) continue;
+        if (cari && (cari + " " + c).length > 220) { out.push(cari); cari = c; } else cari = (cari + " " + c).trim();
+        while (cari.length > 400) { out.push(cari.slice(0, 220)); cari = cari.slice(220); }
+      }
+      if (cari) out.push(cari);
+    }
+    return out;
+  },
+  oku(metinler, baslik) {
+    this.durdur(true);
+    this.kuyruk = this.obekler(metinler); this.baslik = baslik || "Sesli okuma"; this.calisiyor = true; this.kusak++;
+    if (!this.ses()) bildir("Telefonda Türkçe ses bulunamadı; varsayılan sesle okunuyor. Ayarlar › Sesli okuma'ya bakın.");
+    this.cubuk(); this.sonraki(this.kusak);
+  },
+  sonraki(kusak) {
+    if (kusak !== this.kusak) return;
+    const m = this.kuyruk.shift();
+    if (!m) { this.durdur(); return; }
+    const u = new SpeechSynthesisUtterance(m);
+    u.lang = "tr-TR"; u.rate = D.sesHiz || 1;
+    const v = this.ses(); if (v) u.voice = v;
+    u.onend = () => this.sonraki(kusak);
+    u.onerror = e => { if (e.error !== "interrupted" && e.error !== "canceled") this.sonraki(kusak); };
+    speechSynthesis.speak(u);
+    this.cubuk();
+  },
+  durdur(sessiz) { this.kusak++; this.kuyruk = []; this.calisiyor = false; try { speechSynthesis.cancel(); } catch (e) {} if (!sessiz) this.cubuk(); },
+  duraklat() { if (speechSynthesis.paused) speechSynthesis.resume(); else speechSynthesis.pause(); this.cubuk(); },
+  atla() { try { speechSynthesis.cancel(); } catch (e) {} },   // onerror/onend sıradaki öbeğe geçer
+  cubuk() {
+    let c = document.getElementById("ses-cubuk");
+    if (!this.calisiyor) { if (c) c.remove(); return; }
+    if (!c) {
+      c = document.createElement("div"); c.id = "ses-cubuk"; c.setAttribute("role", "region"); c.setAttribute("aria-label", "Sesli okuma");
+      c.innerHTML = `<span class="ses-baslik"></span><button data-s="d" aria-label="Duraklat"></button><button data-s="a" aria-label="Sonraki">⏭</button><button data-s="x" aria-label="Durdur">⏹</button>`;
+      c.querySelector('[data-s="d"]').onclick = () => this.duraklat();
+      c.querySelector('[data-s="a"]').onclick = () => this.atla();
+      c.querySelector('[data-s="x"]').onclick = () => this.durdur();
+      document.body.appendChild(c);
+    }
+    c.querySelector(".ses-baslik").textContent = "🔊 " + this.baslik;
+    c.querySelector('[data-s="d"]').textContent = speechSynthesis.paused ? "▶" : "⏸";
+  },
+};
+if (SES.destek) { try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch (e) {} }
+
+function okunacakMetin(r, kisa) {
+  const bas = (r.l && r.l !== "tr" && r.bt) ? r.bt : r.b;
+  let oz = (r.l && r.l !== "tr") ? (r.ot || "") : (r.o || "");
+  if (kisa && oz.length > 350) oz = oz.slice(0, 350).replace(/\s+\S*$/, "") + "…";
+  return `${String(bas || "").replace(/\.$/, "")}. ${r.w || r.s ? `Kaynak: ${r.w || r.s}. ` : ""}${oz}`;
+}
+async function kaydiDinle(r) {
+  if (r.l && r.l !== "tr" && (!r.bt || (r.o && !r.ot))) {
+    bildir("Okumadan önce Türkçeye çevriliyor…");
+    try { if (!r.bt) r.bt = await cevir(r.b, r.l); if (r.o && !r.ot) r.ot = await cevir(r.o, r.l); }
+    catch (e) { bildir("Çeviri servisine ulaşılamadı; kayıt Türkçe olmadığı için okunamıyor."); return; }
+  }
+  SES.oku([okunacakMetin(r)], r.k === "Haber" ? "Haber okunuyor" : "Kayıt okunuyor");
+}
+function bulteniDinle(kayitlar, ozet) {
+  const turkce = r => !r.l || r.l === "tr" || r.bt;
+  const haber = kayitlar.filter(r => r.k === "Haber" && turkce(r)).slice(0, 8);
+  const diger = kayitlar.filter(r => r.k !== "Haber" && turkce(r)).slice(0, 5);
+  const atlanan = kayitlar.filter(r => !turkce(r)).length;
+  const m = [String(ozet || "").trim()];
+  if (haber.length) { m.push(`${haber.length} haber okunacak.`); haber.forEach((r, i) => m.push(`Haber ${i + 1}. ${okunacakMetin(r, true)}`)); }
+  if (diger.length) { m.push("Yeni yayınlardan başlıklar."); diger.forEach((r, i) => m.push(`${i + 1}. ${TUR_COGUL[r.k] ? r.k : ""}: ${String((r.l && r.l !== "tr" && r.bt) || r.b).replace(/\.$/, "")}.`)); }
+  if (atlanan) m.push(`Türkçeye çevrilmemiş ${atlanan} yabancı kayıt okunmadı; ayrıntısında Dinle'ye basınca çevrilip okunur.`);
+  if (!haber.length && !diger.length) m.push("Okunacak Türkçe kayıt yok.");
+  SES.oku(m, "Bülten okunuyor");
+}
+
 /* ---------------------------------------------------------------- durum (yerel depo) */
 const D = Object.assign({
   fav: [], okundu: {}, notlar: {}, konular: [], kaynakca: [], kayitlar: {},
   gorulen: "", tema: "oto", palet: "kum", yazi: 1, bildirim: false, kurulumIpucu: true,
-  uid: null, esitleme: 0, girisSoruldu: false, hepTurkce: false, oaAnahtar: "",
+  uid: null, esitleme: 0, girisSoruldu: false, hepTurkce: false, oaAnahtar: "", sesHiz: 1,
 }, guvenliOku());
 
 function guvenliOku() {
@@ -181,11 +266,14 @@ function sayfaBugun() {
       ? `Son bakışınızdan beri <b>${yeni.length} yeni kayıt</b> geldi.`
       : `Son iki günde ${son.length} kayıt toplandı.`}${VERI.guncelleme ? ` Bülten ${esc(saatYaz(VERI.guncelleme))} güncellendi.` : ""}</p>
     <div class="ozet-satir">${TURLER.map(t => `<a class="sayac" href="#akis" data-tur-git="${t}"><strong>${say(t)}</strong><span>${TUR_COGUL[t]}</span></a>`).join("")}</div>
+    ${SES.destek ? `<div class="dinle-satir"><button class="dinle-dugme" id="bulten-dinle"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>Bülteni dinle</button><span class="aciklama">Özeti ve haberleri sesli okur</span></div>` : ""}
     ${kurulumIpucuHtml()}`;
   const liste = (yeni.length ? yeni : son).slice(0, 80);
   $("#sayfa").innerHTML = ust + (liste.length ? tabakalarHtml(liste)
     : bosHtml("Henüz kayıt yok", "Bülten ilk kez toplanıyor olabilir; birkaç dakika sonra yeniden bakın."));
   document.querySelectorAll("[data-tur-git]").forEach(a => a.addEventListener("click", () => { S.tur = a.dataset.turGit; }));
+  const dinle = $("#bulten-dinle");
+  if (dinle) dinle.onclick = () => bulteniDinle(yeni.length ? yeni : son, $(".ozet").textContent);
   if (VERI.guncelleme && VERI.guncelleme > (D.gorulen || "")) { D.gorulen = VERI.guncelleme; kaydet(); }
 }
 function gunOnce(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
@@ -450,6 +538,7 @@ function sayfaAyrinti(id) {
         <button class="eylem" data-e="konu"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg>Konuya ekle</button>
         <button class="eylem" data-e="not" aria-pressed="${!!D.notlar[r.i]}"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM8 12h8M8 16h5"/></svg>Not</button>
         <button class="eylem" data-e="kaynakca" aria-pressed="${D.kaynakca.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Kaynakça</button>
+        ${SES.destek ? `<button class="eylem" data-e="dinle"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6"/></svg>Dinle</button>` : ""}
         <button class="eylem" data-e="paylas"><svg viewBox="0 0 24 24"><path d="M12 15V3m-4 4l4-4 4 4M5 12v8h14v-8"/></svg>Paylaş</button>
         ${r.p ? `<a class="eylem" href="${esc(r.p)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 4v11m-4-4l4 4 4-4M5 20h14"/></svg>PDF</a>`
           : r.d ? `<button class="eylem" data-e="acik"><svg viewBox="0 0 24 24"><path d="M12 4v11m-4-4l4 4 4-4M5 20h14"/></svg>Açık kopya ara</button>` : ""}
@@ -490,6 +579,7 @@ async function eylem(ad, r, ciz, goster) {
     kaydet(); ciz();
   }
   else if (ad === "paylas") paylasLevhasi(kayitPaylasimi(r));
+  else if (ad === "dinle") kaydiDinle(r);
   else if (ad === "kunye") panoya(apaDuz(r), "APA 7 künyesi kopyalandı");
 }
 
@@ -834,6 +924,10 @@ function sayfaAyarlar() {
     <div class="grup"><h3>Çeviri</h3><div class="kutu">
       <label class="satir">Yabancı sayfaları Türkçe aç<input type="checkbox" class="anahtar" id="hep-turkce" ${D.hepTurkce ? "checked" : ""}></label>
     </div><p class="aciklama">Açıkken İngilizce ve diğer dillerdeki haber ve makale sayfaları Google Çeviri ile Türkçe açılır. Kapalıyken yabancı kayıtlarda ayrıca "Türkçe aç" düğmesi görünür. Başlık ve özetler her durumda uygulama içinde Türkçe gösterilir.</p></div>
+    ${SES.destek ? `<div class="grup"><h3>Sesli okuma</h3><div class="kutu">
+      <label class="satir">Okuma hızı<select id="ses-hiz"><option value="0.8">Yavaş</option><option value="1">Normal</option><option value="1.2">Hızlı</option><option value="1.4">Çok hızlı</option></select></label>
+      <button class="satir" id="ses-dene">Sesi dene<span class="sag">${esc(SES.sesAdi() || "Türkçe ses yok")}</span></button>
+    </div><p class="aciklama">Özetler ve haberler telefonun kendi Türkçe sesiyle, internet olmadan okunur. Türkçe ses yoksa telefonun ayarlarından (Android: Metin okuma çıkışı; iPhone: Erişilebilirlik › Seslendirilen İçerik › Sesler) Türkçe ses indirin. Ekran kapanınca okuma çoğu telefonda durur.</p></div>` : ""}
     <div class="grup"><h3>Literatür araması</h3><div class="kutu">
       <label class="satir">OpenAlex anahtarı<input id="oa-anahtar" type="password" autocomplete="off" placeholder="isteğe bağlı" value="${esc(D.oaAnahtar)}" style="max-width:55%"></label>
     </div><p class="aciklama">Tüm literatür araması anahtarsız da çalışır, ama OpenAlex yoğun saatlerde anahtarsız aramaları durdurabiliyor. openalex.org'dan ücretsiz alınan anahtarı buraya yazarsanız arama kesintisiz olur. Anahtar yalnız bu telefonda saklanır.</p></div>
@@ -853,7 +947,9 @@ function sayfaAyarlar() {
     </div><p class="aciklama">Favoriler, konular, notlar ve kaynakça yalnızca bu telefonda tutulur. Telefon değiştirirken yedeği dışa aktarıp yenisine yükleyin.</p></div>
     <div class="grup"><h3>Hakkında</h3><div class="kutu">
       <div class="satir">Harrix Arkeoloji Bülteni<span class="sag">${SURUM}</span></div>
-    </div></div>`;
+      <a class="satir" style="color:inherit" href="mailto:harrixapp@gmail.com?subject=${encodeURIComponent("Harrix Bülten")}">Destek ve iletişim<span class="sag">harrixapp@gmail.com</span></a>
+      <a class="satir" style="color:inherit" href="https://www.instagram.com/harrixapp/" target="_blank" rel="noopener">Instagram<span class="sag">@harrixapp</span></a>
+    </div><p class="aciklama">Soru, öneri ve sorunlar için Harrix ekibine yazabilirsiniz.</p></div>`;
   if (typeof hesapGrubuBagla === "function") hesapGrubuBagla();
   const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
   $("#oa-anahtar").onchange = e => { D.oaAnahtar = e.target.value.trim(); kaydet(); bildir(D.oaAnahtar ? "OpenAlex anahtarı kaydedildi" : "OpenAlex anahtarı kaldırıldı"); };
@@ -861,6 +957,10 @@ function sayfaAyarlar() {
   sec("tema", D.tema, v => D.tema = v);
   sec("palet", D.palet, v => D.palet = v);
   sec("yazi", D.yazi, v => D.yazi = Number(v));
+  if ($("#ses-hiz")) {
+    sec("ses-hiz", D.sesHiz || 1, v => D.sesHiz = Number(v));
+    $("#ses-dene").onclick = () => SES.oku(["Merhaba. Harrix Arkeoloji Bülteni sesli okuma böyle duyulur."], "Ses denemesi");
+  }
   $("#yenile").onclick = async () => { bildir("Yenileniyor…"); if (await veriYukle(true)) bildir(`Bülten ${saatYaz(VERI.guncelleme)} tarihli`); };
   $("#bildirim-ac").onchange = async e => {
     if (e.target.checked) {
