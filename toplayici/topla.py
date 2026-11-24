@@ -6,13 +6,17 @@ GitHub Actions bunu günde birkaç kez çalıştırır. Masaüstü uygulamanın 
   docs/veri/bulten.json  kayıtlar (son 'saklama_gun' gün, en çok 'en_fazla' kayıt)
   docs/veri/durum.json   son çalışma, her kaynağın kaç kayıt verdiği / hatası
   docs/veri/sozler.json  motivasyon sözleri
+  docs/veri/ozet.mp3     "Dünün özeti"nin doğal (nöral) sesle okunmuş hâli — yalnız metin değişince yeniden üretilir
 
 Elle çalıştırmak için:  python toplayici/topla.py
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
+import hashlib
 import html
+import re
 import json
 import os
 import sys
@@ -25,7 +29,7 @@ KOK = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(KOK))
 
 from harrix_bulten import ceviri, haber_kaynaklari, harrix_hesap, kaynakca, kaynaklar, sozler, tarayici, terimler  # noqa: E402
-from harrix_bulten.metin import arkeoloji_kesin  # noqa: E402
+from harrix_bulten.metin import TekrarDenetci, arkeoloji_kesin  # noqa: E402
 from harrix_bulten.veritabani import Depo  # noqa: E402
 
 VERI = KOK / "docs" / "veri"
@@ -118,6 +122,102 @@ def topla(depo: Depo, ayar: dict, paralel: int = 6) -> list[dict]:
     return sorted(saglik, key=lambda s: s["ad"])
 
 
+def tekrarlari_ayikla(eski_kayitlar: dict, yeni: list[dict]) -> tuple[list[dict], int]:
+    """Aynı haberin başka kaynaktan gelen kopyalarını atar: önce gelen kalır.
+    Eski kayıtlardaki kopyalar (önceki sürümlerden kalma) eski_kayitlar'dan silinir; yeni listesi süzülüp döner."""
+    d, atilan = TekrarDenetci(), 0
+    for k in sorted(eski_kayitlar.values(), key=lambda k: (k.get("g", ""), k["i"])):
+        tarih = k.get("t") or k.get("g", "")[:10]
+        if d.tekrar_mi(k.get("k", ""), k.get("b", ""), tarih):
+            del eski_kayitlar[k["i"]]
+            atilan += 1
+        else:
+            d.ekle(k["i"], k.get("k", ""), k.get("b", ""), tarih)
+    kalan = []
+    for s in yeni:
+        tarih = s.get("tarih") or simdi()[:10]
+        if d.tekrar_mi(s["kategori"], s["baslik"], tarih):
+            atilan += 1
+            continue
+        d.ekle(s["id"], s["kategori"], s["baslik"], tarih)
+        kalan.append(s)
+    return kalan, atilan
+
+
+# ---------------------------------------------------------------- dünün özeti, doğal sesle
+OZET_SESI = "tr-TR-EmelNeural"
+
+
+def _okunur(metin: str) -> str:
+    """Kısaltmaları sesin doğru okuyacağı biçime çevirir (uygulama.js sesIcinTemizle ile aynı kurallar)."""
+    m = re.sub(r"https?://\S+", "", metin or "")
+    for a, b in ((r"(^|\s)M\.?Ö\.?(?=[\s.,;0-9]|$)", r"\1milattan önce"), (r"(^|\s)M\.?S\.?(?=[\s.,;0-9]|$)", r"\1milattan sonra"),
+                 (r"Prof\.\s*Dr\.", "Profesör Doktor"), (r"Doç\.\s*Dr\.", "Doçent Doktor"), (r"Dr\.(?=\s)", "Doktor"),
+                 (r"(\d+)\.?\s*yy\.", r"\1. yüzyıl"), (r"\bvb\.", "ve benzeri"), (r"\bvd\.", "ve diğerleri"),
+                 (r"(\d+)\s*m²", r"\1 metrekare"), (r"(\d+)\s*km\b", r"\1 kilometre"), (r"(\d+)\s*cm\b", r"\1 santimetre")):
+        m = re.sub(a, b, m)
+    return re.sub(r"\s+", " ", m).strip()
+
+
+def ozet_metni(tum: list[dict], dun: str) -> str:
+    """Uygulamadaki "Dünün özeti" kartının (sabahOzeti) okunacak metni. Dün kayıt yoksa boş."""
+    havuz = [k for k in tum if (k.get("g") or k.get("t") or "")[:10] == dun]
+    if not havuz:
+        return ""
+    say = lambda t: sum(1 for k in havuz if k.get("k") == t)  # noqa: E731
+    parca = [f"{n} {ad}" for n, ad in ((say("Haber"), "haber"), (say("Makale"), "yeni makale"), (say("Tez"), "tez"),
+                                        (say("Rapor"), "rapor")) if n]
+    liste = parca[0] if len(parca) == 1 else ", ".join(parca[:-1]) + " ve " + parca[-1]
+    turkce = lambda k: not k.get("l") or k["l"] == "tr" or k.get("bt")  # noqa: E731
+    baslik = lambda k: (k.get("bt") if k.get("l") and k["l"] != "tr" and k.get("bt") else k.get("b", "")).rstrip(".")  # noqa: E731
+    one = ([k for k in havuz if k.get("k") == "Haber" and turkce(k)][:3] + [k for k in havuz if k.get("k") == "Makale"][:2]
+           + [k for k in havuz if k.get("k") == "Tez"][:1])[:5]
+    gun = dt.date.fromisoformat(dun)
+    aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+    satirlar = [f"Harrix Arkeoloji Bülteni. {gun.day} {aylar[gun.month - 1]}, dünün özeti.",
+                f"Dün arkeoloji gündeminde {liste} öne çıktı."]
+    if one:
+        satirlar.append("Öne çıkanlar.")
+        satirlar += [f"{i}. {k.get('k')}: {baslik(k)}." for i, k in enumerate(one, 1)]
+    return _okunur(" ".join(satirlar))
+
+
+def sesli_ozet(tum: list[dict], eski: dict | None) -> dict | None:
+    """Dünün özetini MP3'e çevirir (docs/veri/ozet.mp3). Metin değişmediyse eskisini kullanır.
+    edge-tts yoksa ya da servise ulaşılamazsa None (uygulama telefonun kendi sesiyle okur)."""
+    dun = (dt.datetime.now(dt.timezone.utc).date() - dt.timedelta(days=1)).isoformat()   # uygulama da UTC günü kullanır
+    metin = ozet_metni(tum, dun)
+    if not metin:
+        return None
+    imza = hashlib.sha1((OZET_SESI + metin).encode("utf-8")).hexdigest()[:12]
+    if eski and eski.get("imza") == imza and eski.get("gun") == dun and (VERI / "ozet.mp3").exists():
+        return eski
+    try:
+        import edge_tts
+    except ImportError:
+        print("edge-tts kurulu değil; sesli özet üretilmedi.", flush=True)
+        return None
+
+    async def al():
+        veri = bytearray()
+        async for p in edge_tts.Communicate(metin, OZET_SESI).stream():
+            if p["type"] == "audio":
+                veri += p["data"]
+        return bytes(veri)
+    try:
+        veri = asyncio.run(asyncio.wait_for(al(), 120))
+        if len(veri) < 1000:
+            raise RuntimeError("boş ses")
+    except Exception as e:
+        print(f"Sesli özet üretilemedi: {type(e).__name__}: {e}", flush=True)
+        return None
+    gecici = VERI / "ozet.mp3.tmp"
+    gecici.write_bytes(veri)
+    os.replace(gecici, VERI / "ozet.mp3")
+    print(f"Sesli özet üretildi ({len(veri) // 1024} KB).", flush=True)
+    return {"gun": dun, "dosya": "veri/ozet.mp3", "imza": imza, "ses": OZET_SESI, "metin": metin}
+
+
 def satira_cevir(r) -> dict:
     return {k: r[k] for k in r.keys()}
 
@@ -144,9 +244,10 @@ def main() -> int:
         satirlar = [satira_cevir(r) for r in depo.listele(limit=100000)]
         dergipark_son = ayar.get("dergipark_son", "")
 
-    # --- yeni kayıtlar
+    # --- yeni kayıtlar (aynı haberin başka kaynaktan gelen kopyaları atılır)
     yeni = [s for s in satirlar if s["id"] not in eski_kayitlar]
-    print(f"Yeni kayıt: {len(yeni)}", flush=True)
+    yeni, atilan = tekrarlari_ayikla(eski_kayitlar, yeni)
+    print(f"Yeni kayıt: {len(yeni)} (kopya olduğu için atılan: {atilan})", flush=True)
 
     # Google Haberler bağlantılarını gerçek adrese çevir (telefonda hızlı açılsın)
     google = [s for s in yeni if s["kaynak"] == "Google Haberler"][: int(kullanici.get("google_cozme_siniri", 120))]
@@ -214,10 +315,12 @@ def main() -> int:
     if kazi:
         kavramlar.append({"id": "kazim", "ad": kazi["kaziAdi"], "en": kazi["kaziAdi"], "grup": "Kazım"})
 
+    ozet_ses = sesli_ozet(tum, eski.get("sesli_ozet"))
     yaz(VERI / "bulten.json", {
         "surum": 1, "guncelleme": calisma, "yeni_sayisi": len(yeni),
         "kazi": harrix_hesap.ozet_metni(kazi) if kazi else "",
         "kavramlar": kavramlar, "kayitlar": tum,
+        **({"sesli_ozet": ozet_ses} if ozet_ses else {}),
     })
     yaz(VERI / "sozler.json", sozler.SOZLER)
     hatali = [s for s in saglik if s.get("hata")]

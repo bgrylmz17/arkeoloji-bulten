@@ -204,3 +204,82 @@ bin yıl yıllık olduğu ortaya çıktı çıkarıldı bulundu keşfedildi
 def kelimeler(s: str) -> list[str]:
     s = tr_kucuk(s)
     return [w for w in re.findall(r"[a-zçğıöşüâîû]{4,}", s) if w not in DURAK]
+
+
+# ---------------------------------------------------------------- aynı haber, farklı kaynak
+# Aynı haber birkaç siteden (ya da Google Haberler'in iki ayrı aramasından) farklı bağlantıyla gelir;
+# bağlantıya göre kimlik farklı olduğundan ikisi de kaydedilirdi. Başlıkların kelime "imzası"
+# karşılaştırılır: önce gelen kalır, sonradan gelen kopya atılır.
+_BOS_KELIME = {katla(k) for k in (
+    "ve ile bir bu da de için olarak olan gibi daha çok en yeni ilk son yıl yılda kadar sonra önce "
+    "nin nın the and for with from that this into over are was its their after has have been how why what").split()}
+TEKRAR_GUN = 3   # haberlerde yalnız ± bu kadar gün içindeki kayıtlar karşılaştırılır
+
+
+def baslik_imzasi(baslik: str) -> frozenset:
+    """Başlığın anlamlı kelimelerinin ilk 6 harfi (Türkçe ekler: kazısında/kazısı → kazısi).
+    Kesme işaretinden sonraki ek atılır (Göbeklitepe'de → göbeklitepe). Rakam içeren kelimeler
+    (NVL3793, BMR1191x19) kısaltılmaz: ayrı envanter/katalog kayıtları birbirine karışmasın."""
+    k = katla(html_temizle(baslik))
+    k = re.sub(r"[’'`´]\w*", "", k)
+    kelimeler = re.findall(rf"[{HARF}]+", k)
+    return frozenset(w if re.search(r"\d", w) else w[:6] for w in kelimeler
+                     if (len(w) > 2 or w.isdigit()) and w not in _BOS_KELIME)
+
+
+def ayni_baslik_mi(a: frozenset, b: frozenset, siki: bool = False) -> bool:
+    """İki imza aynı haberi mi anlatıyor? siki=True (makale/tez): kelimeler birebir aynı olmalı.
+    Haberde: en az 4 ortak kelime ve kısa başlığın kelimelerinin en az %75'i öbüründe geçmeli."""
+    if not a or not b:
+        return False
+    kucuk = min(len(a), len(b))
+    if siki or kucuk < 4:
+        return a == b and len(a) >= (4 if siki else 3)
+    ortak = len(a & b)
+    return ortak >= 4 and ortak / kucuk >= 0.75
+
+
+def _gun_sirasi(tarih: str) -> int:
+    import datetime as _dt
+    try:
+        return _dt.date.fromisoformat((tarih or "")[:10]).toordinal()
+    except ValueError:
+        return _dt.date.today().toordinal()
+
+
+class TekrarDenetci:
+    """Kayıtları sırayla görür; daha önce görülmüş bir haberin kopyasını tanır.
+
+        d = TekrarDenetci()
+        if d.tekrar_mi(kategori, baslik, tarih): atla  else: d.ekle(kimlik, kategori, baslik, tarih)
+    Haber ve Rapor tek grup (aynı haber bir sitede rapor sayılabilir), yalnız ±TEKRAR_GUN gün içinde aranır.
+    Makale ve Tez tek grup; başlık birebir aynıysa (DOI'siz kopyalar) tarihe bakılmaz.
+    """
+
+    def __init__(self):
+        self._haber: dict[int, list[tuple[frozenset, str]]] = {}
+        self._yayin: dict[frozenset, str] = {}
+
+    @staticmethod
+    def _grup(kategori: str) -> str | None:
+        return "haber" if kategori in ("Haber", "Rapor") else "yayin" if kategori in ("Makale", "Tez") else None
+
+    def tekrar_mi(self, kategori: str, baslik: str, tarih: str = "") -> str | None:
+        """Kopyaysa ilk görülen kaydın kimliğini, değilse None döndürür."""
+        g, imza = self._grup(kategori), baslik_imzasi(baslik)
+        if g == "yayin":
+            return self._yayin.get(imza) if len(imza) >= 4 else None
+        if g == "haber":
+            gun = _gun_sirasi(tarih)
+            for d in range(gun - TEKRAR_GUN, gun + TEKRAR_GUN + 1):
+                for diger, kid in self._haber.get(d, ()):
+                    if ayni_baslik_mi(imza, diger):
+                        return kid
+        return None
+
+    def ekle(self, kimlik: str, kategori: str, baslik: str, tarih: str = ""):
+        g, imza = self._grup(kategori), baslik_imzasi(baslik)
+        if g == "yayin" and len(imza) >= 4:
+            self._yayin.setdefault(imza, kimlik)
+        elif g == "haber" and imza:
+            self._haber.setdefault(_gun_sirasi(tarih), []).append((imza, kimlik))

@@ -5,21 +5,26 @@
  */
 "use strict";
 
-const SURUM = "1.5.0";
+const SURUM = "1.6.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 const TUR_COGUL = { Makale: "Makaleler", Tez: "Tezler", Haber: "Haberler", Rapor: "Raporlar" };
 const DIL_AD = { tr: "Türkçe", en: "İngilizce", de: "Almanca", fr: "Fransızca", it: "İtalyanca", es: "İspanyolca" };
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
-/* ---------------------------------------------------------------- sesli okuma (telefonun kendi Türkçe sesi) */
-// Uzun metin cümle öbeklerine bölünür: bazı tarayıcılar 15 saniyeyi aşan tek konuşmayı yarıda keser.
+/* ---------------------------------------------------------------- sesli okuma */
+// "Dünün özeti" toplayıcının doğal (nöral) sesle hazırladığı MP3'ten çalınır (veri/ozet.mp3).
+// Diğer metinler cihazın en doğal Türkçe sesiyle okunur. Uzun metin cümle öbeklerine bölünür:
+// bazı tarayıcılar 15 saniyeyi aşan tek konuşmayı yarıda keser.
 const SES = {
   destek: "speechSynthesis" in window && "SpeechSynthesisUtterance" in window,
-  kuyruk: [], calisiyor: false, baslik: "", kusak: 0,
+  kuyruk: [], calisiyor: false, baslik: "", kusak: 0, calan: null,
   turkceSesler() {
     try {
-      const puan = v => (/premium|enhanced|gelişmiş|natural|neural/i.test(v.name) ? 40 : 0) + (/yelda|cem|filiz|emel/i.test(v.name) ? 20 : 0) + (v.localService ? 5 : 0);
+      // Önce bulut/nöral sesler (Edge: "Microsoft Emel Online (Natural)", Chrome: "Google Türkçe"), sonra
+      // cihazın gelişmiş sesleri (iPhone/Mac: Yelda Gelişmiş), en son sıradan sesler.
+      const puan = v => (/online|natural|neural/i.test(v.name) ? 60 : 0) + (/premium|enhanced|gelişmiş|siri/i.test(v.name) ? 40 : 0)
+        + (/google/i.test(v.name) ? 30 : 0) + (/emel|ahmet|yelda|cem|filiz|tolga|seda/i.test(v.name) ? 10 : 0);
       return speechSynthesis.getVoices().filter(v => /^tr/i.test(v.lang)).sort((a, b) => puan(b) - puan(a));
     } catch (e) { return []; }
   },
@@ -44,6 +49,18 @@ const SES = {
     if (!this.ses()) bildir("Telefonda Türkçe ses bulunamadı; varsayılan sesle okunuyor. Ayarlar › Sesli okuma'ya bakın.");
     this.cubuk(); this.sonraki(this.kusak);
   },
+  /* Hazır MP3'ü çalar; çalınamazsa (internetsiz, eski dosya) yedek metni cihazın sesiyle okur. */
+  mp3(adres, baslik, yedek) {
+    this.durdur(true);
+    const k = ++this.kusak, a = new Audio(adres);
+    this.calan = a; this.baslik = baslik || "Sesli okuma"; this.calisiyor = true;
+    const dus = () => { if (k !== this.kusak) return; this.calan = null; if (yedek && this.destek) this.oku(yedek, baslik); else this.durdur(); };
+    a.onended = () => { if (k === this.kusak) this.durdur(); };
+    a.onerror = dus;
+    a.onpause = a.onplay = () => { if (k === this.kusak) this.cubuk(); };
+    const p = a.play(); if (p && p.catch) p.catch(dus);
+    this.cubuk();
+  },
   sonraki(kusak) {
     if (kusak !== this.kusak) return;
     const m = this.kuyruk.shift();
@@ -56,9 +73,17 @@ const SES = {
     speechSynthesis.speak(u);
     this.cubuk();
   },
-  durdur(sessiz) { this.kusak++; this.kuyruk = []; this.calisiyor = false; try { speechSynthesis.cancel(); } catch (e) {} if (!sessiz) this.cubuk(); },
-  duraklat() { if (speechSynthesis.paused) speechSynthesis.resume(); else speechSynthesis.pause(); this.cubuk(); },
-  atla() { try { speechSynthesis.cancel(); } catch (e) {} },   // onerror/onend sıradaki öbeğe geçer
+  durdur(sessiz) {
+    this.kusak++; this.kuyruk = []; this.calisiyor = false;
+    if (this.calan) { try { this.calan.pause(); } catch (e) {} this.calan = null; }
+    try { speechSynthesis.cancel(); } catch (e) {}
+    if (!sessiz) this.cubuk();
+  },
+  duraklat() {
+    if (this.calan) { if (this.calan.paused) this.calan.play(); else this.calan.pause(); return; }
+    if (speechSynthesis.paused) speechSynthesis.resume(); else speechSynthesis.pause(); this.cubuk();
+  },
+  atla() { if (this.calan) { this.durdur(); return; } try { speechSynthesis.cancel(); } catch (e) {} },   // onerror/onend sıradaki öbeğe geçer
   cubuk() {
     let c = document.getElementById("ses-cubuk");
     if (!this.calisiyor) { if (c) c.remove(); return; }
@@ -71,7 +96,7 @@ const SES = {
       document.body.appendChild(c);
     }
     c.querySelector(".ses-baslik").textContent = "🔊 " + this.baslik;
-    c.querySelector('[data-s="d"]').textContent = speechSynthesis.paused ? "▶" : "⏸";
+    c.querySelector('[data-s="d"]').textContent = (this.calan ? this.calan.paused : this.destek && speechSynthesis.paused) ? "▶" : "⏸";
   },
 };
 /* Arkeoloji metnindeki kısaltmaları Türkçe sesin doğru okuyacağı biçime çevirir. */
@@ -300,7 +325,11 @@ function sayfaBugun() {
     : bosHtml("Henüz kayıt yok", "Bülten ilk kez toplanıyor olabilir; birkaç dakika sonra yeniden bakın."));
   document.querySelectorAll("[data-tur-git]").forEach(a => a.addEventListener("click", () => { S.tur = a.dataset.turGit; }));
   const sd = $("#sabah-dinle");
-  if (sd) sd.onclick = () => SES.oku(so.sesli, "Dünün özeti");
+  if (sd) sd.onclick = () => {
+    const mp3 = VERI.sesli_ozet;   // toplayıcının doğal sesle okuduğu özet; yalnız aynı "dün" içinse
+    if (mp3 && mp3.dosya && so.etiket !== "Son 48 saat" && mp3.gun === gunOnce(1)) SES.mp3(`${mp3.dosya}?v=${mp3.imza}`, "Dünün özeti", so.sesli);
+    else SES.oku(so.sesli, "Dünün özeti");
+  };
   $("#lit-hizli").onsubmit = e => {
     e.preventDefault(); const q = $("#lit-hizli-q").value.trim(); if (!q) return;
     S.mod = "lit"; L.q = q; L.donem = ""; location.hash = "#akis"; litAra(false);
@@ -1057,7 +1086,7 @@ function sayfaAyarlar() {
       ${SES.turkceSesler().length > 1 ? `<label class="satir">Ses<select id="ses-sec" style="max-width:60%"><option value="">Otomatik (en iyisi)</option>
         ${SES.turkceSesler().map(v => `<option value="${esc(v.voiceURI)}">${esc(v.name)}</option>`).join("")}</select></label>` : ""}
       <button class="satir" id="ses-dene">Sesi dene<span class="sag">${esc(SES.sesAdi() || "Türkçe ses yok")}</span></button>
-    </div><p class="aciklama">Özetler ve haberler telefonun kendi Türkçe sesiyle, internet olmadan okunur. Türkçe ses yoksa telefonun ayarlarından (Android: Metin okuma çıkışı; iPhone: Erişilebilirlik › Seslendirilen İçerik › Sesler) Türkçe ses indirin. Ekran kapanınca okuma çoğu telefonda durur.</p></div>` : ""}
+    </div><p class="aciklama">"Dünün özeti" doğal bir insan sesiyle (Microsoft Emel) hazır gelir. Haberler ve diğer metinler telefonun en doğal Türkçe sesiyle okunur; "Otomatik" en iyisini seçer (Edge'de "Emel Online (Natural)", iPhone'da Yelda Gelişmiş). Türkçe ses yoksa telefonun ayarlarından (Android: Metin okuma çıkışı; iPhone: Erişilebilirlik › Seslendirilen İçerik › Sesler) Türkçe ses indirin. Ekran kapanınca okuma çoğu telefonda durur.</p></div>` : ""}
     <div class="grup"><h3>Literatür araması</h3><div class="kutu">
       <label class="satir">OpenAlex anahtarı<input id="oa-anahtar" type="password" autocomplete="off" placeholder="isteğe bağlı" value="${esc(D.oaAnahtar)}" style="max-width:55%"></label>
     </div><p class="aciklama">Tüm literatür araması anahtarsız da çalışır, ama OpenAlex yoğun saatlerde anahtarsız aramaları durdurabiliyor. openalex.org'dan ücretsiz alınan anahtarı buraya yazarsanız arama kesintisiz olur. Anahtar yalnız bu telefonda saklanır.</p></div>

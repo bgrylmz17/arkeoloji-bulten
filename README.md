@@ -7,6 +7,10 @@ telefonda uygulama gibi açılır. Masaüstündeki Harrix Arkeoloji Bülteni ile
   saati) çalıştırır. Kaynaklar: OpenAlex, Crossref, DergiPark, Google Haberler, Bundle'daki haber
   siteleri (TRT Haber, Hürriyet, NTV, CNN Türk, Sözcü, BBC Türkçe…) ve arkeoloji siteleri (Arkeofili,
   Arkeonews, ScienceDaily, Phys.org…). Genel haber sitelerinden yalnızca arkeolojiyle ilgili haberler alınır.
+- **Aynı haber bir kez:** başka kaynaktan gelen kopyalar (başlık karşılaştırmasıyla) bültene alınmaz.
+- **Sesli özet:** toplayıcı "Dünün özeti"ni doğal bir insan sesiyle (Microsoft Emel, `edge-tts`) okuyup
+  `docs/veri/ozet.mp3` olarak kaydeder; metin değişmedikçe dosya yeniden üretilmez. Uygulama özeti bu dosyadan
+  çalar, olmazsa telefonun kendi sesiyle okur.
 - **Uygulama** (`docs/`): telefona "ana ekrana ekle" ile kurulan web uygulaması. Favoriler, konular,
   notlar ve kaynakça yalnızca telefonda tutulur.
 

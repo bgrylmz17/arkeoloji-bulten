@@ -66,6 +66,7 @@ class Depo:
     def __init__(self, yol: str | None = None):
         self.yol = yol or os.path.join(veri_klasoru(), "veri.db")
         self._kilit = threading.Lock()
+        self._denetci = None   # aynı haberin başka kaynaktan gelen kopyasını tanır (ilk kaydette kurulur)
         with self._bag() as c:
             c.executescript(SEMA)
             # 1. sürüm veritabanını yükselt
@@ -97,11 +98,25 @@ class Depo:
             c.execute("UPDATE kayitlar SET dil=? WHERE id=?", (d, r["id"]))
 
     # ---------- kayıtlar ----------
+    def _denetci_kur(self, c):
+        """Son kayıtların başlıklarıyla tekrar denetçisini doldurur (haberler: son 30 gün; yayınlar: hepsi)."""
+        from .metin import TekrarDenetci
+        d = TekrarDenetci()
+        sinir = (dt.datetime.now() - dt.timedelta(days=30)).isoformat()
+        for r in c.execute("SELECT id, kategori, baslik, tarih, ilk_gorulme FROM kayitlar "
+                           "WHERE etiketler NOT LIKE '%,literatur,%' AND (kategori IN ('Makale','Tez') OR ilk_gorulme>=?) "
+                           "ORDER BY ilk_gorulme, id", (sinir,)):
+            d.ekle(r["id"], r["kategori"], r["baslik"] or "", r["tarih"] or (r["ilk_gorulme"] or "")[:10])
+        return d
+
     def kaydet(self, kayitlar: list[dict]) -> list[dict]:
-        """Yeni olanları ekler, var olanların puanını günceller. Yeni eklenenleri döndürür."""
+        """Yeni olanları ekler, var olanların puanını günceller. Yeni eklenenleri döndürür.
+        Başka bir kaynaktan daha önce gelmiş aynı haberin (aynı yayının) kopyası eklenmez."""
         simdi = dt.datetime.now().isoformat(timespec="seconds")
         yeniler = []
         with self._kilit, self._bag() as c:
+            if self._denetci is None:
+                self._denetci = self._denetci_kur(c)
             for k in kayitlar:
                 var = c.execute("SELECT puan FROM kayitlar WHERE id=?", (k["id"],)).fetchone()
                 if var:
@@ -112,6 +127,9 @@ class Depo:
                         c.execute("UPDATE kayitlar SET pdf_url=? WHERE id=? AND pdf_url=''",
                                   (k["pdf_url"], k["id"]))
                     continue
+                tarih = k.get("tarih", "") or simdi[:10]
+                if self._denetci.tekrar_mi(k["kategori"], k["baslik"], tarih):
+                    continue
                 c.execute(
                     """INSERT INTO kayitlar (id,kategori,kaynak,baslik,yazarlar,yayin_yeri,tarih,
                        url,doi,ozet,eslesen,puan,ilk_gorulme,etiketler,pdf_url,icerik,dil)
@@ -121,6 +139,7 @@ class Depo:
                      k.get("ozet", ""), k.get("eslesen", ""), k.get("puan", 0), simdi,
                      k.get("etiketler", ""), k.get("pdf_url", ""), k.get("icerik", ""), k.get("dil", "")),
                 )
+                self._denetci.ekle(k["id"], k["kategori"], k["baslik"], tarih)
                 yeniler.append(k)
         return yeniler
 
@@ -356,6 +375,28 @@ class Depo:
         sil = [r["id"] for r in satirlar if not arkeoloji_mi(r["baslik"] or "", r["ozet"] or "")]
         with self._kilit, self._bag() as c:
             c.executemany("DELETE FROM kayitlar WHERE id=?", [(i,) for i in sil])
+        return len(sil)
+
+    def tekrarlari_temizle(self) -> int:
+        """Eski sürümlerin kaydettiği kopyaları (aynı haber, farklı kaynak) siler; ilk geleni bırakır.
+        Favori, not, konu, kaynakça ya da PDF'i olan kayıt silinmez."""
+        from .metin import TekrarDenetci
+        d, sil = TekrarDenetci(), []
+        with self._bag() as c:
+            kullanilan = {r[0] for r in c.execute(
+                "SELECT kayit_id FROM konu_kayit UNION SELECT kayit_id FROM not_ WHERE kayit_id IS NOT NULL")}
+            satirlar = c.execute("SELECT id, kategori, baslik, tarih, ilk_gorulme, favori, kaynakcada, pdf_yol "
+                                 "FROM kayitlar WHERE etiketler NOT LIKE '%,literatur,%' ORDER BY ilk_gorulme, id").fetchall()
+        for r in satirlar:
+            tarih = r["tarih"] or (r["ilk_gorulme"] or "")[:10]
+            korunur = r["favori"] or r["kaynakcada"] or r["pdf_yol"] or r["id"] in kullanilan
+            if d.tekrar_mi(r["kategori"], r["baslik"] or "", tarih) and not korunur:
+                sil.append(r["id"])
+            else:
+                d.ekle(r["id"], r["kategori"], r["baslik"] or "", tarih)
+        with self._kilit, self._bag() as c:
+            c.executemany("DELETE FROM kayitlar WHERE id=?", [(i,) for i in sil])
+        self._denetci = None
         return len(sil)
 
     # ---------- ayarlar ----------

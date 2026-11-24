@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Doğal ses bileşeni (dünün özeti için)
+        run: pip install --quiet edge-tts || echo "edge-tts kurulamadı; sesli özet bu sefer üretilmeyecek"
       - name: Kaynakları tara
         run: python toplayici/topla.py
       - name: Sonuçları kaydet
