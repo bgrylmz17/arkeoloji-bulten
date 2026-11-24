@@ -52,6 +52,7 @@ const HATA_METNI = {
   "auth/cancelled-popup-request": "Google penceresi kapatıldı.",
   "auth/unauthorized-domain": "Bu adres Firebase'de izinli değil (yönetici ayarı).",
   "ayar-yok": "Hesap sistemi henüz kurulmadı.",
+  "auth/requires-recent-login": "Güvenlik için önce çıkış yapıp yeniden giriş yapın, sonra hesabı silin.",
 };
 const hataMetni = e => HATA_METNI[e && (e.code || e.message)] || "Giriş yapılamadı. Biraz sonra yeniden deneyin.";
 
@@ -203,6 +204,44 @@ async function cikisYap() {
   D.uid = null; D.esitleme = 0; kaydet();
 }
 
+/* Hesabı ve buluttaki bütün verileri kalıcı olarak siler (KVKK m.11; App Store 5.1.1(v)).
+ * Bu cihazdaki kayıtlar yerinde kalır. */
+async function hesabiSil() {
+  const { auth, fs } = await firebaseYukle();
+  const k = H.auth.currentUser;
+  if (!k) return;
+  const uid = k.uid;
+  H.dinleyiciler.forEach(c => c()); H.dinleyiciler = [];
+  clearTimeout(H.gonderZamani);
+  const kayitlar = await fs.getDocs(fs.collection(H.db, "kullanicilar", uid, "kayitlar"));
+  const belgeler = kayitlar.docs.map(d => d.ref);
+  for (let i = 0; i < belgeler.length; i += 400) {
+    const parti = fs.writeBatch(H.db);
+    belgeler.slice(i, i + 400).forEach(r => parti.delete(r));
+    await parti.commit();
+  }
+  await fs.deleteDoc(fs.doc(H.db, "kullanicilar", uid));
+  H.kullanici = null;          // silme sırasında yeniden yazılmasın
+  await auth.deleteUser(k);
+  D.uid = null; D.esitleme = 0; kaydet();
+}
+function hesapSilLevhasi() {
+  levhaAc(`<h3>Hesabı sil</h3>
+    <p class="aciklama">${esc(hesapAdi())} hesabı ve hesapta saklanan favoriler, konular, notlar ve kaynakça kalıcı olarak silinir. Bu işlem geri alınamaz. Bu cihazdaki kayıtlarınız silinmez.</p>
+    <p style="margin:14px 0 0"><button class="buyuk-dugme tehlike" id="sil-onay">Hesabı kalıcı olarak sil</button></p>
+    <p style="text-align:center"><button class="ikincil-dugme" id="sil-vazgec">Vazgeç</button></p>`, lv => {
+    lv.querySelector("#sil-vazgec").onclick = levhaKapat;
+    lv.querySelector("#sil-onay").onclick = async e => {
+      e.target.disabled = true; e.target.textContent = "Siliniyor…";
+      try { await hesabiSil(); levhaKapat(); bildir("Hesabınız ve buluttaki verileriniz silindi"); rota(true); }
+      catch (err) {
+        levhaKapat(); bildir(hataMetni(err));
+        if (H.auth && H.auth.currentUser) { H.kullanici = H.auth.currentUser; dinle(); }
+      }
+    };
+  });
+}
+
 /* ---------------------------------------------------------------- arayüz */
 function hesapAdi() {
   const k = H.kullanici;
@@ -221,11 +260,14 @@ function hesapGrubuHtml() {
     <div class="satir"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(hesapAdi())}</span><span class="sag">${H.kullanici.providerData.some(p => p.providerId === "google.com") ? "Google" : "E-posta"}</span></div>
     <div class="satir">Eşitleme<span class="sag">${esc(H.durum || (H.sonEsitleme ? "Eşitlendi, " + saatYaz(H.sonEsitleme) : "Açık"))}</span></div>
     <button class="satir" id="cikis">Çıkış yap</button>
-  </div><p class="aciklama">Çıkış yapınca kayıtlarınız bu cihazda da kalır; hesabınızdakiler silinmez.</p></div>`;
+    <button class="satir" id="hesap-sil" style="color:var(--rapor)">Hesabı sil</button>
+  </div><p class="aciklama">Çıkış yapınca kayıtlarınız bu cihazda da kalır; hesabınızdakiler silinmez. "Hesabı sil" hesabı ve buluttaki bütün verileri kalıcı olarak siler.</p></div>`;
 }
 function hesapGrubuBagla() {
   const c = document.getElementById("cikis");
   if (c) c.onclick = async () => { await cikisYap(); bildir("Çıkış yapıldı"); rota(true); };
+  const sil = document.getElementById("hesap-sil");
+  if (sil) sil.onclick = hesapSilLevhasi;
 }
 
 function sayfaGiris() {
