@@ -9,5 +9,8 @@
   "en_fazla": 2500,
   "ceviri_siniri": 60,
   "google_cozme_siniri": 120,
-  "eposta": ""
+  "eposta": "",
+  "_duyurular_aciklama": "duyurular: son dakika şeridinde en önde görünen elle yazılmış duyurular. Örnek: [{\"baslik\": \"Göbeklitepe'de yeni sezon başladı\", \"ozet\": \"Kültür ve Turizm Bakanlığı\", \"url\": \"https://...\", \"bitis\": \"2026-12-31\"}]. banner: uygulamanın en üstündeki Harrix alanı, ör. {\"aktif\": true, \"etiket\": \"HARRIX\", \"baslik\": \"Kazı Takip pilot başvuruları açık\", \"altBaslik\": \"harrixapp@gmail.com\", \"url\": \"https://...\"}. Kapatmak için null.",
+  "duyurular": [],
+  "banner": null
 }

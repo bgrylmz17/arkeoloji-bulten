@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.6.0";
+const SURUM = "1.7.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 const TUR_COGUL = { Makale: "Makaleler", Tez: "Tezler", Haber: "Haberler", Rapor: "Raporlar" };
@@ -143,7 +143,7 @@ const D = Object.assign({
   fav: [], okundu: {}, notlar: {}, konular: [], kaynakca: [], kayitlar: {},
   gorulen: "", tema: "oto", palet: "kum", yazi: 1, bildirim: false, kurulumIpucu: true,
   uid: null, esitleme: 0, girisSoruldu: false, hepTurkce: false, oaAnahtar: "", sesHiz: 1, sesId: "",
-  ozelSozler: [], zoteroKullanici: "", zoteroAnahtar: "",
+  ozelSozler: [], kvkkSurum: "",
 }, guvenliOku());
 
 function guvenliOku() {
@@ -303,7 +303,14 @@ function sayfaBugun() {
   const yeni = VERI.kayitlar.filter(yeniMi);
   const say = t => (yeni.length ? yeni : son).filter(r => r.k === t).length;
   const so = sabahOzeti();
+  const sd = sonDakika();
+  const b = VERI.banner;
   const ust = `
+    ${b && b.aktif ? `<a class="harrix-banner" ${b.url ? `href="${esc(b.url)}" target="_blank" rel="noopener"` : ""}>
+      <span class="banner-etiket">${esc(b.etiket || "HARRIX")}</span><span class="banner-metin"><b>${esc(b.baslik)}</b>${b.altBaslik ? `<small>${esc(b.altBaslik)}</small>` : ""}</span></a>` : ""}
+    ${sd.length ? `<section class="son-dakika" aria-label="Son dakika"><h2><span class="nabiz" aria-hidden="true"></span>Son dakika</h2>
+      <div class="sd-serit">${sd.map(d => `<a class="sd-kart${d.onemli ? " onemli" : ""}" href="${esc(d.adres)}" ${d.dis ? 'target="_blank" rel="noopener"' : ""}>
+        <b>${esc(d.baslik)}</b><small>${esc(d.alt)}</small></a>`).join("")}</div></section>` : ""}
     ${VERI.guncelleme ? `<section class="sabah" aria-label="Dünün özeti">
       <div class="sabah-ust"><div><h2>${so.selam} · Dünün özeti</h2><p>${esc(so.etiket)}</p></div>
         ${SES.destek && so.havuz.length ? `<button class="sabah-dinle" id="sabah-dinle"><svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg>Dinle</button>` : ""}</div>
@@ -324,8 +331,8 @@ function sayfaBugun() {
   $("#sayfa").innerHTML = ust + (liste.length ? tabakalarHtml(liste)
     : bosHtml("Henüz kayıt yok", "Bülten ilk kez toplanıyor olabilir; birkaç dakika sonra yeniden bakın."));
   document.querySelectorAll("[data-tur-git]").forEach(a => a.addEventListener("click", () => { S.tur = a.dataset.turGit; }));
-  const sd = $("#sabah-dinle");
-  if (sd) sd.onclick = () => {
+  const sDinle = $("#sabah-dinle");
+  if (sDinle) sDinle.onclick = () => {
     const mp3 = VERI.sesli_ozet;   // toplayıcının doğal sesle okuduğu özet; yalnız aynı "dün" içinse
     if (mp3 && mp3.dosya && so.etiket !== "Son 48 saat" && mp3.gun === gunOnce(1)) SES.mp3(`${mp3.dosya}?v=${mp3.imza}`, "Dünün özeti", so.sesli);
     else SES.oku(so.sesli, "Dünün özeti");
@@ -345,6 +352,14 @@ function gununSozu() {
   if (!l.length) return "";
   const d = new Date(); const sira = Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000);
   return l[sira % l.length];
+}
+
+/* Son dakika: toplayıcının elle yazılan duyuruları ve en az 3 sitede çıkan yeni haberler (r.flash). */
+function sonDakika() {
+  const elle = (VERI.duyurular || []).map(d => ({ baslik: d.baslik, alt: d.ozet || "Harrix duyurusu", adres: d.url || "#bugun", dis: !!d.url, onemli: d.onemli !== false }));
+  const flash = VERI.kayitlar.filter(r => r.flash).slice(0, 6).map(r => ({ baslik: baslikGoster(r),
+    alt: `${r.ks ? `${r.ks} kaynakta` : ""}${r.ks && (r.w || r.s) ? " · " : ""}${r.w || r.s || ""}`, adres: `#k/${encodeURIComponent(r.i)}`, dis: false, onemli: true }));
+  return [...elle, ...flash].slice(0, 8);
 }
 
 /* Dünün (dün boşsa son 48 saatin) kayıtlarından kısa özet ve sesli metin. */
@@ -691,7 +706,6 @@ function sayfaAyrinti(id) {
         ${r.p ? `<a class="eylem" href="${esc(r.p)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 4v11m-4-4l4 4 4-4M5 20h14"/></svg>PDF</a>`
           : r.d ? `<button class="eylem" data-e="acik"><svg viewBox="0 0 24 24"><path d="M12 4v11m-4-4l4 4 4-4M5 20h14"/></svg>Açık kopya ara</button>` : ""}
         <button class="eylem" data-e="kunye"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>APA kopyala</button>
-        <button class="eylem" data-e="zotero"><svg viewBox="0 0 24 24"><path d="M5 5h14L5 19h14"/></svg>Zotero'ya gönder</button>
         ${r.p ? `<button class="eylem" data-e="arsiv"><svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM6 8v12h12V8M10 12h4"/></svg>PDF'i arşive al</button>` : ""}
       </div>
       ${D.notlar[r.i] ? `<div class="kunye"><b>Notunuz:</b> ${esc(D.notlar[r.i])}</div>` : ""}
@@ -731,7 +745,6 @@ async function eylem(ad, r, ciz, goster) {
   else if (ad === "paylas") paylasLevhasi(kayitPaylasimi(r));
   else if (ad === "dinle") kaydiDinle(r);
   else if (ad === "kunye") panoya(apaDuz(r), "APA 7 künyesi kopyalandı");
-  else if (ad === "zotero") zoteroyaGonder([r]);
   else if (ad === "arsiv") pdfIndirArsivle(r);
 }
 
@@ -997,9 +1010,8 @@ function sayfaKaynakca() {
     <div class="grup" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="ikincil-dugme" id="kc-paylas" ${liste.length ? "" : "disabled"}>Paylaş</button>
       <button class="ikincil-dugme" id="kc-kopyala" ${liste.length ? "" : "disabled"}>Tümünü kopyala</button>
-      <button class="ikincil-dugme" id="kc-ris" ${liste.length ? "" : "disabled"}>RIS (Zotero, Mendeley)</button>
+      <button class="ikincil-dugme" id="kc-ris" ${liste.length ? "" : "disabled"}>RIS (EndNote, Mendeley)</button>
       <button class="ikincil-dugme" id="kc-bib" ${liste.length ? "" : "disabled"}>BibTeX</button>
-      <button class="ikincil-dugme" id="kc-zotero" ${liste.length ? "" : "disabled"}>Zotero'ya gönder</button>
       <button class="ikincil-dugme" id="kc-doi">DOI ile ekle</button>
     </div>
     ${liste.length ? `<div class="grup"><h3>APA 7, alfabetik</h3>${liste.map(r => `
@@ -1012,7 +1024,6 @@ function sayfaKaynakca() {
     $("#kc-paylas").onclick = () => paylasLevhasi({ baslik: "Kaynakça", url: "", metin: "Kaynakça (APA 7)\n\n" + liste.map(apaDuz).join("\n\n") });
     $("#kc-ris").onclick = () => dosyaIndir("kaynakca.ris", ris(liste), "application/x-research-info-systems");
     $("#kc-bib").onclick = () => dosyaIndir("kaynakca.bib", bibtex(liste), "application/x-bibtex");
-    $("#kc-zotero").onclick = () => zoteroyaGonder(liste);
   }
   $("#kc-doi").onclick = doiLevhasi;
   $("#sayfa").querySelectorAll("[data-cikar]").forEach(a => a.onclick = e => {
@@ -1090,11 +1101,6 @@ function sayfaAyarlar() {
     <div class="grup"><h3>Literatür araması</h3><div class="kutu">
       <label class="satir">OpenAlex anahtarı<input id="oa-anahtar" type="password" autocomplete="off" placeholder="isteğe bağlı" value="${esc(D.oaAnahtar)}" style="max-width:55%"></label>
     </div><p class="aciklama">Tüm literatür araması anahtarsız da çalışır, ama OpenAlex yoğun saatlerde anahtarsız aramaları durdurabiliyor. openalex.org'dan ücretsiz alınan anahtarı buraya yazarsanız arama kesintisiz olur. Anahtar yalnız bu telefonda saklanır.</p></div>
-    <div class="grup"><h3>Zotero</h3><div class="kutu">
-      <label class="satir">Kullanıcı kimliği<input id="zt-kullanici" inputmode="numeric" autocomplete="off" placeholder="ör. 1234567" value="${esc(D.zoteroKullanici)}" style="max-width:55%"></label>
-      <label class="satir">API anahtarı<input id="zt-anahtar" type="password" autocomplete="off" placeholder="yazma izinli anahtar" value="${esc(D.zoteroAnahtar)}" style="max-width:55%"></label>
-      <button class="satir" id="zt-dene">Bağlantıyı dene</button>
-    </div><p class="aciklama">Kaynakçanızı ve tek tek kayıtları Zotero kütüphanenize gönderir. zotero.org › Settings › Security sayfasında "Your user ID" numarasını görürsünüz; aynı sayfadan "Allow write access" işaretli yeni bir anahtar oluşturun. Anahtar yalnız bu cihazda saklanır.</p></div>
     <div class="grup"><h3>Bildirimler</h3><div class="kutu">
       <label class="satir">Yeni kayıt gelince haber ver<input type="checkbox" class="anahtar" id="bildirim-ac" ${D.bildirim && bildirimDestek && Notification.permission === "granted" ? "checked" : ""} ${bildirimDestek ? "" : "disabled"}></label>
     </div><p class="aciklama">${bildirimDestek
@@ -1118,14 +1124,6 @@ function sayfaAyarlar() {
   if (typeof hesapGrubuBagla === "function") hesapGrubuBagla();
   const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
   $("#oa-anahtar").onchange = e => { D.oaAnahtar = e.target.value.trim(); kaydet(); bildir(D.oaAnahtar ? "OpenAlex anahtarı kaydedildi" : "OpenAlex anahtarı kaldırıldı"); };
-  $("#zt-kullanici").onchange = e => { D.zoteroKullanici = e.target.value.replace(/\D/g, ""); kaydet(); };
-  $("#zt-anahtar").onchange = e => { D.zoteroAnahtar = e.target.value.trim(); kaydet(); };
-  $("#zt-dene").onclick = async () => {
-    D.zoteroKullanici = $("#zt-kullanici").value.replace(/\D/g, ""); D.zoteroAnahtar = $("#zt-anahtar").value.trim(); kaydet();
-    if (!D.zoteroKullanici || !D.zoteroAnahtar) { bildir("Kullanıcı kimliğini ve anahtarı yazın"); return; }
-    bildir("Deneniyor…");
-    bildir(await zoteroDene() ? "Zotero bağlantısı çalışıyor" : "Zotero bağlanamadı; kimliği ve anahtarı kontrol edin");
-  };
   $("#hep-turkce").onchange = e => { D.hepTurkce = e.target.checked; kaydet(); bildir(D.hepTurkce ? "Yabancı sayfalar Türkçe açılacak" : "Sayfalar özgün dilinde açılacak"); };
   sec("tema", D.tema, v => D.tema = v);
   sec("palet", D.palet, v => D.palet = v);
@@ -1184,43 +1182,6 @@ async function arkaPlanKaydi() {
     }
     navigator.serviceWorker.controller && navigator.serviceWorker.controller.postMessage({ tur: "esik", deger: VERI.guncelleme });
   } catch (e) { /* desteklemeyen tarayıcılar sessizce geçer */ }
-}
-
-/* ---------------------------------------------------------------- Zotero (Web API v3; anahtar yalnız bu cihazda) */
-function zoteroOge(r) {
-  const tur = r.k === "Makale" ? "journalArticle" : r.k === "Tez" ? "thesis" : r.k === "Kitap" ? "book" : "webpage";
-  const ku = r.ku || {};
-  const o = { itemType: tur, title: r.b, abstractNote: r.o || "", date: r.t || "", url: r.u || "", language: r.l || "",
-    creators: yazarlarListesi(r).map(y => ({ creatorType: "author", firstName: y.ad || "", lastName: y.soyad || "" })),
-    tags: (r.e || []).filter(e => KAVRAM.has(e)).map(e => ({ tag: KAVRAM.get(e).ad })) };
-  if (tur === "journalArticle") Object.assign(o, { publicationTitle: ku.yayin || r.w || "", volume: ku.cilt || "", issue: ku.sayi || "", pages: ku.sayfa || "", DOI: r.d || "" });
-  else if (tur === "thesis") Object.assign(o, { university: ku.universite || r.w || "", thesisType: ku.tez_turu === "Doktora" ? "Doktora tezi" : "Yüksek lisans tezi" });
-  else if (tur === "book") Object.assign(o, { publisher: r.w || "" });
-  else Object.assign(o, { websiteTitle: r.w || r.s || "" });
-  return o;
-}
-const zoteroBaslik = () => ({ "Zotero-API-Version": "3", "Zotero-API-Key": D.zoteroAnahtar });
-async function zoteroDene() {
-  try { return (await fetch(`https://api.zotero.org/users/${encodeURIComponent(D.zoteroKullanici)}/items?limit=1`, { headers: zoteroBaslik() })).ok; }
-  catch (e) { return false; }
-}
-async function zoteroyaGonder(liste) {
-  if (!D.zoteroKullanici || !D.zoteroAnahtar) { bildir("Önce Ayarlar › Zotero'ya kullanıcı kimliğinizi ve anahtarınızı yazın"); location.hash = "#ayarlar"; return; }
-  bildir(liste.length > 1 ? `${liste.length} kayıt Zotero'ya gönderiliyor…` : "Zotero'ya gönderiliyor…");
-  let tamam = 0, hata = 0;
-  try {
-    for (let i = 0; i < liste.length; i += 50) {
-      const y = await fetch(`https://api.zotero.org/users/${encodeURIComponent(D.zoteroKullanici)}/items`, {
-        method: "POST", headers: { ...zoteroBaslik(), "Content-Type": "application/json" }, body: JSON.stringify(liste.slice(i, i + 50).map(zoteroOge)) });
-      if (y.status === 403) throw new Error("izin");
-      if (!y.ok) throw new Error(String(y.status));
-      const j = await y.json();
-      tamam += Object.keys(j.successful || {}).length; hata += Object.keys(j.failed || {}).length;
-    }
-    bildir(hata ? `${tamam} kayıt Zotero'ya gönderildi, ${hata} kayıt gönderilemedi` : `${tamam} kayıt Zotero kütüphanenize eklendi`);
-  } catch (e) {
-    bildir(e.message === "izin" ? "Zotero anahtarının yazma izni yok. zotero.org'da \"Allow write access\" ile yeni anahtar oluşturun." : "Zotero'ya ulaşılamadı. Biraz sonra yeniden deneyin.");
-  }
 }
 
 /* ---------------------------------------------------------------- PDF arşivi (bu cihazda, IndexedDB) */
@@ -1295,8 +1256,29 @@ async function sayfaPdfler() {
 }
 
 /* ---------------------------------------------------------------- kullanım koşulları ve KVKK */
-function sayfaYasal() {
-  $("#sayfa").innerHTML = `<article class="ayrinti yasal">
+const KVKK_SURUM = "2026-11";   // metin değişince artırın: herkesten yeniden onay istenir
+function sayfaYasal() { $("#sayfa").innerHTML = `<article class="ayrinti yasal">${yasalHtml()}</article>`; }
+/* İlk açılışta (ya da metin değişince) koşullar ve KVKK onaylanmadan uygulama kullanılamaz. */
+function kvkkKapisi() {
+  if (D.kvkkSurum === KVKK_SURUM) return Promise.resolve();
+  return new Promise(tamam => {
+    const k = document.createElement("div");
+    k.className = "onay-kapi"; k.setAttribute("role", "dialog"); k.setAttribute("aria-modal", "true"); k.setAttribute("aria-labelledby", "onay-baslik");
+    k.innerHTML = `<div class="onay-kutu">
+      <h2 id="onay-baslik">Harrix Arkeoloji Bülteni'ne hoş geldiniz</h2>
+      <p>Devam etmeden önce kullanım koşullarını ve KVKK aydınlatma metnini okuyup onaylayın. Giriş yapmadan kullandığınızda kişisel verileriniz yalnız bu cihazda kalır.</p>
+      <details><summary>Metni oku</summary><div class="yasal">${yasalHtml()}</div></details>
+      <label class="onay-satir"><input type="checkbox" id="onay-kutu"> Kullanım koşullarını ve KVKK aydınlatma metnini okudum, kabul ediyorum.</label>
+      <button class="buyuk-dugme" id="onay-dugme" disabled>Devam et</button></div>`;
+    document.body.appendChild(k);
+    const kutu = k.querySelector("#onay-kutu"), dugme = k.querySelector("#onay-dugme");
+    kutu.onchange = () => { dugme.disabled = !kutu.checked; };
+    dugme.onclick = () => { D.kvkkSurum = KVKK_SURUM; D.kvkkTarih = new Date().toISOString(); kaydet(); k.remove(); tamam(); };
+    dugme.focus();
+  });
+}
+function yasalHtml() {
+  return `
     <h2>Kullanım koşulları</h2>
     <p>Harrix Arkeoloji Bülteni; açık akademik veritabanlarından (OpenAlex, Crossref, DergiPark) ve kamuya açık haber kaynaklarından derlenen arkeoloji başlıklarını, özetlerini ve bağlantılarını sunar. İçeriklerin telif hakları özgün yayıncılarına aittir; uygulama yalnızca kaynağa bağlantı, künye ve kişisel araştırma araçları sağlar. Makine çevirileri yardımcıdır; alıntı yapmadan önce özgün metne bakın.</p>
     <h2>KVKK aydınlatma metni</h2>
@@ -1304,9 +1286,9 @@ function sayfaYasal() {
     <ul>
       <li>Giriş yapmadan kullandığınızda favorileriniz, notlarınız, konularınız, kaynakçanız, PDF arşiviniz ve ayarlarınız yalnızca bu cihazda saklanır; hiçbir sunucuya gönderilmez.</li>
       <li>İsteğe bağlı olarak giriş yaptığınızda e-posta adresiniz (Google ile girişte adınız) ve favori, konu, not ve kaynakça listeleriniz yalnızca cihazlarınız arasında eşitleme amacıyla Firebase (Google Cloud) altyapısında işlenir.</li>
-      <li>OpenAlex, Zotero ve çeviri servislerine yalnızca sizin başlattığınız aramalar ve gönderimler iletilir. OpenAlex ve Zotero anahtarlarınız bu cihazda kalır.</li>
+      <li>OpenAlex ve çeviri servislerine yalnızca sizin başlattığınız aramalar iletilir. OpenAlex anahtarınız bu cihazda kalır.</li>
       <li>Kanunun 11. maddesindeki haklarınızı kullanmak için harrixapp@gmail.com adresine yazabilirsiniz. Verilerinizi Ayarlar › Yedeği dışa aktar ile alabilir, Ayarlar › Hesabı sil ile hesabınızı ve buluttaki bütün verilerinizi kalıcı olarak silebilirsiniz.</li>
-    </ul></article>`;
+    </ul>`;
 }
 
 /* ---------------------------------------------------------------- yana kaydırma: favori */
@@ -1335,7 +1317,7 @@ function kaydirmaBagla() {
 }
 
 /* ---------------------------------------------------------------- yönlendirme */
-const UST = { bugun: "Bugün", akis: "Yayınlar", kitaplik: "Kitaplık", ayarlar: "Ayarlar", giris: "Giriş",
+const UST = { bugun: "Bugün", akis: "Yayınlar", kitaplik: "Harrix Kitaplık", ayarlar: "Ayarlar", giris: "Giriş",
   favoriler: "Favoriler", notlar: "Notlu kayıtlar", kaynakca: "Kaynakçam", durum: "Kaynakların durumu", ara: "Ara", konu: "Konu", k: "",
   sozler: "Arkeoloji sözleri", pdfler: "PDF arşivim", yasal: "Koşullar ve KVKK" };
 const ALT_SAYFA = { giris: "ayarlar", favoriler: "kitaplik", notlar: "kitaplik", kaynakca: "kitaplik", konu: "kitaplik", durum: "ayarlar", k: null, ara: "akis",
@@ -1403,6 +1385,7 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", temaUygula
   rota();
   acilis.classList.add("bitti");
   setTimeout(() => acilis.remove(), 600);
+  await kvkkKapisi();
   if ("serviceWorker" in navigator) {
     try { await navigator.serviceWorker.register("sw.js"); if (D.bildirim) arkaPlanKaydi(); } catch (e) {}
   }

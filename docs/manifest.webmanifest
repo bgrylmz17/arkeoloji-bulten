@@ -1,24 +1,84 @@
 {
   "name": "Harrix Arkeoloji Bülteni",
   "short_name": "Bülten",
-  "description": "Arkeoloji makaleleri, tezler, kazı haberleri ve raporları — her gün güncellenir.",
+  "description": "Arkeoloji makaleleri, tezler, kazı haberleri ve raporları; her sabah dünün özeti, son dakika duyuruları ve Harrix Kitaplık.",
   "lang": "tr",
   "dir": "ltr",
   "start_url": "./#bugun",
   "scope": "./",
   "id": "./",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#eef0e9",
   "theme_color": "#eef0e9",
-  "categories": ["news", "education", "books"],
+  "categories": [
+    "news",
+    "education",
+    "books"
+  ],
   "icons": [
-    { "src": "ikon/ikon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "ikon/ikon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "ikon/maskelenebilir-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "ikon/ikon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "ikon/ikon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "ikon/maskelenebilir-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Kaynakçam", "url": "./#kaynakca", "icons": [{ "src": "ikon/ikon-192.png", "sizes": "192x192" }] },
-    { "name": "Ara", "url": "./#ara", "icons": [{ "src": "ikon/ikon-192.png", "sizes": "192x192" }] }
+    {
+      "name": "Kaynakçam",
+      "url": "./#kaynakca",
+      "icons": [
+        {
+          "src": "ikon/ikon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Ara",
+      "url": "./#ara",
+      "icons": [
+        {
+          "src": "ikon/ikon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "ekran/telefon-bugun.png",
+      "sizes": "540x1080",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Bugün: son dakika, dünün özeti ve günün sözü"
+    },
+    {
+      "src": "ekran/telefon-yayinlar.png",
+      "sizes": "540x1080",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Yayınlar: dönem ve dil süzgeçleriyle bülten"
+    },
+    {
+      "src": "ekran/genis-bugun.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Bilgisayarda Bugün ekranı"
+    }
   ]
 }

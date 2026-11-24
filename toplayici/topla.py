@@ -122,26 +122,68 @@ def topla(depo: Depo, ayar: dict, paralel: int = 6) -> list[dict]:
     return sorted(saglik, key=lambda s: s["ad"])
 
 
-def tekrarlari_ayikla(eski_kayitlar: dict, yeni: list[dict]) -> tuple[list[dict], int]:
+def tekrarlari_ayikla(eski_kayitlar: dict, yeni: list[dict]) -> tuple[list[dict], int, dict]:
     """Aynı haberin başka kaynaktan gelen kopyalarını atar: önce gelen kalır.
-    Eski kayıtlardaki kopyalar (önceki sürümlerden kalma) eski_kayitlar'dan silinir; yeni listesi süzülüp döner."""
-    d, atilan = TekrarDenetci(), 0
+    Eski kayıtlardaki kopyalar (önceki sürümlerden kalma) eski_kayitlar'dan silinir; yeni listesi süzülüp döner.
+    Üçüncü değer: {kalan kaydın kimliği: bu çalışmada bulunan kopya sayısı} (flash için)."""
+    d, atilan, kopya = TekrarDenetci(), 0, {}
     for k in sorted(eski_kayitlar.values(), key=lambda k: (k.get("g", ""), k["i"])):
         tarih = k.get("t") or k.get("g", "")[:10]
-        if d.tekrar_mi(k.get("k", ""), k.get("b", ""), tarih):
+        asil = d.tekrar_mi(k.get("k", ""), k.get("b", ""), tarih)
+        if asil:
             del eski_kayitlar[k["i"]]
+            kopya[asil] = kopya.get(asil, 0) + 1
             atilan += 1
         else:
             d.ekle(k["i"], k.get("k", ""), k.get("b", ""), tarih)
     kalan = []
     for s in yeni:
         tarih = s.get("tarih") or simdi()[:10]
-        if d.tekrar_mi(s["kategori"], s["baslik"], tarih):
+        asil = d.tekrar_mi(s["kategori"], s["baslik"], tarih)
+        if asil:
+            kopya[asil] = kopya.get(asil, 0) + 1
             atilan += 1
             continue
         d.ekle(s["id"], s["kategori"], s["baslik"], tarih)
         kalan.append(s)
-    return kalan, atilan
+    return kalan, atilan, kopya
+
+
+FLASH_KAYNAK = 3      # aynı haber en az bu kadar sitede çıktıysa "son dakika"
+FLASH_SAAT = 48       # yalnız bu kadar saat içinde toplanan haberler
+
+
+def flash_isaretle(tum: list[dict], simdiki: str) -> int:
+    """Çok sitenin verdiği yeni haberleri 'flash' (son dakika) işaretler. Dönüş: işaretlenen sayısı."""
+    sinir = (dt.datetime.fromisoformat(simdiki) - dt.timedelta(hours=FLASH_SAAT)).isoformat()
+    n = 0
+    for k in tum:
+        f = k.get("k") in ("Haber", "Rapor") and k.get("ks", 1) >= FLASH_KAYNAK and k.get("g", "") >= sinir
+        if f:
+            k["flash"] = True
+            n += 1
+        else:
+            k.pop("flash", None)
+    return n
+
+
+def duyurular_ve_banner(kullanici: dict, simdiki: str) -> dict:
+    """ayar.json'daki elle yazılan duyurular (süresi geçmemiş olanlar) ve en üstteki Harrix banner'ı."""
+    bugun = simdiki[:10]
+    duyurular = []
+    for i, d in enumerate(kullanici.get("duyurular") or []):
+        if not isinstance(d, dict) or not d.get("baslik") or (d.get("bitis") and d["bitis"] < bugun):
+            continue
+        duyurular.append({"id": d.get("id") or f"duyuru-{i}", "baslik": d["baslik"], "ozet": d.get("ozet", ""),
+                          "url": d.get("url", ""), "tarih": d.get("tarih", bugun), "onemli": bool(d.get("onemli", True))})
+    banner = kullanici.get("banner")
+    sonuc = {}
+    if duyurular:
+        sonuc["duyurular"] = duyurular
+    if isinstance(banner, dict) and banner.get("aktif") and banner.get("baslik"):
+        sonuc["banner"] = {k: banner[k] for k in ("aktif", "etiket", "baslik", "altBaslik", "url") if k in banner}
+        sonuc["banner"].setdefault("etiket", "HARRIX")
+    return sonuc
 
 
 # ---------------------------------------------------------------- dünün özeti, doğal sesle
@@ -246,7 +288,7 @@ def main() -> int:
 
     # --- yeni kayıtlar (aynı haberin başka kaynaktan gelen kopyaları atılır)
     yeni = [s for s in satirlar if s["id"] not in eski_kayitlar]
-    yeni, atilan = tekrarlari_ayikla(eski_kayitlar, yeni)
+    yeni, atilan, kopya_sayisi = tekrarlari_ayikla(eski_kayitlar, yeni)
     print(f"Yeni kayıt: {len(yeni)} (kopya olduğu için atılan: {atilan})", flush=True)
 
     # Google Haberler bağlantılarını gerçek adrese çevir (telefonda hızlı açılsın)
@@ -302,6 +344,11 @@ def main() -> int:
         if s.get("eslesen"):
             eski_kayitlar[s["id"]]["m"] = s["eslesen"]
 
+    # kaç sitede çıktı (ks): kopyaları atılan kayıtların sayacı birikir
+    for kid, n in kopya_sayisi.items():
+        if kid in eski_kayitlar:
+            eski_kayitlar[kid]["ks"] = eski_kayitlar[kid].get("ks", 1) + n
+
     # --- sakla: son N gün, en çok M kayıt (yeniler önde)
     sinir = (dt.date.today() - dt.timedelta(days=int(kullanici.get("saklama_gun", 180)))).isoformat()
     tum = [k for k in eski_kayitlar.values() if (k.get("t") or k.get("g", "")[:10]) >= sinir
@@ -315,12 +362,15 @@ def main() -> int:
     if kazi:
         kavramlar.append({"id": "kazim", "ad": kazi["kaziAdi"], "en": kazi["kaziAdi"], "grup": "Kazım"})
 
+    flash_sayisi = flash_isaretle(tum, calisma)
+    print(f"Son dakika (en az {FLASH_KAYNAK} sitede çıkan haber): {flash_sayisi}", flush=True)
     ozet_ses = sesli_ozet(tum, eski.get("sesli_ozet"))
     yaz(VERI / "bulten.json", {
         "surum": 1, "guncelleme": calisma, "yeni_sayisi": len(yeni),
         "kazi": harrix_hesap.ozet_metni(kazi) if kazi else "",
         "kavramlar": kavramlar, "kayitlar": tum,
         **({"sesli_ozet": ozet_ses} if ozet_ses else {}),
+        **duyurular_ve_banner(kullanici, calisma),
     })
     yaz(VERI / "sozler.json", sozler.SOZLER)
     hatali = [s for s in saglik if s.get("hata")]
