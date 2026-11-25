@@ -531,5 +531,11 @@ const EN = {
  "Sahadan notlar, duyurular ve kendi haberlerimiz burada yayımlanacak.": "Notes from the field, announcements and our own stories will be published here.",
  "Son dakika ve öne çıkanlar": "Breaking and highlights",
  "Özet henüz hazır değil": "The summary is not ready yet",
- "Özel": "Special"
+ "Özel": "Special",
+ "Artık Arkix özet e-postası almayacaksınız. İsterseniz Ayarlar › Hesap'tan yeniden açabilirsiniz.": "You will no longer receive Arkix summary emails. You can turn them back on in Settings › Account.",
+ "Ayrıldınız": "You have unsubscribed",
+ "Ayrılma tamamlanamadı": "Unsubscribe could not be completed",
+ "Bağlantı geçersiz olabilir. harrixapp@gmail.com adresine “ayrıl” yazmanız da yeterli.": "The link may be invalid. You can also just write “unsubscribe” to harrixapp@gmail.com.",
+ "E-posta özeti": "Email summary",
+ "E-posta özetinden ayrılıyorsunuz…": "Unsubscribing from the email summary…"
 };

@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.14.0";
+const SURUM = "1.14.1";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -1494,9 +1494,9 @@ function kaydirmaBagla() {
 /* ---------------------------------------------------------------- yönlendirme */
 const UST = { bugun: tx("Bugün"), ozet: tx("Özet"), ozel: "Arkix Özel", akis: tx("Ara"), kitaplik: tx("Harrix Kitaplık"), ayarlar: tx("Ayarlar"), giris: tx("Giriş"),
   favoriler: tx("Favoriler"), notlar: tx("Notlu kayıtlar"), kaynakca: tx("Kaynakçam"), durum: tx("Kaynakların durumu"), ara: tx("Ara"), konu: tx("Konu"), k: "",
-  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli"), takip: tx("Takip ettiklerim") };
+  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli"), takip: tx("Takip ettiklerim"), ayril: tx("E-posta özeti") };
 const ALT_SAYFA = { giris: null, favoriler: "kitaplik", notlar: "kitaplik", kaynakca: "kitaplik", konu: "kitaplik", durum: null, k: null, ara: "akis",
-  sozler: "kitaplik", pdfler: "kitaplik", yasal: null, yonetim: null, takip: null, ayarlar: null };
+  sozler: "kitaplik", pdfler: "kitaplik", yasal: null, yonetim: null, takip: null, ayarlar: null, ayril: null };
 let sonSekme = "bugun";
 
 function rota(kaydirmayiKoru) {
@@ -1516,6 +1516,7 @@ function rota(kaydirmayiKoru) {
   if (ad === "bugun") sayfaBugun();
   else if (ad === "ozet") sayfaOzet();
   else if (ad === "ozel") sayfaOzel();
+  else if (ad === "ayril") { if (typeof sayfaAyril === "function") sayfaAyril(arg); }
   else if (ad === "akis") { if (S.mod === "lit") sayfaLiteratur(); else sayfaAkis(VERI.kayitlar, tx("Yayınlar"), { modDugmesi: true }); }
   else if (ad === "ara") { sayfaAkis(VERI.kayitlar, tx("Ara"), { odakla: !kaydirmayiKoru }); }
   else if (ad === "kazim") { location.replace("#bugun"); return; }

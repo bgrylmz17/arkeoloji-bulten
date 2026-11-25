@@ -81,6 +81,13 @@ service cloud.firestore {
       allow write: if yonetici();
     }
 
+    // E-posta özetinden ayrılma isteği (girişsiz; imza sunucuda doğrulanır, istek işlenince silinir)
+    match /abonelik_iptal/{uid} {
+      allow create, update: if request.resource.data.keys().hasOnly(['token', 'tarih'])
+        && request.resource.data.token is string && request.resource.data.token.size() == 64
+        && request.resource.data.tarih == request.time;
+    }
+
     // Uzman rozeti: herkes okur (yorum yazarken denetlenir), yalnız yönetici verir
     match /uzmanlar/{uid} {
       allow read: if true;

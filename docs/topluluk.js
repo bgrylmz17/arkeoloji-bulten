@@ -226,6 +226,22 @@ function toplulukGrubuBagla() {
   if (i) i.onclick = () => geriBildirimLevhasi("istek");
 }
 
+/* ---------------------------------------------------------------- e-posta özetinden ayrılma (#ayril/<uid>/<imza>) */
+async function sayfaAyril(arg) {
+  const [uid, token] = (arg || "").split("/");
+  $("#sayfa").innerHTML = bosHtml(tx("E-posta özetinden ayrılıyorsunuz…"), "");
+  try {
+    if (!uid || !/^[a-f0-9]{64}$/.test(token || "")) throw new Error("bağlantı");
+    const { fs } = await firebaseYukle();
+    await fs.setDoc(fs.doc(H.db, "abonelik_iptal", uid), { token, tarih: fs.serverTimestamp() });
+    if (H.kullanici && H.kullanici.uid === uid) await profilKaydet({ eposta_izni: { ...(profilAl().eposta_izni || {}), izin: false, tarih: new Date().toISOString() } });
+    $("#sayfa").innerHTML = bosHtml(tx("Ayrıldınız"), tx("Artık Arkix özet e-postası almayacaksınız. İsterseniz Ayarlar › Hesap'tan yeniden açabilirsiniz."),
+      `<a class="ikincil-dugme" href="#bugun">${tx("Bültene dön")}</a>`);
+  } catch (e) {
+    $("#sayfa").innerHTML = bosHtml(tx("Ayrılma tamamlanamadı"), tx("Bağlantı geçersiz olabilir. harrixapp@gmail.com adresine “ayrıl” yazmanız da yeterli."));
+  }
+}
+
 /* ---------------------------------------------------------------- yönetim paneli (#yonetim) */
 const YON = { sekme: "geri" };
 async function sayfaYonetim() {

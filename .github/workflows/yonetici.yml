@@ -1,0 +1,34 @@
+name: Yönetici bildirimi
+
+on:
+  schedule:
+    # saatte bir (:07)
+    - cron: "7 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yonetici
+  cancel-in-progress: true
+
+jobs:
+  bak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet google-auth requests
+      - name: Yeni bildirim ve şikâyet var mı
+        env:
+          FIREBASE_HIZMET_HESABI: ${{ secrets.FIREBASE_HIZMET_HESABI }}
+          SMTP_SUNUCU: ${{ secrets.SMTP_SUNUCU }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_KULLANICI: ${{ secrets.SMTP_KULLANICI }}
+          SMTP_SIFRE: ${{ secrets.SMTP_SIFRE }}
+          NTFY_KONU: ${{ secrets.NTFY_KONU }}
+        run: python toplayici/yonetici_bildirim.py

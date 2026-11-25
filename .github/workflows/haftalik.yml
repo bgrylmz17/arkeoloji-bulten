@@ -1,0 +1,45 @@
+name: Haftalık e-posta özeti
+
+on:
+  schedule:
+    # her pazartesi 08:00 Türkiye (05:00 UTC)
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+    inputs:
+      deneme_eposta:
+        description: "Yalnız bu adrese deneme gönder (boşsa herkese)"
+        required: false
+        default: ""
+      kuru:
+        description: "Gönderme, yalnız listele (1)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: haftalik
+  cancel-in-progress: false
+
+jobs:
+  gonder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet google-auth requests
+      - name: Özeti gönder
+        env:
+          FIREBASE_HIZMET_HESABI: ${{ secrets.FIREBASE_HIZMET_HESABI }}
+          SMTP_SUNUCU: ${{ secrets.SMTP_SUNUCU }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_KULLANICI: ${{ secrets.SMTP_KULLANICI }}
+          SMTP_SIFRE: ${{ secrets.SMTP_SIFRE }}
+          ABONELIK_ANAHTARI: ${{ secrets.ABONELIK_ANAHTARI }}
+          DENEME_EPOSTA: ${{ github.event.inputs.deneme_eposta }}
+          KURU: ${{ github.event.inputs.kuru }}
+        run: python toplayici/haftalik.py
