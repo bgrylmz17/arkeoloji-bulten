@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.9.1";
+const SURUM = "1.9.2";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -376,7 +376,8 @@ function gununSozu() {
 
 /* Son dakika: toplayıcının elle yazılan duyuruları ve en az 3 sitede çıkan yeni haberler (r.flash). */
 function sonDakika() {
-  const elle = (VERI.duyurular || []).map(d => ({ baslik: d.baslik, alt: d.ozet || tx("Harrix duyurusu"), adres: d.url || "#bugun", dis: !!d.url, onemli: d.onemli !== false }));
+  // yalnizEskiAdres: eski github.io adresinde takılan kurulu kopyalara "yeni adres" duyurusu; bu sürüm göstermez
+  const elle = (VERI.duyurular || []).filter(d => !d.yalnizEskiAdres).map(d => ({ baslik: d.baslik, alt: d.ozet || tx("Harrix duyurusu"), adres: d.url || "#bugun", dis: !!d.url, onemli: d.onemli !== false }));
   const flash = VERI.kayitlar.filter(r => r.flash).slice(0, 6).map(r => ({ baslik: baslikGoster(r),
     alt: `${r.ks ? tx("{n} kaynakta", { n: r.ks }) : ""}${r.ks && (r.w || r.s) ? " · " : ""}${r.w || r.s || ""}`, adres: `#k/${encodeURIComponent(r.i)}`, dis: false, onemli: true }));
   return [...elle, ...flash].slice(0, 8);
