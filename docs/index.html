@@ -33,6 +33,9 @@
 </div>
 
 <header id="ust">
+  <button id="menu-ac" class="ikon-dugme" aria-label="Menü">
+    <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
   <button id="geri" class="ikon-dugme" aria-label="Geri" hidden>
     <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
   </button>
@@ -40,18 +43,17 @@
   <button id="bildir-ac" class="ikon-dugme" aria-label="Bildir" title="Bildir">
     <svg viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>
   </button>
-  <button id="ara-ac" class="ikon-dugme" aria-label="Ara">
-    <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
-  </button>
 </header>
+<div id="cekmece-perde" hidden></div>
+<aside id="cekmece" aria-label="Menü" hidden></aside>
 
 <main id="sayfa" tabindex="-1"></main>
 
 <nav id="sekmeler" aria-label="Bölümler">
-  <a href="#bugun" data-sekme="bugun"><svg viewBox="0 0 24 24"><path d="M3 9h18M3 14h18M3 19h18M7 4l2 3m4-3l-1 3m5-3l-2 3"/></svg><span>Bugün</span></a>
-  <a href="#akis" data-sekme="akis"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg><span>Yayınlar</span></a>
+  <a href="#bugun" data-sekme="bugun"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z"/></svg><span>Bugün</span></a>
+  <a href="#akis" data-sekme="akis"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><span>Ara</span></a>
+  <a href="#ozet" data-sekme="ozet"><svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4"/></svg><span>Özet</span><b class="rozet" id="ozet-rozet" hidden></b></a>
   <a href="#kitaplik" data-sekme="kitaplik"><svg viewBox="0 0 24 24"><path d="M5 3h4v18H5zM11 3h4v18h-4zM16.5 4l3.8 1-4.3 16-3.8-1z"/></svg><span>Kitaplık</span></a>
-  <a href="#ayarlar" data-sekme="ayarlar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10l2.1 2.1M4.9 19.1L7 17m10-10l2.1-2.1"/></svg><span>Ayarlar</span></a>
 </nav>
 
 <div id="tabaka" hidden></div>
@@ -70,5 +72,6 @@
 <script src="topluluk.js"></script>
 <script src="takip.js"></script>
 <script src="tanitim.js"></script>
+<script src="menu.js"></script>
 </body>
 </html>

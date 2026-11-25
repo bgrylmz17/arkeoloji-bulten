@@ -542,3 +542,62 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .yorum-cip { margin-left: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 99px; border: 1px solid var(--okr);
   background: var(--okr-zemin); color: var(--okr); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; vertical-align: middle; }
 .yorum-cip svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+
+/* 1.13 — ızgara yalnız "Milimetrik kâğıt"ta; alt silüet; hamburger menü; yüzen cam alt bar; Özet */
+:root:not([data-zemin="milimetrik"]) body { background-image: none; }
+#zemin-siluet { position: fixed; left: 0; right: 0; bottom: calc(var(--alt-bosluk) + 58px); z-index: -1; pointer-events: none;
+  display: flex; justify-content: center; color: var(--t2); opacity: .5; }
+#zemin-siluet svg { width: min(1200px, 160vw); height: auto; max-height: 30vh; flex: none; }
+:root[data-tema="koyu"] #zemin-siluet { color: var(--t1); opacity: .28; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="acik"]) #zemin-siluet { color: var(--t1); opacity: .28; } }
+@media print { #zemin-siluet { display: none; } }
+
+/* yüzen cam alt bar (iOS 26 havası) */
+#sekmeler {
+  left: 50%; right: auto; bottom: calc(var(--alt-bosluk) + 10px); transform: translateX(-50%);
+  width: min(420px, calc(100vw - 32px)); padding: 6px; gap: 2px; border-radius: 30px; border: 1px solid color-mix(in srgb, var(--cizgi) 70%, transparent);
+  background: color-mix(in srgb, var(--kagit-2) 62%, transparent);
+  -webkit-backdrop-filter: saturate(1.8) blur(22px); backdrop-filter: saturate(1.8) blur(22px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.35);
+}
+#sekmeler a { min-height: 50px; border-radius: 24px; align-content: center; }
+#sekmeler a[aria-current="page"] { background: color-mix(in srgb, var(--murekkep) 9%, transparent); }
+#sekmeler svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#sekmeler .rozet { top: 4px; left: calc(50% + 4px); }
+#sekmeler .rozet.nokta { min-width: 9px; width: 9px; height: 9px; padding: 0; border-radius: 50%; }
+#sayfa { padding-bottom: calc(var(--alt-bosluk) + 110px); }
+.ozet a { color: var(--okr); white-space: nowrap; }
+
+/* hamburger yan menü */
+#cekmece-perde { position: fixed; inset: 0; z-index: 60; background: rgba(15,12,10,.45); opacity: 0; transition: opacity .2s; }
+#cekmece-perde.acik { opacity: 1; }
+#cekmece { position: fixed; top: 0; bottom: 0; left: 0; z-index: 61; width: min(320px, 86vw); overflow-y: auto;
+  padding: calc(var(--ust-bosluk) + 18px) 0 calc(var(--alt-bosluk) + 18px); background: var(--kagit-2); border-right: 1px solid var(--cizgi);
+  transform: translateX(-102%); transition: transform .22s ease; box-shadow: 10px 0 30px rgba(0,0,0,.18); }
+#cekmece.acik { transform: none; }
+.cekmece-profil { display: flex; gap: 12px; align-items: center; padding: 6px 20px 18px; color: inherit; text-decoration: none; border-bottom: 1px solid var(--cizgi); }
+.cekmece-profil span { display: flex; flex-direction: column; min-width: 0; }
+.cekmece-profil b { font-size: 1.05rem; }
+.cekmece-profil small { color: var(--soluk); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cekmece-liste { padding: 8px 0; }
+.cekmece-liste hr { border: 0; border-top: 1px solid var(--cizgi); margin: 8px 20px; }
+.cekmece-satir { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 20px; color: inherit; text-decoration: none; font: inherit; font-size: 1.02rem;
+  background: none; border: 0; text-align: left; cursor: pointer; }
+.cekmece-satir span { flex: 1; }
+.cekmece-satir small { color: var(--okr); font-weight: 700; font-size: .85rem; }
+.cekmece-satir i { font-style: normal; color: var(--soluk); }
+.cekmece-satir:hover { background: color-mix(in srgb, var(--murekkep) 5%, transparent); }
+.cekmece-alt { padding: 8px 20px; color: var(--soluk); font-size: 12.5px; }
+.cekmece-alt a { color: inherit; }
+@media (prefers-reduced-motion: reduce) { #cekmece, #cekmece-perde { transition: none; } }
+
+/* Özet sayfası */
+.ozet-bolumu { margin: 14px 16px; }
+.ozet-bolumu > h2, .son-dakika > h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--okr); margin: 0 0 8px; }
+.ozet-bolumu .takip-serit { margin: 0 0 8px; }
+.ozet-bolumu .liste { border-radius: 12px; overflow: hidden; border: 1px solid var(--cizgi); }
+.ozet-kartlar { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 10px -4px 2px; padding: 2px 4px 6px; }
+.ozet-kart { flex: 0 0 72%; max-width: 280px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 14px;
+  border: 1px solid var(--cizgi); background: var(--kagit); color: inherit; text-decoration: none; }
+.ozet-kart b { font-size: 15px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ozet-kart small { color: var(--soluk); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

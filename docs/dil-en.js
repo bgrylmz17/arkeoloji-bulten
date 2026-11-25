@@ -514,5 +514,17 @@ const EN = {
  "Kitaplık ve kaynakça": "Library and bibliography",
  "Bir kaydı sola kaydırınca favorilere girer. “Konuya ekle” ile tez bölümlerine göre klasör kurarsın. Kaynakçan APA 7'ye göre kendiliğinden dizilir; RIS ya da BibTeX olarak alabilirsin. Açık erişimli PDF'leri arşivine indirip internetsiz okursun.": "Swipe a record left to add it to favourites. “Add to topic” builds folders, for example by thesis chapter. Your bibliography is formatted in APA 7 automatically and exports to RIS or BibTeX. Save open-access PDFs to your archive and read them offline.",
  "Yorum yap, bildir": "Comment and report",
- "Giriş yapınca kayıtların altına yorum yazabilirsin; uzmanların yorumunda rozet görünür. Arkeolojiyle ilgisiz ya da hatalı bir kayıt görürsen kaydın altındaki “Bildir”e ya da üst çubuktaki bayrağa dokun. Bülteni birlikte temizliyoruz.": "Once signed in you can comment under records; experts' comments carry a badge. If you see an irrelevant or wrong record, tap “Report” under it or the flag in the top bar. We keep the bulletin clean together."
+ "Giriş yapınca kayıtların altına yorum yazabilirsin; uzmanların yorumunda rozet görünür. Arkeolojiyle ilgisiz ya da hatalı bir kayıt görürsen kaydın altındaki “Bildir”e ya da üst çubuktaki bayrağa dokun. Bülteni birlikte temizliyoruz.": "Once signed in you can comment under records; experts' comments carry a badge. If you see an irrelevant or wrong record, tap “Report” under it or the flag in the top bar. We keep the bulletin clean together.",
+ "Dönem, yazar, dergi, anahtar kelime": "Period, author, journal, keyword",
+ "Hata bildir ya da öneride bulun": "Report a bug or suggest something",
+ "Kayıtların her cihazda": "Your records on every device",
+ "Konunu takibe al": "Follow your topic",
+ "Milimetrik kâğıt": "Graph paper",
+ "Sayfanın altında her gün Günün Ören Yeri'nin çizimi. Bugün: {ad}.": "A drawing of the Site of the Day at the bottom of the page. Today: {ad}.",
+ "Son iki gün": "Last two days",
+ "{n} yeni": "{n} new",
+ "Ören yeri çizimi": "Site drawing",
+ "Özet": "Summary",
+ "Özete git": "Go to summary",
+ "Menü": "Menu"
 };

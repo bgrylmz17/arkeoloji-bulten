@@ -27,7 +27,8 @@
         "lisans": "CC BY 4.0",
         "lisans_url": "https://creativecommons.org/licenses/by/4.0",
         "sayfa": "https://commons.wikimedia.org/wiki/File:Excavated_stone_enclosure_with_T-shaped_pillars,_G%C3%B6bekli_Tepe,_%C5%9Eanl%C4%B1urfa_Province,_Turkey,_2024.jpg"
-      }
+      },
+      "siluet": "M0 204 Q180 176 340 196 M860 196 Q1020 176 1200 204 M300 226 Q600 196 900 226 M374.0 224V187H365.0v-9h30v9H386.0V224 M444.0 224V175H435.0v-9h30v9H456.0V224 M744.0 224V175H735.0v-9h30v9H756.0V224 M814.0 224V187H805.0v-9h30v9H826.0V224 M514.0 224V167H505.0v-9h30v9H526.0V224 M674.0 224V167H665.0v-9h30v9H686.0V224 M559.0 226V122H541.0v-14h54v14H577.0V226 M623.0 226V122H605.0v-14h54v14H641.0V226 M560 170h16M624 172h16"
     },
     {
       "id": "stonehenge",
@@ -55,7 +56,8 @@
         "lisans": "CC BY-SA 4.0",
         "lisans_url": "https://creativecommons.org/licenses/by-sa/4.0",
         "sayfa": "https://commons.wikimedia.org/wiki/File:Stonehenge,_Condado_de_Wiltshire,_Inglaterra,_2014-08-12,_DD_05.JPG"
-      }
+      },
+      "siluet": "M0 226 Q300 214 600 218 T1200 224 M400 222h30v-78h-30z M450 222h30v-84h-30z M520 222h30v-96h-30z M560 222h30v-96h-30z M640 222h30v-92h-30z M680 222h30v-92h-30z M760 222h30v-82h-30z M810 222h30v-76h-30z M512 126h86v-14h-86z M632 130h86v-14h-86z M442 144h76v-12h-76z M752 140h86v-12h-86z M330 222l46-10 4 10z M880 222l40-14 8 14z M560 222h40v-10h-40z"
     },
     {
       "id": "catalhoyuk",
@@ -83,7 +85,8 @@
         "lisans": "CC BY-SA 4.0",
         "lisans_url": "https://creativecommons.org/licenses/by-sa/4.0",
         "sayfa": "https://commons.wikimedia.org/wiki/File:%C3%87atalh%C3%B6y%C3%BCk,_7400_BC,_Konya,_Turkey_-_UNESCO_World_Heritage_Site,_08.jpg"
-      }
+      },
+      "siluet": "M0 226H1200 M160 226 Q600 112 1040 226 M380 183V151H440V177 M440 177V139H510V171 M510 171V139H574V169 M574 169V135H644V170 M644 170V140H704V172 M704 172V144H770V178 M770 178V154H824V184 M469.0 139l-5 -24M479.0 139l-5 -24M466.0 131h11M464.0 123h11 M603.0 135l-5 -24M613.0 135l-5 -24M600.0 127h11M598.0 119h11 M731.0 144l-5 -24M741.0 144l-5 -24M728.0 136h11M726.0 128h11"
     },
     {
       "id": "efes",
@@ -111,7 +114,8 @@
         "lisans": "CC BY 2.0",
         "lisans_url": "https://creativecommons.org/licenses/by/2.0",
         "sayfa": "https://commons.wikimedia.org/wiki/File:Celsus_Library_(13952257871).jpg"
-      }
+      },
+      "siluet": "M0 226 H1200 M440 226h320v-8h-320z M452 218h296v-6h-296z M470 212v-62M480 212v-62 M496 212v-62M506 212v-62 M560 212v-62M570 212v-62 M586 212v-62M596 212v-62 M614 212v-62M624 212v-62 M640 212v-62M650 212v-62 M704 212v-62M714 212v-62 M730 212v-62M740 212v-62 M460 150h280v-12h-280z M466 138h268 M480 138v-48M490 138v-48 M574 138v-48M584 138v-48 M650 138v-48M660 138v-48 M716 138v-48M726 138v-48 M470 90h270v-10h-270z M474 80l26-18 26 18M570 80q30-24 60 0M688 80l26-18 26 18 M526 212v-40q0-14 14-14t14 14v40M596 212v-48h28v48M646 212v-40q0-14 14-14t14 14v40 M320 226v-70h14v70M318 156h18M860 226v-44h14v44M856 182h22M330 226h90M800 226h120"
     },
     {
       "id": "hattusa",
@@ -139,7 +143,8 @@
         "lisans": "CC BY-SA 4.0",
         "lisans_url": "https://creativecommons.org/licenses/by-sa/4.0",
         "sayfa": "https://commons.wikimedia.org/wiki/File:Hattu%C5%9Fa_Lion_gate_Outside_before_restoration_in_1994_098.jpg"
-      }
+      },
+      "siluet": "M0 200 Q140 176 250 186 M950 186 Q1080 172 1200 196 M0 226H1200 M260 226V170H440V226 M760 226V170H940V226 M440 226V150H520V226M680 226V150H760V226 M520 226V170Q600 70 680 170V226 M548 226V176Q600 104 652 176V226 M520 226v-44q-18-4-20-20q8-12 20-8 M680 226v-44q18-4 20-20q-8-12-20-8 M270 200l1 -3l30 0 M304 200l-4 0l25 0 M338 200l-4 0l21 0 M372 200l2 0l23 0 M406 200l-3 0l29 0 M770 200l-3 0l29 0 M804 200l2 -1l20 0 M838 200l4 -2l26 0 M872 200l-2 -2l28 0 M906 200l-2 -1l25 0 M270 176l-3 0l29 0 M304 176l-1 3l25 0 M338 176l3 2l24 0 M372 176l-1 -1l21 0 M406 176l0 2l27 0 M770 176l0 0l28 0 M804 176l2 -2l22 0 M838 176l3 0l30 0 M872 176l-3 2l25 0 M906 176l3 0l21 0"
     },
     {
       "id": "nemrut",
@@ -167,7 +172,8 @@
         "lisans": "CC BY-SA 4.0",
         "lisans_url": "https://creativecommons.org/licenses/by-sa/4.0",
         "sayfa": "https://commons.wikimedia.org/wiki/File:001362_Nemrut_Da%C4%9F%C4%B1_-_T%C3%BCrkei.jpg"
-      }
+      },
+      "siluet": "M0 214 Q200 196 360 210 M840 210 Q1000 196 1200 214 M330 226 L560 74 Q600 56 640 74 L870 226 M430 226v-46h40v46M436 180v-18h28v18 M490 226v-46h40v46M496 180v-18h28v18 M550 226v-46h40v46M556 180v-18h28v18 M610 226v-46h40v46M616 180v-18h28v18 M670 226v-46h40v46M676 180v-18h28v18 M730 226v-46h40v46M736 180v-18h28v18 M370 226q0-24 22-24t22 24z M392 202v-8 M800 226q0-28 26-28t26 28z M826 198l-6-12h12z M900 226q0-18 16-18t16 18z M0 226H1200"
     },
     {
       "id": "gize",
@@ -195,7 +201,9 @@
         "lisans": "CC BY-SA 2.0",
         "lisans_url": "https://creativecommons.org/licenses/by-sa/2.0",
         "sayfa": "https://commons.wikimedia.org/wiki/File:All_Gizah_Pyramids.jpg"
-      }
+      },
+      "siluet": "M0 226 Q240 214 420 222 T820 218 T1200 226 M380 222L540 66L700 222 M540 66L560 222 M700 222L820 98L940 222 M820 98L834 222 M960 222L1015 160L1070 222 M220 222v-22q8-14 26-14h18q10 0 12 8v28M206 222h80M246 186q4-14 18-12"
     }
-  ]
+  ],
+  "_siluet": "siluet: alt kenardaki çizgi çizimi (SVG path, viewBox 0 0 1200 240, yalnız kontur). Harrix çizimi."
 }

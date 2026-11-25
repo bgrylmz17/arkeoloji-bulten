@@ -350,11 +350,18 @@ ESKI_DONEM = re.compile(r"\b(ancient|antik|antique|maya|aztec|inca|roman|byzant\
                         r"mesolit\w*|chalcolith\w*|kalkolit\w*|prehistor\w*|tarih öncesi|hominin\w*|neanderthal\w*|"
                         r"pleistocene|holocene|fossil\w*|fosil\w*)\b", re.I)
 AKADEMIK_KAYNAK = {"OpenAlex", "Crossref"}
+# Dışlanan bir alandaki yayın, başlığında bunlardan biri geçerse yine kalır (arkeojeofizik, eski DNA, dijital arkeoloji...)
+BASLIK_ARKEO = re.compile(r"(archa?eolog|arkeolo|archéolog|archäolog|neolit|neolith|paleolit|palaeolith|paleolith|mesolit|mesolith|"
+                          r"excavat|kazı|prehistor|tarih öncesi|hominin|neanderthal|ancient|antik|bronze age|iron age|tunç ça|demir ça|"
+                          r"roman |byzant|bizans|tumul|höyük|tell |megalith)", re.I)
 
 
 # Arkeometri, jeoarkeoloji, eski DNA, paleoiklim gibi doğa bilimi alanları: yalnız kesin arkeoloji sözcüğüyle birlikte
-BILIM_ALT_ALAN = {1311, 1312, 2303, 1105, 1103, 1110, 1111, 1902, 1904, 1906, 1907, 1908, 1910, 2306, 2309, 2505,
+BILIM_ALT_ALAN = {1311, 1312, 2303, 1105, 1103, 1110, 1111, 1902, 2306, 2309,
                   3316, 1213, 1212, 1203, 1208, 3305, 3322}
+# Arkeoloji konusu yoksa doğrudan atılan alanlar (felsefe, astronomi, ekonomi, yer bilimi, mühendislik...)
+DISLANAN_ALT_ALAN = {1211, 3103, 2002, 2003, 1400, 1401, 1402, 1403, 1404, 1406, 1407, 1408, 1409,
+                     1906, 1907, 1908, 1910, 2105, 2205, 2211, 2210, 2208, 2505, 1700, 1702, 1703, 1705, 1706, 1707, 1710, 1712}
 
 
 def konu_uygun(k: dict) -> bool:
@@ -372,7 +379,10 @@ def konu_uygun(k: dict) -> bool:
     kesin = arkeoloji_kesin(k.get("b", ""), k.get("o", ""))
     if not kz:
         return kesin
-    return kesin and bool(kz & (BILIM_ALT_ALAN | TARIH_ALT_ALAN))
+    baslik_arkeo = bool(BASLIK_ARKEO.search(f'{k.get("b", "")} {k.get("bt", "")}'))
+    if kz & DISLANAN_ALT_ALAN:
+        return baslik_arkeo
+    return baslik_arkeo or (kesin and bool(kz & (BILIM_ALT_ALAN | TARIH_ALT_ALAN)))
 
 
 def engelli_mi(k: dict, engel: list[str]) -> bool:

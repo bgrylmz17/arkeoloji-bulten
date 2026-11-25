@@ -30,17 +30,22 @@
              kunye: f.yazar ? `${d === "en" ? "Photo" : "Fotoğraf"}: ${f.yazar} · ${f.lisans} · Wikimedia Commons` : "" };
   }
 
-  /* kip: "gorsel" (günün alanı), "desen" (çizimler; desen.js) ya da "sade" */
+  /* kip: "siluet" (sayfanın altında Günün Ören Yeri çizimi), "milimetrik" (ızgara; stil.css) ya da "sade" */
   function zemin(kip) {
-    let kat = document.getElementById("zemin-gorsel");
-    const g = kip === "gorsel" ? bugun() : null;
-    if (!g) { if (kat) kat.remove(); return; }
+    let kat = document.getElementById("zemin-siluet");
+    const g = bugun();
+    const a = g && kip === "siluet" ? VERI.alanlar.find(x => x.id === g.id) : null;
+    if (!a || !a.siluet) { if (kat) kat.remove(); return; }
     if (!kat) {
       kat = document.createElement("div");
-      kat.id = "zemin-gorsel"; kat.setAttribute("aria-hidden", "true");
+      kat.id = "zemin-siluet"; kat.setAttribute("aria-hidden", "true");
       document.body.prepend(kat);
     }
-    kat.style.backgroundImage = `url("${g.gorsel}")`;
+    if (kat.dataset.alan !== a.id) {
+      kat.dataset.alan = a.id;
+      kat.innerHTML = `<svg viewBox="0 0 1200 240" preserveAspectRatio="xMidYMax meet"><path d="${kac(a.siluet)}" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+    }
   }
 
   const kunyeHtml = g => g.kunye ? `<a class="gunluk-kunye" href="${kac(g.foto.sayfa || "#")}" target="_blank" rel="noopener">${kac(g.kunye)}</a>` : "";
