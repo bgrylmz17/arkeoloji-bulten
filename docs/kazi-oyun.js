@@ -1,11 +1,13 @@
 /* Arkix — Kazı Başı (#oyun/kazi): 2D piksel kazı oyunu.
- * Ören yeri seç → 10×8 açma; her tıklama bir hücreyi bir katman kazar (3 katman). Her kazıda 30 vuruş; günde 3 kazı izni.
- * Alanın gerçek buluntularından 3'ü ve sık buluntular gizlidir; çıkan buluntu tanıtılır, Buluntu Defteri'ne yazılır.
+ * Arkeolog seç (her birinin bir üstünlüğü var) → ören yeri seç → 10×8 açma; her tıklama bir hücreyi bir katman kazar (3 katman).
+ * Buluntular farklı derinliklerde: sık buluntular çoğu 1–2 vuruşta, değerliler 2–3 vuruşta çıkar. Her kazıda 32 vuruş; günde 5 kazı izni.
+ * Alanın bütün değerli buluntuları ve 14 sık buluntu gizlidir; çıkan buluntu tanıtılır, Buluntu Defteri'ne yazılır.
+ * Her alanın kendi müziği var (WebAudio ile çalınan özgün kısa döngüler; kz-muzik).
  * İpucu: boş çıkan hücre, yakında değerli buluntu varsa "sıcak" görünür (1 hücre: kızıl, 2 hücre: amber).
  * Puan: buluntu puanları + hepsi bulunursa kalan vuruş × 5. Günlük toplam skor tablosuna gider (oyunlar.js › skorGonder).
  * Piksel çizimler 12×12 metin haritası; harf → renk. Hepsi özgün, basit çizimler. */
 
-const KZ_SUTUN = 10, KZ_SATIR = 8, KZ_HUCRE = 16, KZ_SAHNE = 48, KZ_VURUS = 30, KZ_HAK = 3;
+const KZ_SUTUN = 10, KZ_SATIR = 8, KZ_HUCRE = 16, KZ_SAHNE = 48, KZ_VURUS = 32, KZ_HAK = 5, KZ_SIK_SAYI = 14;
 
 /* ---------------------------------------------------------------- çizimler */
 const SPRITE = {
@@ -64,9 +66,38 @@ const SPRITE = {
   fresk: { r: { p: "#e7d6b8", r: "#a8442e", y: "#d6a23a", g: "#5e7d5a", d: "#9d8d70" }, h: [
     "pppppppppppd", "prrrrrrrrrpd", "prpppppppppd", "prpyyppggppd", "prpyyppggppd", "prppppppppd.", "prrrrrrrrrpd", "ppppppppppd.", "pdpppppppd..", "ddpppppd....", "..dddd......", "............"] },
 };
+Object.assign(SPRITE, {
+  yonga: { r: { f: "#9c8f7e", d: "#6a5f52", l: "#c7bcac" }, h: [
+    "............", "............", "....ff......", "...flfd.....", "..flffd.....", "..fffffd....", "...ffffd....", "....fdd.....", "............", "............", "............", "............"] },
+  elbaltasi: { r: { f: "#b2a48c", d: "#7c6f5a", l: "#d6ccb8" }, h: [
+    ".....ff.....", "....fffd....", "....fldd....", "...flffd....", "...fffddd...", "..fflfffdd..", "..fffffddd..", "..ffffddd...", "...fffdd....", "....fdd.....", "............", "............"] },
+  levallois: { r: { f: "#a99a84", d: "#6f6352", l: "#d0c6b4" }, h: [
+    ".....l......", ".....ld.....", "....lfd.....", "....lffd....", "...lfffd....", "...lffffd...", "..lffffffd..", "..lffffffd..", "..dddddddd..", "............", "............", "............"] },
+  dis: { r: { w: "#f1ead8", s: "#c9bea4" }, h: [
+    "............", "...wwwwww...", "..wwwwwwww..", "..wwswwsww..", "..wwwwwwww..", "..wwwwwwww..", "...wwwwww...", "...ww..ww...", "...ws..sw...", "...w....w...", "............", "............"] },
+  kaziyici: { r: { f: "#a38f74", d: "#6c5c47", l: "#cdbfa8" }, h: [
+    "............", "............", "..ffffffff..", ".flllllllfd.", ".ffffffffd..", "..fffffffd..", "...ffffffd..", "....fffdd...", ".....dd.....", "............", "............", "............"] },
+  dilgicik: { r: { f: "#8d8478", d: "#5b544b", l: "#bdb4a6" }, h: [
+    "............", "..l...l...l.", "..f...f...f.", "..f..lf...f.", "..fd.fd..fd.", "..fd.fd..fd.", "..fd.fd..fd.", "..fd.fd..fd.", "...d..d...d.", "............", "............", "............"] },
+  nukleus: { r: { f: "#958a7c", d: "#5e564c", l: "#c2b9ab" }, h: [
+    "............", "............", "....ffff....", "...fdfdfd...", "..fdlfdlfd..", "..fdlfdlfd..", "..fdlfdlfd..", "...fdfdfd...", "....dddd....", "............", "............", "............"] },
+  tasfigurin: { r: { s: "#cbbfa9", d: "#8a7e6a" }, h: [
+    "............", ".....ss.....", "....ssss....", ".....ss.....", "....ssss....", "...ssddss...", "...ssssss...", "....ssss....", "....s..s....", "....d..d....", "............", "............"] },
+  // arkeologlar (12×16)
+  ark_saha: { r: { h: "#c9a25a", s: "#e8c4a0", k: "#2b2420", c: "#5c7d5a", p: "#5a4a3a", b: "#3a2e24" }, h: [
+    "....hhhh....", "..hhhhhhhh..", "....ssss....", "....sksk....", "....ssss....", ".....ss.....", "...cccccc...", "..cccccccc..", "..sccccccs..", "..s.cccc.s..", "....pppp....", "....pppp....", "....p..p....", "....p..p....", "...bb..bb...", "............"] },
+  ark_prehistorya: { r: { k: "#7a4a2a", s: "#d9a87e", e: "#2b2420", c: "#b8863b", p: "#4d5a6a", b: "#3a2e24", f: "#9c8f7e" }, h: [
+    ".....kk.....", "....kkkk....", "...kssssk...", "...ksese....", "....ssss....", ".....ss.....", "...cccccc...", "..cccccccc..", "..sccccccsf.", "..s.cccc..f.", "....pppp....", "....pppp....", "....p..p....", "....p..p....", "...bb..bb...", "............"] },
+  ark_klasik: { r: { h: "#3f5c7a", s: "#f0cfae", k: "#2b2420", c: "#e7e1d3", p: "#7a6a52", b: "#3a2e24", g: "#d6a23a" }, h: [
+    "............", "...hhhhh....", "..hhhhhhh...", "....ssss....", "....sksk....", "....ssss....", "...cccccc...", "..cccggccc..", "..sccccccs..", "..s.cccc.s..", "....pppp....", "....pppp....", "....p..p....", "....p..p....", "...bb..bb...", "............"] },
+  ark_jeofizik: { r: { h: "#e06a2b", s: "#c99472", k: "#2b2420", c: "#e0a12c", p: "#3d4a5a", b: "#3a2e24", g: "#6d7a84", y: "#9be27a" }, h: [
+    "....hhhh....", "...hhhhhh...", "....ssss....", "....sksk....", "....ssss....", ".....ss.....", "...cccccc...", "..cccccccc..", "..sccccccs..", "..s.cccc.sg.", "....pppp..g.", "....pppp..g.", "....p..p..g.", "....p..p.ggg", "...bb..bb.y.", "............"] },
+});
+
 function spriteCiz(ctx, ad, x, y, olcek = 1, golge = false) {
   const s = SPRITE[ad]; if (!s) return;
-  s.h.forEach((satir, j) => [...satir.padEnd(12, ".").slice(0, 12)].forEach((c, i) => {
+  const gen = Math.max(...s.h.map(x => x.length));
+  s.h.forEach((satir, j) => [...satir.padEnd(gen, ".")].forEach((c, i) => {
     if (c === ".") return;
     ctx.fillStyle = golge ? "rgba(60,45,35,.55)" : (s.r[c] || "#000");
     ctx.fillRect(x + i * olcek, y + j * olcek, olcek, olcek);
@@ -75,7 +106,10 @@ function spriteCiz(ctx, ad, x, y, olcek = 1, golge = false) {
 
 /* ---------------------------------------------------------------- ören yerleri ve buluntular */
 const KZ_SIK = [
-  { id: "canak", ad: "Çanak çömlek parçası", ad_en: "Potsherd", puan: 15,
+  { id: "yonga", ad: "Çakmaktaşı yongası", ad_en: "Flint flake", puan: 15, tarihOncesi: true,
+    bilgi: "Taş alet yapılırken kopan parça. Yongalar, aletin nerede ve nasıl yapıldığını anlatır; tarih öncesi alanların en sık buluntusudur.",
+    bilgi_en: "A piece struck off while making stone tools. Flakes show where and how tools were made; the commonest find at prehistoric sites." },
+  { id: "canak", ad: "Çanak çömlek parçası", ad_en: "Potsherd", puan: 15, cag: true,
     bilgi: "Arkeolojinin en sık buluntusu. Hamuru, biçimi ve süslemesi, bulunduğu katmanı tarihlemeye yardım eder.",
     bilgi_en: "The most common archaeological find. Its fabric, shape and decoration help date the layer it came from." },
   { id: "kemik", ad: "Hayvan kemiği", ad_en: "Animal bone", puan: 10,
@@ -86,7 +120,36 @@ const KZ_SIK = [
     bilgi_en: "Seeds charred by fire survive for millennia. Archaeobotanists use them to trace farming, and they are also used for radiocarbon dating." },
 ];
 const KZ_ALANLAR = [
-  { id: "gobekli", ad: "Göbeklitepe", il: "Şanlıurfa", donem: "Çanak Çömleksiz Neolitik, MÖ 9600–8200", donem_en: "Pre-Pottery Neolithic, 9600–8200 BC",
+  { id: "karain", ad: "Karain Mağarası", il: "Antalya", tarihOncesi: true, donem: "Paleolitik: Alt Paleolitik'ten Epipaleolitik'e", donem_en: "Palaeolithic: Lower Palaeolithic to Epipalaeolithic",
+    toprak: ["#b49a7c", "#8f7660", "#6a5544", "#cbbfae"], gok: ["#e9e2d4", "#cfc4b0"],
+    buluntular: [
+      { id: "elbaltasi", ad: "El baltası", ad_en: "Hand axe", puan: 220,
+        bilgi: "İki yüzü yontulmuş, çok amaçlı Alt Paleolitik aleti. Karain, Türkiye'de en uzun süre kullanılmış mağaralardan biridir; en alt katları Alt Paleolitik'e iner.",
+        bilgi_en: "A bifacially worked, multi-purpose Lower Palaeolithic tool. Karain is one of Türkiye's longest-used caves; its lowest layers reach the Lower Palaeolithic." },
+      { id: "levallois", ad: "Levallois uç", ad_en: "Levallois point", puan: 180,
+        bilgi: "Taşın önceden hazırlanıp tek darbeyle uç koparıldığı Levallois tekniği, Orta Paleolitik'in, yani Neandertaller çağının işaretidir.",
+        bilgi_en: "The Levallois technique, preparing a core to strike off a point in one blow, marks the Middle Palaeolithic, the age of Neanderthals." },
+      { id: "dis", ad: "Neandertal dişi", ad_en: "Neanderthal tooth", puan: 250,
+        bilgi: "Karain'in Orta Paleolitik katlarında Neandertallere ait insan kalıntıları, özellikle dişler bulundu.",
+        bilgi_en: "Human remains attributed to Neanderthals, mainly teeth, were found in Karain's Middle Palaeolithic layers." },
+      { id: "kaziyici", ad: "Kazıyıcı", ad_en: "Scraper", puan: 120,
+        bilgi: "Deri ve odun işlemek için kenarı düzeltilmiş taş alet. Karain'den binlerce yontmataş alet çıktı.",
+        bilgi_en: "A stone tool with a retouched edge for working hides and wood. Thousands of chipped-stone tools came from Karain." },
+    ] },
+  { id: "kizilin", ad: "Kızılin", il: "Antalya, Katran Dağı", tarihOncesi: true, donem: "Epipaleolitik", donem_en: "Epipalaeolithic",
+    toprak: ["#b88a68", "#956a50", "#6e4d3a", "#d0bba4"], gok: ["#e3eadf", "#bcd0b8"],
+    buluntular: [
+      { id: "dilgicik", ad: "Dilgicikler", ad_en: "Bladelets", puan: 150,
+        bilgi: "Kızılin'de yoğun bir dilgicik üretimi saptandı. Bu küçük taş kesiciler sapa dizilerek ok ve mızrak uçlarında kullanılırdı.",
+        bilgi_en: "Intensive bladelet production was identified at Kızılin. These small stone blades were set in hafts for arrows and spears." },
+      { id: "nukleus", ad: "Dilgicik çekirdeği", ad_en: "Bladelet core", puan: 140,
+        bilgi: "Dilgiciklerin koparıldığı taş çekirdek (nükleus). Üzerindeki izler, alet yapımcısının hangi sırayla vurduğunu gösterir.",
+        bilgi_en: "The stone core from which bladelets were struck. Its scars show the order of the knapper's blows." },
+      { id: "tasfigurin", ad: "Taş figürin", ad_en: "Stone figurine", puan: 250,
+        bilgi: "Kızılin'de çıkan küçük taş figürinler, 2025'te Höyük dergisinde Anadolu'nun bilinen en eski taş figürinleri olarak tanıtıldı.",
+        bilgi_en: "Small stone figurines from Kızılin were presented in the journal Höyük in 2025 as the oldest known stone figurines in Anatolia." },
+    ] },
+  { id: "gobekli", ad: "Göbeklitepe", il: "Şanlıurfa", tarihOncesi: true, donem: "Çanak Çömleksiz Neolitik, MÖ 9600–8200", donem_en: "Pre-Pottery Neolithic, 9600–8200 BC",
     toprak: ["#c7a27a", "#a9825c", "#8a6646", "#d8c9b0"], gok: ["#f4d9a8", "#e9b98a"],
     buluntular: [
       { id: "tdikili", ad: "T biçimli dikilitaş", ad_en: "T-shaped pillar", puan: 250,
@@ -102,7 +165,7 @@ const KZ_ALANLAR = [
         bilgi: "Göbeklitepe'de kireçtaşından yontulmuş insan başları bulundu. Bir kısmının heykellerden kopmuş parçalar olduğu düşünülür.",
         bilgi_en: "Human heads carved in limestone were found at Göbeklitepe; some are thought to have broken off larger statues." },
     ] },
-  { id: "catal", ad: "Çatalhöyük", il: "Konya", donem: "Neolitik, MÖ 7100–5950", donem_en: "Neolithic, 7100–5950 BC",
+  { id: "catal", ad: "Çatalhöyük", il: "Konya", tarihOncesi: true, canak: true, donem: "Neolitik, MÖ 7100–5950", donem_en: "Neolithic, 7100–5950 BC",
     toprak: ["#c9ad86", "#a88a64", "#7f6648", "#dccfb6"], gok: ["#f1e2bd", "#dcc79a"],
     buluntular: [
       { id: "figurin", ad: "Oturan kadın figürini", ad_en: "Seated woman figurine", puan: 250,
@@ -186,12 +249,96 @@ const KZ_ALANLAR = [
 const kzAd = b => DIL === "en" && b.ad_en ? b.ad_en : b.ad;
 const kzBilgi = b => DIL === "en" && b.bilgi_en ? b.bilgi_en : b.bilgi;
 
-/* ---------------------------------------------------------------- günlük izin */
+/* ---------------------------------------------------------------- günlük izin, arkeolog */
 function kaziDurumu() {
   const g = oyunGunu();
-  if (!D.kaziOyun || D.kaziOyun.gun !== g) D.kaziOyun = { gun: g, hak: KZ_HAK, toplam: 0, kosular: [] };
+  if (!D.kaziOyun || D.kaziOyun.gun !== g) D.kaziOyun = { gun: g, hak: KZ_HAK, toplam: 0, kosular: [], surum5: true };
+  if (!D.kaziOyun.surum5) { D.kaziOyun.hak += KZ_HAK - 3; D.kaziOyun.surum5 = true; }   // izin 3'ten 5'e çıktı (bugün başlamış eski kayıtlar)
+  D.kaziOyun.hak = Math.max(0, Math.min(KZ_HAK, D.kaziOyun.hak));
   return D.kaziOyun;
 }
+const ARKEOLOGLAR = [
+  { id: "saha", sprite: "ark_saha", ad: "Saha arkeoloğu", ad_en: "Field archaeologist", ozellik: "Her kazıda +6 vuruş", ozellik_en: "+6 strikes every dig" },
+  { id: "prehistorya", sprite: "ark_prehistorya", ad: "Prehistoryacı", ad_en: "Prehistorian", ozellik: "Tarih öncesi alanlarda buluntu puanı ×1,5", ozellik_en: "Finds score ×1.5 at prehistoric sites" },
+  { id: "klasik", sprite: "ark_klasik", ad: "Klasik arkeolog", ad_en: "Classical archaeologist", ozellik: "Tunç Çağı ve sonrası alanlarda buluntu puanı ×1,5", ozellik_en: "Finds score ×1.5 at Bronze Age and later sites" },
+  { id: "jeofizik", sprite: "ark_jeofizik", ad: "Jeofizikçi", ad_en: "Geophysicist", ozellik: "İpucu 3 hücreden sezilir", ozellik_en: "Hints are felt from 3 squares away" },
+];
+const arkeolog = () => ARKEOLOGLAR.find(a => a.id === D.kzArkeolog) || null;
+const arkAd = a => DIL === "en" ? a.ad_en : a.ad;
+const arkOzellik = a => DIL === "en" ? a.ozellik_en : a.ozellik;
+function kzCarpan(alan) {
+  const a = arkeolog(); if (!a) return 1;
+  if (a.id === "prehistorya" && alan.tarihOncesi) return 1.5;
+  if (a.id === "klasik" && !alan.tarihOncesi) return 1.5;
+  return 1;
+}
+function arkeologSecimi(sonra) {
+  levhaAc(`<h3>${tx("Arkeoloğunu seç")}</h3><p class="aciklama">${tx("Her arkeoloğun kazıda bir üstünlüğü var. İstediğin zaman değiştirebilirsin.")}</p>
+    <div class="ark-izgara">${ARKEOLOGLAR.map(a => `<button class="ark-kart${D.kzArkeolog === a.id ? " secili" : ""}" data-ark="${a.id}">
+      <canvas width="48" height="64"></canvas><b>${esc(arkAd(a))}</b><small>${esc(arkOzellik(a))}</small></button>`).join("")}</div>`, lv => {
+    lv.querySelectorAll("[data-ark]").forEach(b => {
+      const a = ARKEOLOGLAR.find(x => x.id === b.dataset.ark);
+      spriteCiz(b.querySelector("canvas").getContext("2d"), a.sprite, 0, 0, 4);
+      b.onclick = () => { D.kzArkeolog = a.id; kaydet(); levhaKapat(); bildir(tx("{ad} kazıya hazır", { ad: arkAd(a) })); if (sonra) sonra(); else if (location.hash === "#oyun/kazi") sayfaKaziOyun(""); };
+    });
+  });
+}
+
+/* ---------------------------------------------------------------- müzik: her alana özgün kısa döngü (WebAudio) */
+const MUZIK = {
+  karain:   { bpm: 58, kok: 110, olcek: [0, 3, 5, 7, 10], dalga: "sine", melodi: [4, -1, 3, -1, 2, -1, -1, 0, 2, -1, 1, -1, 0, -1, -1, -1], bas: [0, -1, -1, -1], damla: true },
+  kizilin:  { bpm: 76, kok: 147, olcek: [0, 2, 3, 7, 9], dalga: "sine", melodi: [0, 2, 3, 2, 4, -1, 3, 2, 0, -1, 1, 2, 3, -1, -1, -1], bas: [0, -1, 3, -1] },
+  gobekli:  { bpm: 66, kok: 110, olcek: [0, 3, 5, 7, 10], dalga: "triangle", melodi: [0, -1, 2, 3, 4, -1, 3, -1, 2, -1, 0, 1, 2, -1, -1, -1], bas: [0, -1, -1, -1], davul: [1, 0, 0, 0, 0, 0, 1, 0] },
+  catal:    { bpm: 84, kok: 131, olcek: [0, 2, 3, 5, 7, 9, 10], dalga: "sine", melodi: [4, 5, 4, 2, 3, -1, 2, 0, 4, 5, 6, 5, 4, -1, -1, -1], bas: [0, -1, 4, -1], davul: [1, 0, 1, 0, 1, 0, 0, 1] },
+  hattusa:  { bpm: 92, kok: 110, olcek: [0, 1, 3, 5, 7, 8, 10], dalga: "square", melodi: [0, 1, 0, -1, 3, 2, 1, 0, 4, -1, 5, 4, 2, 1, 0, -1], bas: [0, 0, 4, 0], davul: [1, 0, 0, 1, 1, 0, 0, 0] },
+  troya:    { bpm: 100, kok: 147, olcek: [0, 2, 4, 5, 7, 9, 10], dalga: "sawtooth", melodi: [4, 3, 2, 4, 5, -1, 4, 2, 1, 2, 3, -1, 2, 1, 0, -1], bas: [0, -1, 3, -1], davul: [1, 0, 0, 0, 1, 0, 1, 0] },
+  efes:     { bpm: 96, kok: 165, olcek: [0, 2, 4, 6, 7, 9, 11], dalga: "triangle", melodi: [0, 2, 4, 6, 4, 2, 5, -1, 3, 4, 2, 0, 1, -1, 0, -1], bas: [0, 4, 2, 4] },
+  zeugma:   { bpm: 84, kok: 147, olcek: [0, 1, 4, 5, 7, 8, 10], dalga: "sawtooth", melodi: [4, 5, 4, 2, 1, 2, -1, 0, 1, 2, 3, 4, 2, 1, 0, -1], bas: [0, -1, 0, 3], davul: [1, 0, 0, 1, 0, 0, 1, 0] },
+};
+const KM = { ctx: null, zaman: null, adim: 0, sonraki: 0, alan: null, ana: null };
+function kzMuzikAcik() { return D.kzMuzik !== false; }
+function kzMuzikBaslat(alanId) {
+  kzMuzikDur();
+  if (!kzMuzikAcik() || !MUZIK[alanId]) return;
+  try {
+    KM.ctx = KM.ctx || new (window.AudioContext || window.webkitAudioContext)();
+    if (KM.ctx.state === "suspended") KM.ctx.resume();
+  } catch (e) { return; }
+  const ctx = KM.ctx;
+  KM.ana = ctx.createGain(); KM.ana.gain.value = 0.07;
+  const suzgec = ctx.createBiquadFilter(); suzgec.type = "lowpass"; suzgec.frequency.value = 1800;
+  KM.ana.connect(suzgec); suzgec.connect(ctx.destination);
+  KM.alan = alanId; KM.adim = 0; KM.sonraki = ctx.currentTime + 0.1;
+  const m = MUZIK[alanId], adimSure = 60 / m.bpm / 2;
+  const nota = (frek, t, sure, dalga, ses) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = dalga; o.frequency.value = frek;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(ses, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + sure);
+    o.connect(g); g.connect(KM.ana); o.start(t); o.stop(t + sure + 0.05);
+  };
+  const derece = (i, oktav = 0) => m.kok * Math.pow(2, (m.olcek[((i % m.olcek.length) + m.olcek.length) % m.olcek.length] + 12 * (oktav + Math.floor(i / m.olcek.length))) / 12);
+  const davul = t => {
+    const uz = Math.floor(ctx.sampleRate * 0.08), b = ctx.createBuffer(1, uz, ctx.sampleRate), v = b.getChannelData(0);
+    for (let i = 0; i < uz; i++) v[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / uz, 3);
+    const k = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+    f.type = "lowpass"; f.frequency.value = 420; g.gain.value = 0.9;
+    k.buffer = b; k.connect(f); f.connect(g); g.connect(KM.ana); k.start(t);
+  };
+  KM.zaman = setInterval(() => {
+    while (KM.sonraki < ctx.currentTime + 0.25) {
+      const t = KM.sonraki, a = KM.adim;
+      const n = m.melodi[a % m.melodi.length];
+      if (n >= 0) nota(derece(n, 1), t, adimSure * 1.8, m.dalga, m.dalga === "sine" || m.dalga === "triangle" ? 0.5 : 0.18);
+      if (a % 4 === 0) { const bn = m.bas[(a / 4) % m.bas.length]; if (bn >= 0) nota(derece(bn, -1), t, adimSure * 3.6, "triangle", 0.45); }
+      if (m.davul && m.davul[a % m.davul.length]) davul(t);
+      if (m.damla && Math.random() < 0.12) nota(derece(Math.floor(Math.random() * 5), 2), t + Math.random() * adimSure, 0.25, "sine", 0.25);
+      KM.adim++; KM.sonraki += adimSure;
+    }
+  }, 90);
+}
+function kzMuzikDur() { if (KM.zaman) clearInterval(KM.zaman); KM.zaman = null; if (KM.ana) { try { KM.ana.disconnect(); } catch (e) {} KM.ana = null; } }
+window.addEventListener("hashchange", () => { if (!location.hash.startsWith("#oyun/kazi/")) kzMuzikDur(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) kzMuzikDur(); else if (KZ && !KZ.bitti && location.hash.startsWith("#oyun/kazi/")) kzMuzikBaslat(KZ.alan.id); });
 
 /* ---------------------------------------------------------------- sahne çizimi (48 px yükseklik) */
 function kzSahne(ctx, alan, w) {
@@ -201,7 +348,15 @@ function kzSahne(ctx, alan, w) {
   const r = (x, y, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, ww, hh); };
   const t = alan.toprak;
   r(0, 40, w, 8, t[0]);
-  if (alan.id === "gobekli") {
+  if (alan.id === "karain") {
+    r(0, 6, w, 34, "#a89a86"); r(0, 6, w, 3, "#bcae98");
+    for (const [x, y, ww] of [[10, 14, 30], [120, 12, 28], [60, 30, 40]]) r(x, y, ww, 2, "#93856f");
+    r(58, 18, 44, 22, "#2e261f"); r(62, 14, 36, 4, "#2e261f"); r(66, 12, 28, 2, "#2e261f");
+  } else if (alan.id === "kizilin") {
+    r(0, 18, w, 22, "#9c8a74"); r(30, 8, 60, 10, "#9c8a74"); r(50, 4, 30, 4, "#9c8a74");
+    r(64, 24, 22, 16, "#2e261f"); r(68, 21, 14, 3, "#2e261f");
+    for (const x of [8, 22, 128, 142]) { r(x + 3, 30, 2, 10, "#5a4030"); r(x, 20, 8, 4, "#3f6b45"); r(x + 1, 16, 6, 4, "#3f6b45"); r(x + 2, 12, 4, 4, "#3f6b45"); }
+  } else if (alan.id === "gobekli") {
     r(0, 34, 60, 6, "#d6b48c"); r(100, 32, 60, 8, "#d6b48c");
     for (const x of [40, 64, 92, 116]) { r(x, 22, 10, 3, "#b9b2a6"); r(x + 3, 25, 4, 15, "#b9b2a6"); r(x + 7, 25, 1, 15, "#7e776c"); }
   } else if (alan.id === "catal") {
@@ -234,20 +389,25 @@ function kaziKartGorseli(cv) {
 }
 
 /* ---------------------------------------------------------------- oyun ekranları */
-let KZ = null;   // { alan, hucreler: [{derinlik, buluntu}], vurus, puan, bulunan: [] , bitti }
+let KZ = null;   // { alan, hucreler: [{derinlik, buluntu, bulKat}], vurus, puan, bulunan: [], ozelSayi, bitti }
+const sikMi = b => KZ_SIK.includes(b);
 
 function sayfaKaziOyun(arg) {
   const kd = kaziDurumu();
   if (arg && KZ && KZ.alan.id === arg && !KZ.bitti) return kzOyunCiz();
-  const defter = D.buluntuDefteri || {};
+  if (arg) { history.replaceState(null, "", "#oyun/kazi"); }
+  kzMuzikDur();
+  const defter = D.buluntuDefteri || {}, ark = arkeolog();
   const tum = KZ_ALANLAR.flatMap(a => a.buluntular.map(b => ({ ...b, alan: a })));
   $("#sayfa").innerHTML = `<div class="kazi-oyun">
     <div class="kz-ust"><p>${tx("Bir ören yeri seç, açmayı kaz, buluntuları çıkar.")}</p>
       <p class="kz-izin">${tx("Bugün kalan kazı izni")}: <b>${kd.hak}/${KZ_HAK}</b> · ${tx("Bugünkü puan")}: <b>${kd.toplam}</b></p></div>
+    <button class="kz-arkeolog" id="kz-ark"><canvas width="24" height="32"></canvas>
+      <span>${ark ? `<b>${esc(arkAd(ark))}</b><small>${esc(arkOzellik(ark))}</small>` : `<b>${tx("Arkeoloğunu seç")}</b><small>${tx("Kazıya başlamadan önce")}</small>`}</span><i>${ark ? tx("Değiştir") : "›"}</i></button>
     <div class="kz-alanlar">${KZ_ALANLAR.map(a => {
       const bulunan = a.buluntular.filter(b => defter[b.id]).length;
       return `<button class="kz-alan" data-alan="${a.id}" ${kd.hak ? "" : "disabled"}><canvas width="160" height="48"></canvas>
-        <span><b>${esc(a.ad)}</b><small>${esc(a.il)} · ${esc(DIL === "en" ? a.donem_en : a.donem)}</small><em>${tx("Defter")}: ${bulunan}/${a.buluntular.length}</em></span></button>`;
+        <span><b>${esc(a.ad)}</b><small>${esc(a.il)} · ${esc(DIL === "en" ? a.donem_en : a.donem)}</small><em>${tx("Defter")}: ${bulunan}/${a.buluntular.length}${kzCarpan(a) > 1 ? " · ×1,5" : ""}</em></span></button>`;
     }).join("")}</div>
     ${kd.hak ? "" : `<p class="aciklama" style="text-align:center">${tx("Bugünkü kazı izinlerin bitti. Yarın yeni izin!")}</p>`}
     <section class="kz-defter"><h3>${tx("Buluntu Defteri")} <small>${Object.keys(defter).filter(id => tum.some(b => b.id === id)).length}/${tum.length}</small></h3>
@@ -255,10 +415,12 @@ function sayfaKaziOyun(arg) {
         <canvas width="48" height="48"></canvas><small>${defter[b.id] ? esc(kzAd(b)) : "?"}</small></button>`).join("")}</div></section>
     ${skorBolumuHtml("kazi")}</div>`;
   $(".oyun-skor h3").textContent = tx("Kazı Başı · Skor tablosu");
+  spriteCiz($("#kz-ark canvas").getContext("2d"), ark ? ark.sprite : "ark_saha", 0, 0, 2, !ark);
+  $("#kz-ark").onclick = () => arkeologSecimi();
   $$(".kz-alan").forEach(b => {
     const a = KZ_ALANLAR.find(x => x.id === b.dataset.alan);
     kzSahne(b.querySelector("canvas").getContext("2d"), a, 160);
-    b.onclick = () => kzBasla(a);
+    b.onclick = () => arkeolog() ? kzBasla(a) : arkeologSecimi(() => kzBasla(a));
   });
   $$(".kz-defter-oge").forEach(b => {
     const bul = tum.find(x => x.id === b.dataset.b), ctx = b.querySelector("canvas").getContext("2d");
@@ -273,30 +435,43 @@ function kzBasla(alan) {
   if (kd.hak <= 0) { bildir(tx("Bugünkü kazı izinlerin bitti. Yarın yeni izin!")); return; }
   kd.hak--; kaydet();
   const n = KZ_SUTUN * KZ_SATIR, yerler = [...Array(n).keys()].sort(() => Math.random() - .5);
-  const hucreler = Array.from({ length: n }, () => ({ derinlik: 3, buluntu: null }));
-  const ozel = [...alan.buluntular].sort(() => Math.random() - .5).slice(0, 3);
-  ozel.forEach((b, i) => { hucreler[yerler[i]] = { derinlik: 3, buluntu: b }; });
-  for (let i = 3; i < 10; i++) hucreler[yerler[i]].buluntu = KZ_SIK[Math.floor(Math.random() * KZ_SIK.length)];
-  KZ = { alan, hucreler, vurus: KZ_VURUS, puan: 0, bulunan: [], ozelSayi: 3, bitti: false, vurgu: -1 };
+  const hucreler = Array.from({ length: n }, () => ({ derinlik: 3, buluntu: null, bulKat: 0 }));
+  // değerliler: 2–3 vuruşta (bulKat 1 ya da 0); sık buluntular: 1–3 vuruşta
+  alan.buluntular.forEach((b, i) => { hucreler[yerler[i]] = { derinlik: 3, buluntu: b, bulKat: Math.random() < .5 ? 1 : 0 }; });
+  const sikler = KZ_SIK.filter(b => (b.tarihOncesi ? alan.tarihOncesi : true) && (b.cag ? (!alan.tarihOncesi || alan.canak) : true));
+  for (let i = alan.buluntular.length; i < alan.buluntular.length + KZ_SIK_SAYI; i++)
+    hucreler[yerler[i]] = { derinlik: 3, buluntu: sikler[Math.floor(Math.random() * sikler.length)], bulKat: [2, 2, 1, 1, 0][Math.floor(Math.random() * 5)] };
+  const ark = arkeolog();
+  KZ = { alan, hucreler, vurus: KZ_VURUS + (ark && ark.id === "saha" ? 6 : 0), puan: 0, bulunan: [], ozelSayi: alan.buluntular.length, bitti: false, vurgu: -1,
+    carpan: kzCarpan(alan), menzil: ark && ark.id === "jeofizik" ? 3 : 2, ark };
+  kzMuzikBaslat(alan.id);
   if (location.hash !== `#oyun/kazi/${alan.id}`) location.hash = `#oyun/kazi/${alan.id}`; else kzOyunCiz();
 }
 
 function kzOyunCiz() {
   $("#sayfa").innerHTML = `<div class="kazi-oyun"><div class="kz-hud">
-      <span><b>${esc(KZ.alan.ad)}</b> · ${esc(KZ.alan.il)}</span>
+      <span><b>${esc(KZ.alan.ad)}</b> · ${esc(KZ.ark ? arkAd(KZ.ark) : "")}</span>
       <span class="kz-vurus" title="${tx("Kalan vuruş")}">⛏ <b id="kz-vurus">${KZ.vurus}</b></span>
-      <span>${tx("Puan")}: <b id="kz-puan">${KZ.puan}</b></span></div>
+      <span>${tx("Puan")}: <b id="kz-puan">${KZ.puan}</b></span>
+      <span><button class="kz-muzik" id="kz-muzik" aria-label="${tx("Müzik")}" title="${tx("Müzik")}">${kzMuzikAcik() ? "♪" : "♪̸"}</button>${oyunSesDugmesi()}</span></div>
     <div class="kz-cerceve"><canvas id="kz-tuval" width="${KZ_SUTUN * KZ_HUCRE}" height="${KZ_SAHNE + KZ_SATIR * KZ_HUCRE}" aria-label="${tx("Kazı alanı")}"></canvas></div>
-    <p class="aciklama kz-ipucu">${tx("Toprağa dokun: her dokunuş bir katman kazar. Boş çıkan hücre kızıl ya da amber parlıyorsa yakında değerli bir buluntu var.")}</p>
+    <p class="aciklama kz-ipucu">${tx("Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücre kızıl ya da amber parlıyorsa yakında değerli bir buluntu var.")}</p>
     <p class="kz-bulunanlar" id="kz-bulunanlar"></p>
     <p style="text-align:center"><button class="ikincil-dugme" id="kz-bitir">${tx("Kazıyı bitir")}</button></p></div>`;
   const cv = $("#kz-tuval");
   cv.onclick = e => {
+    if (!KM.zaman && kzMuzikAcik()) kzMuzikBaslat(KZ.alan.id);
     const k = cv.getBoundingClientRect(), x = (e.clientX - k.left) / k.width * cv.width, y = (e.clientY - k.top) / k.height * cv.height - KZ_SAHNE;
     if (y < 0) return;
     kzKaz(Math.floor(y / KZ_HUCRE) * KZ_SUTUN + Math.floor(x / KZ_HUCRE));
   };
+  $("#kz-muzik").onclick = () => {
+    D.kzMuzik = !kzMuzikAcik(); kaydet();
+    $("#kz-muzik").textContent = kzMuzikAcik() ? "♪" : "♪̸";
+    if (kzMuzikAcik()) kzMuzikBaslat(KZ.alan.id); else kzMuzikDur();
+  };
   $("#kz-bitir").onclick = () => kzSon(false);
+  oyunSesBagla();
   kzCiz();
 }
 
@@ -304,7 +479,7 @@ function kzYakinlik(i) {
   const x = i % KZ_SUTUN, y = Math.floor(i / KZ_SUTUN);
   let en = 99;
   KZ.hucreler.forEach((h, j) => {
-    if (!h.buluntu || h.derinlik === 0 || KZ_SIK.includes(h.buluntu)) return;
+    if (!h.buluntu || h.derinlik === 0 || sikMi(h.buluntu)) return;
     en = Math.min(en, Math.max(Math.abs(j % KZ_SUTUN - x), Math.abs(Math.floor(j / KZ_SUTUN) - y)));
   });
   return en;
@@ -317,7 +492,6 @@ function kzCiz() {
     const x = (i % KZ_SUTUN) * KZ_HUCRE, y = KZ_SAHNE + Math.floor(i / KZ_SUTUN) * KZ_HUCRE;
     const renk = h.derinlik === 3 ? t[0] : h.derinlik === 2 ? t[1] : h.derinlik === 1 ? t[2] : t[3];
     ctx.fillStyle = renk; ctx.fillRect(x, y, KZ_HUCRE, KZ_HUCRE);
-    // doku: hücreye özgü sabit benekler
     for (let k = 0; k < 5; k++) {
       const s = (i * 7 + k * 13 + h.derinlik * 31) % 97;
       ctx.fillStyle = h.derinlik ? "rgba(0,0,0,.13)" : "rgba(0,0,0,.06)";
@@ -329,48 +503,88 @@ function kzCiz() {
       if (h.buluntu) spriteCiz(ctx, h.buluntu.id, x + 2, y + 2, 1);
       else {
         const d = kzYakinlik(i);
-        if (d <= 2) { ctx.fillStyle = d === 1 ? "#d2452b" : "#e0a12c"; for (const [a, b] of [[5, 6], [9, 9], [7, 11]].slice(0, d === 1 ? 3 : 2)) ctx.fillRect(x + a, y + b, 2, 2); }
+        if (d <= KZ.menzil) { ctx.fillStyle = d === 1 ? "#d2452b" : "#e0a12c"; for (const [a, b] of [[5, 6], [9, 9], [7, 11]].slice(0, d === 1 ? 3 : d === 2 ? 2 : 1)) ctx.fillRect(x + a, y + b, 2, 2); }
       }
     }
     if (i === KZ.vurgu) { ctx.fillStyle = "rgba(255,255,255,.35)"; ctx.fillRect(x, y, KZ_HUCRE, KZ_HUCRE); }
   });
   ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.setLineDash([2, 2]); ctx.lineWidth = 1;
   ctx.strokeRect(0.5, KZ_SAHNE + 0.5, cv.width - 1, KZ_SATIR * KZ_HUCRE - 1); ctx.setLineDash([]);
+  if (!KZ.arkKonum) KZ.arkKonum = { x: 4, y: 24, salla: 0 };
+  kzArkCiz(ctx);
   $("#kz-vurus").textContent = KZ.vurus; $("#kz-puan").textContent = KZ.puan;
   $("#kz-bulunanlar").innerHTML = KZ.bulunan.map(b => `<span>${esc(kzAd(b))}</span>`).join("");
+}
+/* Arkeolog: tıklanan hücreye hızla yürür (adım sesleri), kazma sallar. Kazı anında işlenir; yürüyüş yalnız görüntü. */
+function kzArkCiz(ctx) {
+  const a = KZ.arkKonum; if (!a || !KZ.ark) return;
+  const zip = a.yuruyor ? (Math.floor(performance.now() / 70) % 2) : 0;
+  spriteCiz(ctx, KZ.ark.sprite, Math.round(a.x), Math.round(a.y) - zip, 1);
+  // kazma: sap ve demir; sallanırken yukarı kalkar
+  const kx = Math.round(a.x) + 10, ky = Math.round(a.y) + 8, kalk = a.salla > 0;
+  ctx.fillStyle = "#7a5530";
+  if (kalk) { ctx.fillRect(kx, ky - 6, 1, 7); ctx.fillStyle = "#9aa3ab"; ctx.fillRect(kx - 2, ky - 7, 5, 1); }
+  else { ctx.fillRect(kx, ky, 4, 1); ctx.fillRect(kx + 3, ky + 1, 1, 1); ctx.fillStyle = "#9aa3ab"; ctx.fillRect(kx + 4, ky - 1, 1, 4); }
+}
+function kzYuru(i) {
+  const hx = (i % KZ_SUTUN) * KZ_HUCRE, hy = KZ_SAHNE + Math.floor(i / KZ_SUTUN) * KZ_HUCRE;
+  const hedef = { x: Math.min(KZ_SUTUN * KZ_HUCRE - 14, hx + 2), y: hy - 8 };
+  const a = KZ.arkKonum || (KZ.arkKonum = { x: 4, y: 24, salla: 0 });
+  a.hedef = hedef; a.salla = 2;
+  if (a.dongu) return;
+  let sonAdim = 0;
+  const adim = zaman => {
+    if (!KZ || !$("#kz-tuval")) { a.dongu = null; return; }
+    const dx = a.hedef.x - a.x, dy = a.hedef.y - a.y, uz = Math.hypot(dx, dy), hiz = 9;   // fıtı fıtı: kare başına 9 piksel
+    a.yuruyor = uz > 0.5;
+    if (a.yuruyor) {
+      a.x += uz <= hiz ? dx : dx / uz * hiz; a.y += uz <= hiz ? dy : dy / uz * hiz;
+      if (zaman - sonAdim > 60) { oyunSesi("adim"); sonAdim = zaman; }
+    } else if (a.salla > 0) { a.salla--; }
+    kzCiz();
+    if (a.yuruyor || a.salla > 0) a.dongu = requestAnimationFrame(adim);
+    else { a.dongu = null; kzCiz(); }
+  };
+  a.dongu = requestAnimationFrame(adim);
 }
 function kzKaz(i) {
   if (!KZ || KZ.bitti || i < 0 || i >= KZ.hucreler.length) return;
   const h = KZ.hucreler[i];
   if (h.derinlik === 0) return;
   h.derinlik--; KZ.vurus--; KZ.vurgu = i;
+  oyunSesi("kazma", 2 - h.derinlik);
+  kzYuru(i);
   setTimeout(() => { if (KZ && KZ.vurgu === i) { KZ.vurgu = -1; kzCiz(); } }, 90);
   if (navigator.vibrate) try { navigator.vibrate(8); } catch (e) {}
   let yeni = null;
-  if (h.derinlik === 0 && h.buluntu) { yeni = h.buluntu; KZ.bulunan.push(yeni); KZ.puan += yeni.puan; }
+  if (h.buluntu && h.derinlik <= h.bulKat) {
+    h.derinlik = 0; yeni = h.buluntu; KZ.bulunan.push(yeni);
+    const p = sikMi(yeni) ? yeni.puan : Math.round(yeni.puan * KZ.carpan);
+    KZ.puan += p; yeni = { ...yeni, kazanilan: p };
+    setTimeout(() => oyunSesi(sikMi(h.buluntu) ? "sik" : "buluntu"), 120);
+  }
   kzCiz();
-  const ozelBitti = KZ.bulunan.filter(b => !KZ_SIK.includes(b)).length >= KZ.ozelSayi;
+  const ozelBitti = KZ.bulunan.filter(b => !sikMi(b)).length >= KZ.ozelSayi;
   if (yeni) {
-    const ozel = !KZ_SIK.includes(yeni);
-    const ilk = ozel && !(D.buluntuDefteri || {})[yeni.id];
-    if (ozel) { D.buluntuDefteri = D.buluntuDefteri || {}; D.buluntuDefteri[yeni.id] = D.buluntuDefteri[yeni.id] || oyunGunu(); kaydet(); }
-    kzBuluntuLevhasi(yeni, KZ.alan, ilk, () => { if (ozelBitti || KZ.vurus <= 0) kzSon(ozelBitti); });
+    const ozel = !sikMi(h.buluntu);
+    const ilk = ozel && !(D.buluntuDefteri || {})[h.buluntu.id];
+    if (ozel) { D.buluntuDefteri = D.buluntuDefteri || {}; D.buluntuDefteri[h.buluntu.id] = D.buluntuDefteri[h.buluntu.id] || oyunGunu(); kaydet(); }
+    kzBuluntuLevhasi(yeni, KZ.alan, ilk, () => { if (ozelBitti || KZ.vurus <= 0) kzSon(ozelBitti); }, !ozel);
     return;
   }
   if (ozelBitti || KZ.vurus <= 0) setTimeout(() => kzSon(ozelBitti), 250);
 }
-function kzBuluntuLevhasi(b, alan, ilk, sonra) {
-  const ozel = !KZ_SIK.includes(b);
+function kzBuluntuLevhasi(b, alan, ilk, sonra, sik) {
+  const ozel = sik === undefined ? !KZ_SIK.some(x => x.id === b.id) : !sik;
   levhaAc(`<div class="kz-buluntu">${ilk ? `<p class="kz-yeni">${tx("Deftere yeni buluntu!")}</p>` : ""}
     <canvas width="144" height="144" id="kz-buyuk"></canvas>
     <h3>${esc(kzAd(b))}</h3>
-    <p class="aciklama">${ozel ? `${esc(alan.ad)}, ${esc(alan.il)} · ${esc(DIL === "en" ? alan.donem_en : alan.donem)}` : tx("Sık buluntu")} · <b>+${b.puan}</b></p>
+    <p class="aciklama">${ozel ? `${esc(alan.ad)}, ${esc(alan.il)} · ${esc(DIL === "en" ? alan.donem_en : alan.donem)}` : tx("Sık buluntu")} · <b>+${b.kazanilan || b.puan}</b></p>
     <p>${esc(kzBilgi(b))}</p>
-    <p style="margin-top:14px"><button class="buyuk-dugme" id="kz-devam">${tx("Kazmaya devam")}</button></p></div>`, lv => {
+    <p style="margin-top:14px"><button class="buyuk-dugme" id="kz-devam">${sonra ? tx("Kazmaya devam") : tx("Kapat")}</button></p></div>`, lv => {
     const ctx = lv.querySelector("#kz-buyuk").getContext("2d");
     ctx.fillStyle = alan.toprak[3]; ctx.fillRect(0, 0, 144, 144);
     spriteCiz(ctx, b.id, 0, 0, 12);
-    // perdeye dokunarak kapatılsa da oyun akışı sürsün
     const perde = () => { if (sonra) sonra(); };
     if (sonra) $("#tabaka").addEventListener("click", perde, { once: true });
     lv.querySelector("#kz-devam").onclick = () => { $("#tabaka").removeEventListener("click", perde); levhaKapat(); if (sonra) sonra(); };
@@ -379,12 +593,14 @@ function kzBuluntuLevhasi(b, alan, ilk, sonra) {
 function kzSon(hepsi) {
   if (!KZ || KZ.bitti) return;
   KZ.bitti = true;
+  kzMuzikDur();
+  setTimeout(() => oyunSesi("bitis"), 150);
   const bonus = hepsi ? KZ.vurus * 5 : 0;
   KZ.puan += bonus;
   const kd = kaziDurumu();
   kd.toplam += KZ.puan; kd.kosular.push({ alan: KZ.alan.id, puan: KZ.puan }); kaydet();
   skorGonder("kazi", kd.toplam, `${kd.kosular.length} kazı`);
-  const ozeller = KZ.bulunan.filter(b => !KZ_SIK.includes(b));
+  const ozeller = KZ.bulunan.filter(b => !sikMi(b));
   levhaAc(`<div class="kz-buluntu"><h3>${hepsi ? tx("Açma tamamlandı!") : tx("Kazı bitti")}</h3>
     <p>${esc(KZ.alan.ad)} · ${tx("{n} değerli buluntu", { n: ozeller.length })} · ${tx("{n} sık buluntu", { n: KZ.bulunan.length - ozeller.length })}</p>
     ${bonus ? `<p>${tx("Kalan vuruş bonusu")}: <b>+${bonus}</b></p>` : ""}

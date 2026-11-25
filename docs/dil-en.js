@@ -687,5 +687,17 @@ const EN = {
  "Ören yerlerine dön": "Back to sites",
  "Ünlü ören yerlerinde kaz, gerçek buluntuları çıkar ve tanı.": "Dig at famous sites, uncover real finds and learn about them.",
  "Arkix'te yeni: Oyunlar": "New in Arkix: Games",
- "Kelime Kazısı ve piksel kazı oyunu Kazı Başı; skor tablosunda yarış.": "Word Dig and the pixel dig game Dig Site; compete on the leaderboard."
+ "Kelime Kazısı ve piksel kazı oyunu Kazı Başı; skor tablosunda yarış.": "Word Dig and the pixel dig game Dig Site; compete on the leaderboard.",
+ "Arkeoloğunu seç": "Choose your archaeologist",
+ "Bugün kalan kazı izni: {n}/{t}": "Digging permits left today: {n}/{t}",
+ "Her arkeoloğun kazıda bir üstünlüğü var. İstediğin zaman değiştirebilirsin.": "Each archaeologist has an advantage in the dig. You can switch any time.",
+ "Her gün yeni bir kelime ve beş kazı izni. Oynarken öğren, skor tablosunda yüksel.": "A new word and five digging permits every day. Learn as you play and climb the leaderboard.",
+ "Kazıya başlamadan önce": "Before you start digging",
+ "Kelime her gece yarısı değişir; herkes aynı kelimeyi çözer. Çözünce terimin anlamını öğrenirsin. Puan: 1. denemede 600, 6. denemede 100; ipucu 100 puan düşürür.": "The word changes every midnight and everyone solves the same one. Solve it to learn the term. Score: 600 on the 1st try, 100 on the 6th; a hint costs 100 points.",
+ "Müzik": "Music",
+ "Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücre kızıl ya da amber parlıyorsa yakında değerli bir buluntu var.": "Tap the soil: each tap digs one layer. Finds lie at different depths; if an empty square glows red or amber, a valuable find is nearby.",
+ "ilk harf": "first letter",
+ "puan": "points",
+ "{ad} kazıya hazır": "{ad} is ready to dig",
+ "İpucu al": "Get a hint"
 };

@@ -72,11 +72,59 @@ function skorBolumuBagla(kok) {
   });
 }
 
+/* ---------------------------------------------------------------- ses efektleri (WebAudio, dosya yok; D.oyunSes === false ise sessiz) */
+const OS = { ctx: null };
+const oyunSesAcik = () => D.oyunSes !== false;
+function oyunSesCtx() {
+  try { OS.ctx = OS.ctx || new (window.AudioContext || window.webkitAudioContext)(); if (OS.ctx.state === "suspended") OS.ctx.resume(); } catch (e) { OS.ctx = null; }
+  return OS.ctx;
+}
+function oyunSesi(tur, ek = 0) {
+  if (!oyunSesAcik()) return;
+  const c = oyunSesCtx(); if (!c) return;
+  const t0 = c.currentTime;
+  const ton = (frek, bas, sure, dalga = "square", ses = 0.12, kayma = 0) => {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = dalga; o.frequency.setValueAtTime(frek, t0 + bas);
+    if (kayma) o.frequency.exponentialRampToValueAtTime(Math.max(40, frek + kayma), t0 + bas + sure);
+    g.gain.setValueAtTime(0.0001, t0 + bas); g.gain.exponentialRampToValueAtTime(ses, t0 + bas + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t0 + bas + sure);
+    o.connect(g); g.connect(c.destination); o.start(t0 + bas); o.stop(t0 + bas + sure + 0.02);
+  };
+  const gurultu = (bas, sure, frek, ses = 0.35) => {
+    const n = Math.floor(c.sampleRate * sure), b = c.createBuffer(1, n, c.sampleRate), v = b.getChannelData(0);
+    for (let i = 0; i < n; i++) v[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+    const k = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = "bandpass"; f.frequency.value = frek; f.Q.value = 1.2; g.gain.value = ses;
+    k.buffer = b; k.connect(f); f.connect(g); g.connect(c.destination); k.start(t0 + bas);
+  };
+  if (tur === "kazma") { ton(1900 - ek * 250, 0, 0.05, "square", 0.08); gurultu(0.01, 0.12, 700 - ek * 120, 0.5); }   // metal tık + toprak
+  else if (tur === "adim") ton(220 + Math.random() * 40, 0, 0.03, "triangle", 0.06);
+  else if (tur === "sik") { ton(660, 0, 0.12, "triangle", 0.18); ton(990, 0.07, 0.16, "triangle", 0.14); }
+  else if (tur === "buluntu") [523, 659, 784, 1047, 1319].forEach((f, i) => ton(f, i * 0.07, 0.28, "triangle", 0.16));
+  else if (tur === "bitis") [784, 659, 523, 659, 784, 1047].forEach((f, i) => ton(f, i * 0.1, 0.22, "square", 0.07));
+  else if (tur === "tus") ton(520, 0, 0.035, "triangle", 0.07);
+  else if (tur === "sil") ton(300, 0, 0.05, "triangle", 0.07, -80);
+  else if (tur === "yerinde") ton(660 + ek * 90, 0, 0.14, "triangle", 0.14);
+  else if (tur === "var") ton(440 + ek * 60, 0, 0.12, "triangle", 0.11);
+  else if (tur === "yok") ton(180, 0, 0.1, "square", 0.05);
+  else if (tur === "hata") { ton(200, 0, 0.09, "square", 0.08); ton(160, 0.1, 0.12, "square", 0.08); }
+  else if (tur === "kazan") [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => ton(f, i * 0.09, 0.25, "triangle", 0.16));
+  else if (tur === "kaybet") [392, 330, 262, 196].forEach((f, i) => ton(f, i * 0.16, 0.3, "triangle", 0.12));
+  else if (tur === "ipucu") { ton(880, 0, 0.2, "sine", 0.15); ton(1320, 0.1, 0.3, "sine", 0.12); }
+}
+function oyunSesDugmesi(id = "oyun-ses") {
+  return `<button class="kz-muzik" id="${id}" aria-label="${tx("Ses")}" title="${tx("Ses")}">${oyunSesAcik() ? "🔊" : "🔇"}</button>`;
+}
+function oyunSesBagla(id = "oyun-ses") {
+  const b = document.getElementById(id); if (!b) return;
+  b.onclick = () => { D.oyunSes = !oyunSesAcik(); kaydet(); b.textContent = oyunSesAcik() ? "🔊" : "🔇"; if (oyunSesAcik()) oyunSesi("tus"); };
+}
+
 /* ---------------------------------------------------------------- oyunlar merkezi */
 function sayfaOyunlar() {
   const kd = kelimeDurumu(), kz = typeof kaziDurumu === "function" ? kaziDurumu() : null;
   $("#sayfa").innerHTML = `<div class="oyun-merkez">
-    <p class="aciklama" style="margin:14px 16px 4px">${tx("Her gün yeni bir kelime ve üç kazı izni. Oynarken öğren, skor tablosunda yüksel.")}</p>
+    <p class="aciklama" style="margin:14px 16px 4px">${tx("Her gün yeni bir kelime ve beş kazı izni. Oynarken öğren, skor tablosunda yüksel.")}</p>
     <a class="oyun-kart kelime-kart" href="#oyun/kelime">
       <span class="oyun-gorsel">${["K", "A", "Z", "I"].map((h, i) => `<i class="tas ${["yerinde", "var", "yok", "yerinde"][i]}">${h}</i>`).join("")}</span>
       <span class="oyun-yazi"><b>${tx("Kelime Kazısı")}</b><small>${tx("Günün arkeoloji terimini 6 denemede bul.")}</small>
@@ -84,7 +132,7 @@ function sayfaOyunlar() {
     <a class="oyun-kart kazioyun-kart" href="#oyun/kazi">
       <span class="oyun-gorsel"><canvas width="48" height="32" id="oyun-kart-kazi"></canvas></span>
       <span class="oyun-yazi"><b>${tx("Kazı Başı")}</b><small>${tx("Ünlü ören yerlerinde kaz, gerçek buluntuları çıkar ve tanı.")}</small>
-        <em>${kz ? tx("Bugün kalan kazı izni: {n}/3", { n: kz.hak }) : ""}</em></span></a>
+        <em>${kz ? tx("Bugün kalan kazı izni: {n}/{t}", { n: kz.hak, t: typeof KZ_HAK !== "undefined" ? KZ_HAK : 5 }) : ""}</em></span></a>
     ${skorBolumuHtml("kelime")}${skorBolumuHtml("kazi")}
   </div>`;
   $$(".oyun-skor h3").forEach(h => { const o = h.closest(".oyun-skor").dataset.oyun; h.textContent = `${tx(OYUN_ADI[o])} · ${tx("Skor tablosu")}`; });
@@ -130,6 +178,17 @@ const KELIMELER = [
   ["KAZMA", "Toprağı kazmak için kullanılan, sapı uzun el aleti.", "A long-handled hand tool for breaking ground; a pickaxe."],
   ["BALTA", "Neolitik'te cilalı taştan, sonra tunçtan ve demirden yapılan kesici alet.", "A cutting tool made of polished stone in the Neolithic, later of bronze and iron."],
 ];
+// İpucu: tür ve ilk harf; kullanılırsa puan −100 (en az 50)
+const KELIME_TUR = {
+  "HÖYÜK": ["Yerleşim türü", "Type of settlement"], "SİKKE": ["Buluntu: para", "Find: money"], "LAHİT": ["Mezar", "Burial"], "AGORA": ["Kent meydanı", "City square"],
+  "FRESK": ["Duvar sanatı", "Wall art"], "MÜHÜR": ["Buluntu: damga", "Find: stamp"], "HİTİT": ["Uygarlık", "Civilisation"], "KOLON": ["Mimari öğe", "Architectural element"],
+  "TROYA": ["Antik kent", "Ancient city"], "APSİS": ["Mimari öğe", "Architectural element"], "RİTON": ["Kap", "Vessel"], "TESTİ": ["Kap", "Vessel"],
+  "KUBBE": ["Mimari öğe", "Architectural element"], "YAZIT": ["Yazı", "Writing"], "ODEON": ["Yapı türü", "Building type"], "LİDYA": ["Krallık", "Kingdom"],
+  "KEMER": ["Mimari öğe", "Architectural element"], "TORSO": ["Heykel", "Sculpture"], "SKENE": ["Tiyatro bölümü", "Part of a theatre"], "PİTOS": ["Kap", "Vessel"],
+  "KUROS": ["Heykel", "Sculpture"], "ASSOS": ["Antik kent", "Ancient city"], "KAVEA": ["Tiyatro bölümü", "Part of a theatre"], "ÇANAK": ["Kap", "Vessel"],
+  "LİKYA": ["Antik bölge", "Ancient region"], "FORUM": ["Kent meydanı", "City square"], "HAMAM": ["Yapı türü", "Building type"], "KARYA": ["Antik bölge", "Ancient region"],
+  "SÜTUN": ["Mimari öğe", "Architectural element"], "PERGE": ["Antik kent", "Ancient city"], "KAZMA": ["Kazı aleti", "Excavation tool"], "BALTA": ["Alet", "Tool"],
+};
 function kelimeGunNo() { return Math.max(0, Math.round((new Date(oyunGunu() + "T00:00:00") - new Date(KELIME_BASLANGIC + "T00:00:00")) / 864e5)); }
 function gununKelimesi() { const k = KELIMELER[kelimeGunNo() % KELIMELER.length]; return { kelime: k[0], anlam: DIL === "en" ? k[2] : k[1] }; }
 function kelimeDurumu() {
@@ -164,10 +223,12 @@ function sayfaKelime() {
   }
   const tus = c => `<button class="kk-tus ${klavyeDurum[c] || ""}" data-h="${c}">${c}</button>`;
   $("#sayfa").innerHTML = `<div class="kelime-oyun">
-    <p class="kk-ust">${tx("Günün arkeoloji terimi · 5 harf")} · <span>${esc(tarihYaz(oyunGunu()))}</span> · <button class="metin-dugme" id="kk-nasil">${tx("Nasıl oynanır?")}</button></p>
+    <p class="kk-ust">${tx("Günün arkeoloji terimi · 5 harf")} · <span>${esc(tarihYaz(oyunGunu()))}</span> · <button class="metin-dugme" id="kk-nasil">${tx("Nasıl oynanır?")}</button> ${oyunSesDugmesi()}</p>
+    ${kd.ipucu ? `<p class="kk-ipucu">💡 ${esc((KELIME_TUR[kelime] || ["", ""])[DIL === "en" ? 1 : 0])} · ${tx("ilk harf")} <b>${esc(harfler(kelime)[0])}</b></p>`
+      : !kd.bitti ? `<p class="kk-ipucu"><button class="ikincil-dugme" id="kk-ipucu">💡 ${tx("İpucu al")} <small>(−100 ${tx("puan")})</small></button></p>` : ""}
     <div class="kk-izgara">${satirlar.join("")}</div>
     ${kd.bitti ? `<div class="kk-sonuc"><p class="kk-kelime">${esc(kelime)}</p><p>${esc(anlam)}</p>
-        <p><b>${kd.kazandi ? tx("Tebrikler! {n}. denemede buldun · {p} puan", { n: kd.tahminler.length, p: (7 - kd.tahminler.length) * 100 }) : tx("Bu sefer olmadı. Yarın yeni kelime!")}</b></p>
+        <p><b>${kd.kazandi ? tx("Tebrikler! {n}. denemede buldun · {p} puan", { n: kd.tahminler.length, p: Math.max(50, (7 - kd.tahminler.length) * 100 - (kd.ipucu ? 100 : 0)) }) : tx("Bu sefer olmadı. Yarın yeni kelime!")}</b></p>
         <p class="kk-seri">${tx("Seri: {n} gün · En iyi: {e}", { n: (D.kelimeSeri || {}).seri || 0, e: (D.kelimeSeri || {}).enIyi || 0 })}</p>
         <p style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="buyuk-dugme" id="kk-paylas">${tx("Sonucu paylaş")}</button>
           <a class="ikincil-dugme" href="#oyun/kazi">${tx("Kazı Başı'na geç")}</a></p></div>`
@@ -179,22 +240,26 @@ function sayfaKelime() {
   $(".oyun-skor h3").textContent = tx("Kelime Kazısı · Skor tablosu");
   skorBolumuBagla($("#sayfa"));
   $("#kk-nasil").onclick = kelimeNasil;
+  oyunSesBagla();
+  const ip = $("#kk-ipucu");
+  if (ip) ip.onclick = () => { kd.ipucu = true; kaydet(); oyunSesi("ipucu"); const y = window.scrollY; sayfaKelime(); window.scrollTo(0, y); };
   if (kd.bitti) { $("#kk-paylas").onclick = () => kelimePaylas(); return; }
   $$(".kk-tus").forEach(b => b.onclick = () => kelimeTus(b.dataset.h));
 }
 function kelimeTus(h) {
   const kd = kelimeDurumu();
   if (kd.bitti) return;
-  if (h === "SIL") kelimeGirdi = harfler(kelimeGirdi).slice(0, -1).join("");
+  if (h === "SIL") { kelimeGirdi = harfler(kelimeGirdi).slice(0, -1).join(""); oyunSesi("sil"); }
   else if (h === "TAMAM") {
-    if (harfler(kelimeGirdi).length !== 5) { bildir(tx("5 harf yazın")); $(".kk-satir.etkin") && $(".kk-satir.etkin").classList.add("salla"); return; }
+    if (harfler(kelimeGirdi).length !== 5) { bildir(tx("5 harf yazın")); oyunSesi("hata"); $(".kk-satir.etkin") && $(".kk-satir.etkin").classList.add("salla"); return; }
     const { kelime } = gununKelimesi();
+    kelimeIsaretle(kelimeGirdi, kelime).forEach((x, j) => setTimeout(() => oyunSesi(x, j), j * 110));
     kd.tahminler.push(kelimeGirdi); kelimeGirdi = "";
     if (kd.tahminler[kd.tahminler.length - 1] === kelime) { kd.bitti = true; kd.kazandi = true; }
     else if (kd.tahminler.length >= 6) kd.bitti = true;
-    if (kd.bitti) kelimeBitti(kd);
+    if (kd.bitti) { kelimeBitti(kd); setTimeout(() => oyunSesi(kd.kazandi ? "kazan" : "kaybet"), 600); }
     kaydet();
-  } else if (TR_HARF.includes(h) && harfler(kelimeGirdi).length < 5) kelimeGirdi += h;
+  } else if (TR_HARF.includes(h) && harfler(kelimeGirdi).length < 5) { kelimeGirdi += h; oyunSesi("tus"); }
   if (location.hash === "#oyun/kelime") { const y = window.scrollY; sayfaKelime(); window.scrollTo(0, y); }
 }
 function kelimeBitti(kd) {
@@ -203,7 +268,7 @@ function kelimeBitti(kd) {
   if (kd.kazandi) { s.seri = s.son === dun ? s.seri + 1 : 1; s.enIyi = Math.max(s.enIyi, s.seri); s.son = kd.gun; }
   else s.seri = 0;
   D.kelimeSeri = s;
-  const puan = kd.kazandi ? (7 - kd.tahminler.length) * 100 : 0;
+  const puan = kd.kazandi ? Math.max(50, (7 - kd.tahminler.length) * 100 - (kd.ipucu ? 100 : 0)) : 0;
   skorGonder("kelime", puan, `${kd.kazandi ? kd.tahminler.length : "X"}/6`).then(ok => { if (ok && location.hash === "#oyun/kelime") skorBolumuBagla($("#sayfa")); });
 }
 function kelimePaylas() {
@@ -220,7 +285,7 @@ function kelimeNasil() {
     <div class="kutu"><div class="satir"><span class="tas yerinde">H</span>${tx("Harf doğru yerde")}</div>
       <div class="satir"><span class="tas var">Ö</span>${tx("Harf kelimede var ama başka yerde")}</div>
       <div class="satir"><span class="tas yok">Y</span>${tx("Harf kelimede yok")}</div></div>
-    <p class="aciklama">${tx("Kelime her gece yarısı değişir; herkes aynı kelimeyi çözer. Çözünce terimin anlamını öğrenirsin. Puan: 1. denemede 600, 6. denemede 100.")}</p>`);
+    <p class="aciklama">${tx("Kelime her gece yarısı değişir; herkes aynı kelimeyi çözer. Çözünce terimin anlamını öğrenirsin. Puan: 1. denemede 600, 6. denemede 100; ipucu 100 puan düşürür.")}</p>`);
 }
 document.addEventListener("keydown", e => {
   if (location.hash !== "#oyun/kelime" || e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;

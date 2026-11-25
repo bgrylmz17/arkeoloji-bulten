@@ -799,3 +799,19 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .kz-buluntu > p:not(.aciklama) { text-align: left; line-height: 1.55; }
 .kz-buluntu .kz-yeni, .kz-buluntu .kz-toplam { text-align: center !important; }
 .kz-yeni { color: var(--okr); font-weight: 800; letter-spacing: .05em; }
+/* Kazı Başı: arkeolog, ses; Kelime Kazısı: ipucu */
+.kz-arkeolog { display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); margin: 4px 16px 12px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--cizgi);
+  background: var(--kagit-2); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.kz-arkeolog canvas { width: 36px; height: 48px; image-rendering: pixelated; }
+.kz-arkeolog span { flex: 1; display: flex; flex-direction: column; }
+.kz-arkeolog small { color: var(--soluk); font-size: 13px; }
+.kz-arkeolog i { font-style: normal; color: var(--okr); font-weight: 700; font-size: 13px; }
+.ark-izgara { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ark-kart { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border-radius: 14px; border: 2px solid var(--cizgi); background: var(--kagit-2);
+  color: inherit; font: inherit; cursor: pointer; text-align: center; }
+.ark-kart.secili { border-color: var(--okr); }
+.ark-kart canvas { width: 72px; height: 96px; image-rendering: pixelated; }
+.ark-kart small { color: var(--soluk); font-size: 12.5px; line-height: 1.3; }
+.kz-muzik { background: none; border: 1px solid var(--cizgi); border-radius: 99px; min-width: 34px; height: 30px; margin-left: 4px; font: inherit; color: var(--murekkep); cursor: pointer; }
+.kk-ipucu { text-align: center; margin: -4px 16px 10px; color: var(--murekkep); }
+.kk-ipucu small { color: var(--soluk); }
