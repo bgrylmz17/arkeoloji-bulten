@@ -12,6 +12,7 @@ const PUSH_KATEGORILER = [
   ["kazi", "Yeni kazı duyuruları"],
 ];
 const YENILIKLER = [
+  { tarih: "2026-11-25T23:20:00Z", baslik: "Arkix'te yeni: Oyunlar", metin: "Kelime Kazısı ve piksel kazı oyunu Kazı Başı; skor tablosunda yarış.", adres: "#oyunlar" },
   { tarih: "2026-11-25T22:50:00Z", baslik: "Arkix'te yeni: Bildirimler", metin: "Önemli gelişmeler artık burada; istersen telefonuna da gelsin.", adres: "#ozet" },
   { tarih: "2026-11-25T21:00:00Z", baslik: "Arkix'te yeni: Kazı duyuruları", metin: "Sezona başlayan kazılar, gönüllü ve öğrenci ilanları Özel sekmesinde.", adres: "#ozel/kazi" },
   { tarih: "2026-11-25T19:00:00Z", baslik: "Arkix'te yeni: Günün Katmanları", metin: "Dünün öne çıkanları katman katman; dinleyerek de takip edebilirsin.", adres: "#bugun" },

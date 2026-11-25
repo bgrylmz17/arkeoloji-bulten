@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.17.1";
+const SURUM = "1.18.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -369,6 +369,7 @@ function sayfaBugun() {
     ${VERI.guncelleme ? `<button class="katman-kart" id="anlat-ac" aria-label="${tx("Günün Katmanları")}">
       <span class="katman-simge" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
       <span class="katman-yazi"><b>${tx("Günün Katmanları")}</b><small>${tx("Dünün {n} önemli gelişmesi, katman katman · dinle", { n: Math.max(1, sabahOzeti().oneCikanlar.length) })}</small></span><i class="katman-ok">›</i></button>` : ""}
+    <a class="oyun-serit" href="#oyunlar"><span class="oyun-serit-tas"><i>K</i><i>A</i><i>Z</i></span><span><b>${tx("Günün oyunları")}</b><small>${tx("Kelime Kazısı · Kazı Başı · skor tablosu")}</small></span><i class="katman-ok">›</i></a>
     <p class="ozet">${!VERI.guncelleme ? tx("Bülten henüz ilk kez toplanmadı.") : yeni.length
       ? tx("Son bakışınızdan beri {b}{n} yeni kayıt{/b} geldi.", { n: yeni.length, b: "<b>", "/b": "</b>" })
       : tx("Son iki günde {n} kayıt toplandı.", { n: son.length })}${VERI.guncelleme ? " " + tx("Bülten {saat} güncellendi.", { saat: esc(saatYaz(VERI.guncelleme)) }) : ""}
@@ -1561,9 +1562,9 @@ function kaydirmaBagla() {
 /* ---------------------------------------------------------------- yönlendirme */
 const UST = { bugun: tx("Bugün"), ozet: tx("Bildirimler"), ozel: "Arkix Özel", akis: tx("Ara"), kitaplik: tx("Harrix Kitaplık"), ayarlar: tx("Ayarlar"), giris: tx("Giriş"),
   favoriler: tx("Favoriler"), notlar: tx("Notlu kayıtlar"), kaynakca: tx("Kaynakçam"), durum: tx("Kaynakların durumu"), ara: tx("Ara"), konu: tx("Konu"), k: "",
-  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli"), takip: tx("Takip ettiklerim"), ayril: tx("E-posta özeti") };
+  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli"), takip: tx("Takip ettiklerim"), ayril: tx("E-posta özeti"), oyunlar: tx("Oyunlar"), oyun: tx("Oyunlar") };
 const ALT_SAYFA = { giris: null, favoriler: "kitaplik", notlar: "kitaplik", kaynakca: "kitaplik", konu: "kitaplik", durum: null, k: null, ara: "akis",
-  sozler: "kitaplik", pdfler: "kitaplik", yasal: null, yonetim: null, takip: null, ayarlar: null, ayril: null };
+  sozler: "kitaplik", pdfler: "kitaplik", yasal: null, yonetim: null, takip: null, ayarlar: null, ayril: null, oyunlar: null, oyun: null };
 let sonSekme = "bugun";
 
 function rota(kaydirmayiKoru) {
@@ -1601,6 +1602,13 @@ function rota(kaydirmayiKoru) {
   else if (ad === "takip") { if (typeof sayfaTakip === "function") sayfaTakip(); else location.replace("#kitaplik"); }
   else if (ad === "yonetim") { if (typeof sayfaYonetim === "function") sayfaYonetim(); else location.replace("#ayarlar"); }
   else if (ad === "k") sayfaAyrinti(arg);
+  else if (ad === "oyunlar" && typeof sayfaOyunlar === "function") sayfaOyunlar();
+  else if (ad === "oyun" && typeof sayfaKelime === "function") {
+    const [oyun, ...geri] = arg.split("/");
+    if (oyun === "kelime") { $("#baslik").textContent = tx("Kelime Kazısı"); sayfaKelime(); }
+    else if (oyun === "kazi") { $("#baslik").textContent = tx("Kazı Başı"); sayfaKaziOyun(geri.join("/")); }
+    else { location.replace("#oyunlar"); return; }
+  }
   else { location.hash = "#bugun"; return; }
   kaydirmaBagla();
   reklamlariDoldur();

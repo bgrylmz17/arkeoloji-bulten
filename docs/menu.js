@@ -9,6 +9,7 @@ function cekmeceAc() {
     <a class="cekmece-profil" href="${girdi ? "#ayarlar" : "#giris"}">${girdi && typeof avatarHtml === "function" ? avatarHtml(48) : `<span class="avatar avatar-bas" style="width:48px;height:48px">A</span>`}
       <span><b>${esc(ad)}</b><small>${girdi ? esc(H.kullanici.email || "") : tx("Kayıtların her cihazda")}</small></span></a>
     <nav class="cekmece-liste">
+      ${satir("#oyunlar", tx("Oyunlar"), tx("Yeni"))}
       ${satir("#ozel/kazi", tx("Kazı duyuruları"))}
       ${satir("#takip", tx("Takip ettiklerim"), takipYeni ? tx("{n} yeni", { n: takipYeni }) : String((D.takip || []).length))}
       ${satir("#favoriler", tx("Favoriler"), D.fav.length)}
