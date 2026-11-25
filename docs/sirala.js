@@ -39,7 +39,7 @@ function sayfaSirala() {
   const son = sd.denemeler[sd.denemeler.length - 1];
   const dEn = d => DIL === "en" ? d.ad_en : d.ad;
   $("#sayfa").innerHTML = `<div class="sirala-oyun">
-    <p class="kk-ust">${tx("Buluntuları en eskiden en yeniye sırala")} · ${esc(tarihYaz(oyunGunu()))} ${oyunSesDugmesi()}</p>
+    <p class="kk-ust">${tx("Buluntuları en eskiden en yeniye sırala")} · ${esc(tarihYaz(oyunGunu()))} · <button class="metin-dugme" id="sr-nasil">${tx("Nasıl oynanır?")}</button> ${oyunSesDugmesi()}</p>
     <p class="sirala-ok">${tx("En eski")} ↑</p>
     <ol class="sirala-liste">${(sd.bitti ? gs.dogru : sd.dizi).map((id, i) => {
       const b = siralaBuluntu(id);
@@ -54,10 +54,13 @@ function sayfaSirala() {
         <p style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="buyuk-dugme" id="sr-paylas">${tx("Sonucu paylaş")}</button><a class="ikincil-dugme" href="#oyunlar">${tx("Oyunlar")}</a></p></div>`
       : `<p class="sirala-durum">${son ? tx("{n}/5 doğru yerde · kalan deneme: {k}", { n: dogruSayi(son), k: 3 - sd.denemeler.length }) : tx("3 deneme hakkın var. Okla yukarı-aşağı taşı.")}</p>
         <p style="text-align:center"><button class="buyuk-dugme" id="sr-kontrol" style="max-width:320px;margin:0 auto">${tx("Sırayı kontrol et")}</button></p>`}
-    ${skorBolumuHtml("sirala")}</div>`;
+    ${yoneticiSifirlaHtml("sirala")}${skorBolumuHtml("sirala")}</div>`;
   $(".oyun-skor h3").textContent = tx("Katman Sırala · Skor tablosu");
   skorBolumuBagla($("#sayfa"));
   oyunSesBagla();
+  $("#sr-nasil").onclick = () => nasilGoster("sirala");
+  yoneticiSifirlaBagla();
+  oyunNasilIlk("sirala");
   $$(".sirala-kart").forEach(li => {
     spriteCiz(li.querySelector("canvas").getContext("2d"), li.dataset.id, 0, 0, 4);
     if (sd.bitti) li.onclick = () => { const b = siralaBuluntu(li.dataset.id); kzBuluntuLevhasi(b, b.alan, false); };

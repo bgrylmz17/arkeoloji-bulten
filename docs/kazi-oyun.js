@@ -255,6 +255,7 @@ function kaziDurumu() {
   if (!D.kaziOyun || D.kaziOyun.gun !== g) D.kaziOyun = { gun: g, hak: KZ_HAK, toplam: 0, kosular: [], surum5: true };
   if (!D.kaziOyun.surum5) { D.kaziOyun.hak += KZ_HAK - 3; D.kaziOyun.surum5 = true; }   // izin 3'ten 5'e çıktı (bugün başlamış eski kayıtlar)
   D.kaziOyun.hak = Math.max(0, Math.min(KZ_HAK, D.kaziOyun.hak));
+  if (typeof oyunYoneticisi === "function" && oyunYoneticisi()) D.kaziOyun.hak = KZ_HAK;   // yönetici: sınırsız izin
   return D.kaziOyun;
 }
 const ARKEOLOGLAR = [
@@ -406,7 +407,7 @@ function sayfaKaziOyun(arg) {
   const tum = KZ_ALANLAR.flatMap(a => a.buluntular.map(b => ({ ...b, alan: a })));
   $("#sayfa").innerHTML = `<div class="kazi-oyun">
     <div class="kz-ust"><p>${tx("Bir ören yeri seç, açmayı kaz, buluntuları çıkar.")}</p>
-      <p class="kz-izin">${tx("Bugün kalan kazı izni")}: <b>${kd.hak}/${KZ_HAK}</b> · ${tx("Bugünkü puan")}: <b>${kd.toplam}</b></p></div>
+      <p class="kz-izin">${tx("Bugün kalan kazı izni")}: <b>${oyunYoneticisi() ? "∞" : `${kd.hak}/${KZ_HAK}`}</b> · ${tx("Bugünkü puan")}: <b>${kd.toplam}</b> · <button class="metin-dugme" id="kz-nasil">${tx("Nasıl oynanır?")}</button></p></div>
     <button class="kz-arkeolog" id="kz-ark"><canvas width="24" height="32"></canvas>
       <span>${ark ? `<b>${esc(arkAd(ark))}</b><small>${esc(arkOzellik(ark))}</small>` : `<b>${tx("Arkeoloğunu seç")}</b><small>${tx("Kazıya başlamadan önce")}</small>`}</span><i>${ark ? tx("Değiştir") : "›"}</i></button>
     <div class="kz-alanlar">${KZ_ALANLAR.map(a => {
@@ -418,8 +419,10 @@ function sayfaKaziOyun(arg) {
     <section class="kz-defter"><h3>${tx("Buluntu Defteri")} <small>${Object.keys(defter).filter(id => tum.some(b => b.id === id)).length}/${tum.length}</small></h3>
       <div class="kz-defter-izgara">${tum.map(b => `<button class="kz-defter-oge${defter[b.id] ? "" : " kayip"}${(D.altinDefter || {})[b.id] ? " altin" : ""}" data-b="${b.id}" title="${defter[b.id] ? esc(kzAd(b)) : "?"}">
         <canvas width="48" height="48"></canvas><small>${defter[b.id] ? esc(kzAd(b)) : "?"}</small></button>`).join("")}</div></section>
-    ${skorBolumuHtml("kazi")}</div>`;
+    ${yoneticiSifirlaHtml("kazi")}${skorBolumuHtml("kazi")}</div>`;
   $(".oyun-skor h3").textContent = tx("Kazı Başı · Skor tablosu");
+  $("#kz-nasil").onclick = () => nasilGoster("kazi");
+  yoneticiSifirlaBagla();
   spriteCiz($("#kz-ark canvas").getContext("2d"), ark ? ark.sprite : "ark_saha", 0, 0, 2, !ark);
   $("#kz-ark").onclick = () => arkeologSecimi();
   $$(".kz-alan").forEach(b => {
@@ -427,6 +430,7 @@ function sayfaKaziOyun(arg) {
     kzSahne(b.querySelector("canvas").getContext("2d"), a, 160);
     b.onclick = () => arkeolog() ? kzBasla(a) : arkeologSecimi(() => kzBasla(a));
   });
+  oyunNasilIlk("kazi");
   $$(".kz-defter-oge").forEach(b => {
     const bul = tum.find(x => x.id === b.dataset.b), ctx = b.querySelector("canvas").getContext("2d");
     spriteCiz(ctx, bul.id, 0, 0, 4, !defter[bul.id]);
@@ -438,7 +442,8 @@ function sayfaKaziOyun(arg) {
 function kzBasla(alan) {
   const kd = kaziDurumu();
   if (kd.hak <= 0) { bildir(tx("Bugünkü kazı izinlerin bitti. Yarın yeni izin!")); return; }
-  kd.hak--; kaydet();
+  if (!(typeof oyunYoneticisi === "function" && oyunYoneticisi())) kd.hak--;
+  kaydet();
   const n = KZ_SUTUN * KZ_SATIR, yerler = [...Array(n).keys()].sort(() => Math.random() - .5);
   const hucreler = Array.from({ length: n }, () => ({ derinlik: 3, buluntu: null, bulKat: 0 }));
   // değerliler: 2–3 vuruşta (bulKat 1 ya da 0); sık buluntular: 1–3 vuruşta

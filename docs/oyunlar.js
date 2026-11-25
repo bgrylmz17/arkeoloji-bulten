@@ -21,6 +21,7 @@ const OYUN_ADI = { kelime: "Kelime Kazısı", kazi: "Kazı Başı", sirala: "Kat
 
 async function skorGonder(oyun, puan, ayrinti) {
   if (!H.kullanici || H.yok) return false;
+  if (typeof oyunYoneticisi === "function" && oyunYoneticisi()) return false;   // yönetici sınırsız oynar; tablo adil kalsın
   try {
     const { fs } = await firebaseYukle();
     const gun = oyunGunu(), uid = H.kullanici.uid;
@@ -242,10 +243,12 @@ function sayfaKelime() {
         <div>${"ERTYUIOPĞÜ".split("").map(tus).join("")}</div>
         <div>${"ASDFGHJKLŞİ".split("").map(tus).join("")}</div>
         <div><button class="kk-tus genis" data-h="SIL" aria-label="${tx("Sil")}">⌫</button>${"ZCVBNMÖÇ".split("").map(tus).join("")}<button class="kk-tus genis" data-h="TAMAM">${tx("Dene")}</button></div></div>`}
-    ${skorBolumuHtml("kelime")}</div>`;
+    ${yoneticiSifirlaHtml("kelime")}${skorBolumuHtml("kelime")}</div>`;
   $(".oyun-skor h3").textContent = tx("Kelime Kazısı · Skor tablosu");
   skorBolumuBagla($("#sayfa"));
   $("#kk-nasil").onclick = kelimeNasil;
+  yoneticiSifirlaBagla();
+  oyunNasilIlk("kelime");
   oyunSesBagla();
   const ip = $("#kk-ipucu");
   if (ip) ip.onclick = () => { kd.ipucu = true; kaydet(); oyunSesi("ipucu"); const y = window.scrollY; sayfaKelime(); window.scrollTo(0, y); };
@@ -286,14 +289,7 @@ function kelimePaylas() {
   if (navigator.share) navigator.share({ text: metin }).catch(() => {});
   else navigator.clipboard.writeText(metin).then(() => bildir(tx("Panoya kopyalandı")), () => {});
 }
-function kelimeNasil() {
-  levhaAc(`<h3>${tx("Kelime Kazısı nasıl oynanır?")}</h3>
-    <p>${tx("Günün 5 harfli arkeoloji terimini 6 denemede bul. Her denemeden sonra harfler işaretlenir:")}</p>
-    <div class="kutu"><div class="satir"><span class="tas yerinde">H</span>${tx("Harf doğru yerde")}</div>
-      <div class="satir"><span class="tas var">Ö</span>${tx("Harf kelimede var ama başka yerde")}</div>
-      <div class="satir"><span class="tas yok">Y</span>${tx("Harf kelimede yok")}</div></div>
-    <p class="aciklama">${tx("Kelime her gece yarısı değişir; herkes aynı kelimeyi çözer. Çözünce terimin anlamını öğrenirsin. Puan: 1. denemede 600, 6. denemede 100; ipucu 100 puan düşürür.")}</p>`);
-}
+function kelimeNasil() { nasilGoster("kelime"); }
 document.addEventListener("keydown", e => {
   if (location.hash !== "#oyun/kelime" || e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
   if (!$("#levha").hidden) return;
