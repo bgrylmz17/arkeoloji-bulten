@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.10.0";
+const SURUM = "1.11.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -152,12 +152,15 @@ function bulteniDinle(kayitlar, ozet) {
 /* ---------------------------------------------------------------- durum (yerel depo) */
 const D = Object.assign({
   fav: [], okundu: {}, notlar: {}, konular: [], kaynakca: [], kayitlar: {},
-  gorulen: "", tema: "oto", palet: "kum", yazi: 1, bildirim: false, kurulumIpucu: true,
+  gorulen: "", tema: "oto", palet: "gobeklitepe", yazi: 1, bildirim: false, kurulumIpucu: true,
   uid: null, esitleme: 0, girisSoruldu: false, hepTurkce: false, desen: true, oaAnahtar: "", sesHiz: 1, sesId: "",
-  ozelSozler: [], kvkkSurum: "", dil: DIL, zemin: "gorsel", gunlukGun: "", profil: {},
+  ozelSozler: [], kvkkSurum: "", dil: DIL, zemin: "desen", gunlukGun: "", profil: {}, temaSecildi: false, takip: [], takipGorulen: "",
 }, guvenliOku());
-// arka plan: eski "desen" anahtarı kapalıysa sade, açıksa yeni varsayılan (günün görseli)
+// arka plan: eski "desen" anahtarı kapalıysa sade. 1.11: tam ekran fotoğraf yerine Bugün'ün başında kart; arka plan çizim deseni
 if (!("zemin" in guvenliOku()) && D.desen === false) D.zemin = "sade";
+if (D.zeminSurum !== 2) { if (D.zemin === "gorsel") D.zemin = "desen"; D.zeminSurum = 2; }
+// eski paletler ören yeri temalarına
+if (typeof ESKI_PALET !== "undefined" && ESKI_PALET[D.palet]) D.palet = ESKI_PALET[D.palet];
 
 function guvenliOku() {
   try { return JSON.parse(localStorage.getItem(DEPO_ANAHTARI)) || {}; } catch (e) { return {}; }
@@ -264,10 +267,11 @@ function rozetGuncelle() {
 function temaUygula() {
   const kok = document.documentElement;
   if (D.tema === "oto") kok.removeAttribute("data-tema"); else kok.dataset.tema = D.tema;
-  if (D.palet === "kum") kok.removeAttribute("data-palet"); else kok.dataset.palet = D.palet;
+  if (!D.palet || D.palet === "gobeklitepe") kok.removeAttribute("data-palet"); else kok.dataset.palet = D.palet;
   kok.style.setProperty("--yazi-olcek", D.yazi);
   const koyu = D.tema === "koyu" || (D.tema === "oto" && matchMedia("(prefers-color-scheme: dark)").matches);
-  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute("content", koyu ? "#161916" : "#eef0e9"));
+  const kagit = getComputedStyle(kok).getPropertyValue("--kagit").trim() || (koyu ? "#161916" : "#eef0e9");
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute("content", kagit));
   if (window.DESEN) DESEN.uygula(D.zemin === "desen");
   if (window.GUNLUK) GUNLUK.zemin(D.zemin);
 }
@@ -359,12 +363,16 @@ function sayfaBugun() {
   const sd = sonDakika();
   const b = VERI.banner;
   const ozeller = VERI.kayitlar.filter(r => r.oz && (r.t || "") >= gunOnce(60)).sort((x, y) => (y.t || "").localeCompare(x.t || "")).slice(0, 3);
+  const takipYeni = typeof takipYeniSayisi === "function" ? takipYeniSayisi() : 0;
   const ust = `
+    ${window.GUNLUK ? GUNLUK.kahramanHtml({ baslik: tx("Günün Ören Yeri") }) : ""}
     ${b && b.aktif ? `<a class="harrix-banner" ${b.url ? `href="${esc(b.url)}" target="_blank" rel="noopener"` : ""}>
       <span class="banner-etiket">${esc(b.etiket || "HARRIX")}</span><span class="banner-metin"><b>${esc(b.baslik)}</b>${b.altBaslik ? `<small>${esc(b.altBaslik)}</small>` : ""}</span></a>` : ""}
     ${sd.length ? `<section class="son-dakika" aria-label="${tx("Son dakika")}"><h2><span class="nabiz" aria-hidden="true"></span>${tx("Son dakika")}</h2>
       <div class="sd-serit">${sd.map(d => `<a class="sd-kart${d.onemli ? " onemli" : ""}" href="${esc(d.adres)}" ${d.dis ? 'target="_blank" rel="noopener"' : ""}>
         <b>${esc(d.baslik)}</b><small>${esc(d.alt)}</small></a>`).join("")}</div></section>` : ""}
+    ${(D.takip || []).length ? `<a class="takip-serit${takipYeni ? " yeni" : ""}" href="#takip"><b>${tx("Takip ettiklerim")}</b>
+      <span>${takipYeni ? tx("{n} yeni kayıt", { n: takipYeni }) : tx("Yeni kayıt yok")}</span></a>` : ""}
     ${ozeller.length ? `<section class="ozel-bolum" aria-label="Arkix Özel"><h2>Arkix Özel</h2>
       <div class="ozel-serit">${ozeller.map(r => `<a class="ozel-kart" href="#k/${encodeURIComponent(r.i)}">
         ${r.gv ? `<img src="${esc(r.gv)}" alt="" loading="lazy">` : ""}
@@ -373,18 +381,14 @@ function sayfaBugun() {
       <div class="sabah-ust"><div><h2>${so.selam} · ${tx("Dünün özeti")}</h2><p>${esc(so.etiket)}</p></div>
         ${SES.destek && so.havuz.length ? `<button class="sabah-dinle" id="sabah-dinle"><svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg>${tx("Dinle")}</button>` : ""}</div>
       <p class="sabah-metin">${esc(so.paragraf)}</p>
-      ${so.oneCikanlar.slice(0, 2).map(r => `<a class="sabah-madde" href="#k/${encodeURIComponent(r.i)}">${esc(baslikGoster(r))}</a>`).join("")}
+      ${so.oneCikanlar.slice(0, 1).map(r => `<a class="sabah-madde" href="#k/${encodeURIComponent(r.i)}">${esc(baslikGoster(r))}</a>`).join("")}
     </section>` : ""}
-    ${window.GUNLUK ? GUNLUK.kartHtml({ baslik: tx("Günün alanı") }) : ""}
-    ${soz ? `<a class="soz soz-bag" href="#sozler"><blockquote>${esc(soz)}</blockquote><span class="soz-kim">${tx("Günün sözü · Söz ekle")}</span></a>` : ""}
-    <form class="arama-kutu lit-hizli" id="lit-hizli"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
-      <input id="lit-hizli-q" type="search" placeholder="${tx("Tüm literatürde ara (ör. Göbeklitepe taş alet)")}" enterkeyhint="search" autocomplete="off" aria-label="${tx("Tüm literatürde ara")}">
-      <button class="ara-git" type="submit">${tx("Ara")}</button></form>
     <p class="ozet">${!VERI.guncelleme ? tx("Bülten henüz ilk kez toplanmadı.") : yeni.length
       ? tx("Son bakışınızdan beri {b}{n} yeni kayıt{/b} geldi.", { n: yeni.length, b: "<b>", "/b": "</b>" })
       : tx("Son iki günde {n} kayıt toplandı.", { n: son.length })}${VERI.guncelleme ? " " + tx("Bülten {saat} güncellendi.", { saat: esc(saatYaz(VERI.guncelleme)) }) : ""}</p>
-    <div class="ozet-satir">${TURLER.map(t => `<a class="sayac" href="#akis" data-tur-git="${t}"><strong>${say(t)}</strong><span>${TUR_COGUL[t]}</span></a>`).join("")}</div>
-    ${SES.destek ? `<div class="dinle-satir"><button class="dinle-dugme" id="bulten-dinle"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>${tx("Bülteni dinle")}</button><span class="aciklama">${tx("Özeti ve haberleri sesli okur")}</span></div>` : ""}
+    <div class="ozet-satir kompakt">${TURLER.map(t => `<a class="sayac" href="#akis" data-tur-git="${t}"><strong>${say(t)}</strong><span>${TUR_COGUL[t]}</span></a>`).join("")}
+      ${SES.destek ? `<button class="sayac dinle-cip" id="bulten-dinle" aria-label="${tx("Bülteni dinle")}"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg><span>${tx("Dinle")}</span></button>` : ""}</div>
+    ${soz ? `<a class="soz soz-bag kompakt" href="#sozler"><blockquote>${esc(soz)}</blockquote></a>` : ""}
     ${kurulumIpucuHtml()}`;
   const liste = (yeni.length ? yeni : son).slice(0, 80);
   $("#sayfa").innerHTML = ust + (liste.length ? tabakalarHtml(liste)
@@ -396,10 +400,11 @@ function sayfaBugun() {
     if (mp3 && mp3.dosya && DIL !== "en" && !so.son48 && mp3.gun === gunOnce(1)) SES.mp3(`${mp3.dosya}?v=${mp3.imza}`, tx("Dünün özeti"), so.sesli);
     else SES.oku(so.sesli, tx("Dünün özeti"));
   };
-  $("#lit-hizli").onsubmit = e => {
-    e.preventDefault(); const q = $("#lit-hizli-q").value.trim(); if (!q) return;
-    S.mod = "lit"; L.q = q; L.donem = ""; location.hash = "#akis"; litAra(false);
-  };
+  const kahraman = document.querySelector(".gunluk-kahraman");
+  if (kahraman) kahraman.addEventListener("click", e => {
+    if (e.target.closest("a")) return;
+    GUNLUK.acilis({ baslik: tx("Günün Ören Yeri"), dugme: tx("Kapat") }, "", () => {});
+  });
   const dinle = $("#bulten-dinle");
   if (dinle) dinle.onclick = () => bulteniDinle(yeni.length ? yeni : son, $(".ozet").textContent);
   if (VERI.guncelleme && VERI.guncelleme > (D.gorulen || "")) { D.gorulen = VERI.guncelleme; kaydet(); }
@@ -781,6 +786,7 @@ function sayfaAyrinti(id) {
       <div class="eylemler">
         <button class="eylem" data-e="fav" aria-pressed="${D.fav.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>${tx("Favori")}</button>
         ${yabanci ? `<button class="eylem" data-e="cevir" aria-pressed="${!!goster.tr}"><svg viewBox="0 0 24 24"><path d="M4 5h8M8 3v2m2 0c-1 4-3 7-6 9m2-5c1 2 3 4 5 5M13 21l4-10 4 10m-6.5-3h5"/></svg>${goster.tr ? tx("Özgün") : HEDEF_AD}</button>` : ""}
+        <button class="eylem" data-e="takip"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="5"/></svg>${tx("Takip et")}</button>
         <button class="eylem" data-e="konu"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg>${tx("Konuya ekle")}</button>
         <button class="eylem" data-e="not" aria-pressed="${!!D.notlar[r.i]}"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM8 12h8M8 16h5"/></svg>${tx("Not")}</button>
         <button class="eylem" data-e="kaynakca" aria-pressed="${D.kaynakca.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>${tx("Kaynakça")}</button>
@@ -806,6 +812,7 @@ function sayfaAyrinti(id) {
 
 async function eylem(ad, r, ciz, goster) {
   titres();
+  if (ad === "takip") { if (typeof takipLevhasi === "function") takipLevhasi(r); return; }
   if (ad === "fav") { favDegistir(r); ciz(); }
   else if (ad === "acik") { acikKopyaAra(r); }
   else if (ad === "cevir") {
@@ -963,6 +970,9 @@ function kayitlarDen(ids) { return ids.map(id => DIZIN.get(id) || D.kayitlar[id]
 function sayfaKitaplik() {
   const notlu = Object.keys(D.notlar);
   $("#sayfa").innerHTML = `
+    <div class="grup"><h3>${tx("Takip")}</h3><div class="kutu">
+      <a class="satir" href="#takip">${tx("Takip ettiklerim")}<span class="sag">${(D.takip || []).length}</span></a>
+    </div></div>
     <div class="grup"><h3>${tx("Toplananlar")}</h3><div class="kutu">
       <a class="satir" href="#favoriler">${tx("★ Favoriler")}<span class="sag">${D.fav.length}</span></a>
       <a class="satir" href="#notlar">${tx("Notlu kayıtlar")}<span class="sag">${notlu.length}</span></a>
@@ -1171,11 +1181,11 @@ function sayfaAyarlar() {
     <div class="grup"><h3>${tx("Görünüm")}</h3><div class="kutu">
       <div class="satir">Dil / Language${dilSeciciHtml()}</div>
       <label class="satir">${tx("Tema")}<select id="tema"><option value="oto">${tx("Telefona uy")}</option><option value="acik">${dilSec("Açık", "Light")}</option><option value="koyu">${tx("Koyu")}</option></select></label>
-      <label class="satir">${tx("Toprak rengi")}<select id="palet"><option value="kum">${tx("Kum")}</option><option value="lacivert">${tx("Lacivert")}</option><option value="zeytin">${tx("Zeytin")}</option><option value="murdum">${tx("Mürdüm")}</option></select></label>
-      <label class="satir">${tx("Arka plan")}<select id="zemin"><option value="gorsel">${tx("Günün alanı")}</option><option value="desen">${tx("Çizim deseni")}</option><option value="sade">${tx("Sade")}</option></select></label>
+      <label class="satir">${tx("Tema")} · ${tx("ören yeri")}<select id="palet">${TEMALAR.map(t => `<option value="${t.id}">${esc(temaAdi(t))}</option>`).join("")}</select></label>
+      <label class="satir">${tx("Arka plan")}<select id="zemin"><option value="gorsel">${tx("Günün Ören Yeri fotoğrafı")}</option><option value="desen">${tx("Çizim deseni")}</option><option value="sade">${tx("Sade")}</option></select></label>
       <label class="satir">${tx("Yazı boyutu")}<select id="yazi"><option value="0.9">${tx("Küçük")}</option><option value="1">${tx("Normal")}</option><option value="1.12">${tx("Büyük")}</option><option value="1.25">${tx("Çok büyük")}</option></select></label>
     </div>${D.zemin === "desen" && window.DESEN ? `<p class="aciklama">${tx("Arkeolojik çizimlerden oluşan desen her gün değişir. Bugün: {ad}.", { ad: DIL === "en" ? DESEN.bugun().en : DESEN.bugun().ad })}</p>`
-      : D.zemin === "gorsel" && window.GUNLUK && GUNLUK.bugun() ? `<p class="aciklama">${tx("Her gün başka bir arkeolojik alan. Bugün: {ad}. Görseller yapay zekâ ile üretilmiş temsilî görsellerdir.", { ad: GUNLUK.bugun().ad })}</p>` : ""}</div>
+      : D.zemin === "gorsel" && window.GUNLUK && GUNLUK.bugun() ? `<p class="aciklama">${tx("Arka planda Günün Ören Yeri fotoğrafı. Bugün: {ad}.", { ad: GUNLUK.bugun().ad })}</p>` : ""}</div>
     <div class="grup"><h3>${tx("Çeviri")}</h3><div class="kutu">
       <label class="satir">${tx("Yabancı sayfaları Türkçe aç")}<input type="checkbox" class="anahtar" id="hep-turkce" ${D.hepTurkce ? "checked" : ""}></label>
     </div><p class="aciklama">${tx("Açıkken İngilizce ve diğer dillerdeki haber ve makale sayfaları Google Çeviri ile Türkçe açılır. Kapalıyken yabancı kayıtlarda ayrıca “Türkçe aç” düğmesi görünür. Başlık ve özetler her durumda uygulama içinde Türkçe gösterilir.")}</p></div>
@@ -1380,7 +1390,7 @@ function yasalHtml() {
     <p>Data controller: Harrix (harrixapp@gmail.com).</p>
     <ul>
       <li>If you use the app without signing in, your favorites, notes, topics, bibliography, PDF archive and settings are stored only on this device and are never sent to any server.</li>
-      <li>If you choose to sign in, your email address (and your name, with Google sign-in) and your favorite, topic, note and bibliography lists are processed on Firebase (Google Cloud) solely to sync them between your devices.</li>
+      <li>If you choose to sign in, your email address (and your name, with Google sign-in) and your favorite, topic, note, bibliography and follow lists are processed on Firebase (Google Cloud) solely to sync them between your devices.</li>
       <li>Comments you write are public together with your display name and avatar; your email address is never shown. You can delete your comments at any time. Comments you report and bug reports or suggestions you send (with the email address and device information you choose to add) are seen only by the Arkix administrator and are used only to resolve them.</li>
       <li>A profile photo is optional. If you add one, a small copy (160 px) is stored in your account and can be removed at any time.</li>
       <li>Email updates are sent only if you give separate, explicit consent in Settings › Account. Your email address and the date of consent are kept for this purpose; you can withdraw consent at any time in Settings or via the link in every email.</li>
@@ -1396,7 +1406,7 @@ function yasalHtml() {
     <p>6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında veri sorumlusu Harrix'tir (harrixapp@gmail.com).</p>
     <ul>
       <li>Giriş yapmadan kullandığınızda favorileriniz, notlarınız, konularınız, kaynakçanız, PDF arşiviniz ve ayarlarınız yalnızca bu cihazda saklanır; hiçbir sunucuya gönderilmez.</li>
-      <li>İsteğe bağlı olarak giriş yaptığınızda e-posta adresiniz (Google ile girişte adınız) ve favori, konu, not ve kaynakça listeleriniz yalnızca cihazlarınız arasında eşitleme amacıyla Firebase (Google Cloud) altyapısında işlenir.</li>
+      <li>İsteğe bağlı olarak giriş yaptığınızda e-posta adresiniz (Google ile girişte adınız) ve favori, konu, not, kaynakça ve takip listeleriniz yalnızca cihazlarınız arasında eşitleme amacıyla Firebase (Google Cloud) altyapısında işlenir.</li>
       <li>Yazdığınız yorumlar görünen adınız ve avatarınızla birlikte herkese açık görünür; e-posta adresiniz hiçbir yerde gösterilmez. Yorumlarınızı istediğiniz an silebilirsiniz. Bildirdiğiniz yorumları ve gönderdiğiniz hata bildirimi ya da önerileri (eklemeyi seçtiğiniz e-posta ve cihaz bilgisiyle) yalnız Arkix yöneticisi görür ve yalnız bunları çözmek için kullanır.</li>
       <li>Profil fotoğrafı isteğe bağlıdır. Eklerseniz küçük bir kopyası (160 piksel) hesabınızda saklanır; dilediğiniz an kaldırabilirsiniz.</li>
       <li>Yenilik ve duyuru e-postaları yalnızca Ayarlar › Hesap bölümünde ayrıca verdiğiniz açık rızayla gönderilir. Bu amaçla e-posta adresiniz ve rıza tarihiniz saklanır; rızanızı Ayarlar'dan ya da her e-postadaki bağlantıdan istediğiniz an geri alabilirsiniz.</li>
@@ -1455,9 +1465,9 @@ function kaydirmaBagla() {
 /* ---------------------------------------------------------------- yönlendirme */
 const UST = { bugun: tx("Bugün"), akis: tx("Yayınlar"), kitaplik: tx("Harrix Kitaplık"), ayarlar: tx("Ayarlar"), giris: tx("Giriş"),
   favoriler: tx("Favoriler"), notlar: tx("Notlu kayıtlar"), kaynakca: tx("Kaynakçam"), durum: tx("Kaynakların durumu"), ara: tx("Ara"), konu: tx("Konu"), k: "",
-  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli") };
+  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli"), takip: tx("Takip ettiklerim") };
 const ALT_SAYFA = { giris: "ayarlar", favoriler: "kitaplik", notlar: "kitaplik", kaynakca: "kitaplik", konu: "kitaplik", durum: "ayarlar", k: null, ara: "akis",
-  sozler: "kitaplik", pdfler: "kitaplik", yasal: "ayarlar", yonetim: "ayarlar" };
+  sozler: "kitaplik", pdfler: "kitaplik", yasal: "ayarlar", yonetim: "ayarlar", takip: "kitaplik" };
 let sonSekme = "bugun";
 
 function rota(kaydirmayiKoru) {
@@ -1489,6 +1499,7 @@ function rota(kaydirmayiKoru) {
   else if (ad === "sozler") sayfaSozler();
   else if (ad === "pdfler") sayfaPdfler();
   else if (ad === "yasal") sayfaYasal();
+  else if (ad === "takip") { if (typeof sayfaTakip === "function") sayfaTakip(); else location.replace("#kitaplik"); }
   else if (ad === "yonetim") { if (typeof sayfaYonetim === "function") sayfaYonetim(); else location.replace("#ayarlar"); }
   else if (ad === "k") sayfaAyrinti(arg);
   else { location.hash = "#bugun"; return; }
@@ -1526,7 +1537,11 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", temaUygula
   acilis.classList.add("bitti");
   setTimeout(() => acilis.remove(), 600);
   await kvkkKapisi();
-  if (window.GUNLUK) await GUNLUK.acilis({ baslik: tx("Günün alanı"), dugme: tx("Bugüne başla") }, D.gunlukGun, g => { D.gunlukGun = g; kaydet(); });
+  if (!D.temaSecildi && typeof temaSecici === "function") {
+    D.palet = await temaSecici(D.palet || "gobeklitepe", id => { D.palet = id; temaUygula(); });
+    D.temaSecildi = true; kaydet(); temaUygula(); rota(true);
+  }
+  if (window.GUNLUK) await GUNLUK.acilis({ baslik: tx("Günün Ören Yeri"), dugme: tx("Bugüne başla") }, D.gunlukGun, g => { D.gunlukGun = g; kaydet(); });
   if ("serviceWorker" in navigator) {
     try { await navigator.serviceWorker.register("sw.js"); if (D.bildirim) arkaPlanKaydi(); } catch (e) {}
   }

@@ -352,7 +352,15 @@ ESKI_DONEM = re.compile(r"\b(ancient|antik|antique|maya|aztec|inca|roman|byzant\
 AKADEMIK_KAYNAK = {"OpenAlex", "Crossref"}
 
 
+# Arkeometri, jeoarkeoloji, eski DNA, paleoiklim gibi doğa bilimi alanları: yalnız kesin arkeoloji sözcüğüyle birlikte
+BILIM_ALT_ALAN = {1311, 1312, 2303, 1105, 1103, 1110, 1111, 1902, 1904, 1906, 1907, 1908, 1910, 2306, 2309, 2505,
+                  3316, 1213, 1212, 1203, 1208, 3305, 3322}
+
+
 def konu_uygun(k: dict) -> bool:
+    """Akademik kayıt: OpenAlex konusu arkeolojiyse kalır; tarih/paleontolojiyse eski dönem sözcüğü, doğa bilimi ya da
+    kültür alanıysa kesin arkeoloji sözcüğü gerekir. Ekonomi, tıp, felsefe gibi konulardaki kayıt sözcük geçse de atılır.
+    Konu bilgisi yoksa (DOI yok) yalnız sözcük süzgeci."""
     if k.get("s") not in AKADEMIK_KAYNAK:
         return True
     kz = set(k.get("kz") or [])
@@ -361,7 +369,10 @@ def konu_uygun(k: dict) -> bool:
     metin = f'{k.get("b", "")} {k.get("o", "")}'
     if kz & TARIH_ALT_ALAN and ESKI_DONEM.search(metin):
         return True
-    return arkeoloji_kesin(k.get("b", ""), k.get("o", ""))
+    kesin = arkeoloji_kesin(k.get("b", ""), k.get("o", ""))
+    if not kz:
+        return kesin
+    return kesin and bool(kz & (BILIM_ALT_ALAN | TARIH_ALT_ALAN))
 
 
 def engelli_mi(k: dict, engel: list[str]) -> bool:

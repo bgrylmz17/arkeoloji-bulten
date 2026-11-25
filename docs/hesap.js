@@ -70,13 +70,16 @@ function birlestir(yerel, bulut) {
     if (!notlar[id]) notlar[id] = n;
     else if (notlar[id] !== n) notlar[id] = notlar[id].includes(n) ? notlar[id] : `${notlar[id]}\n\n${n}`;
   }
+  const takip = [...(yerel.takip || [])];
+  for (const t of k.takip || []) if (!takip.some(x => x.tur === t.tur && x.deger === t.deger)) takip.push(t);
   return {
+    takip,
     fav: [...new Set([...(yerel.fav || []), ...(k.fav || [])])],
     kaynakca: [...new Set([...(yerel.kaynakca || []), ...(k.kaynakca || [])])],
     notlar, konular,
   };
 }
-const kitaplikAl = () => ({ fav: D.fav, notlar: D.notlar, konular: D.konular, kaynakca: D.kaynakca });
+const kitaplikAl = () => ({ fav: D.fav, notlar: D.notlar, konular: D.konular, kaynakca: D.kaynakca, takip: D.takip || [] });
 const belgeAdi = id => encodeURIComponent(id).replace(/\./g, "%2E");
 
 /* ---------------------------------------------------------------- buluta yaz */
@@ -135,7 +138,7 @@ function dinle() {
     if (v.cihaz === CIHAZ || !(v.guncelleme > (D.esitleme || 0))) return;
     H.uygulaniyor = true;
     Object.assign(D, { fav: v.kitaplik.fav || [], notlar: v.kitaplik.notlar || {}, konular: v.kitaplik.konular || [],
-                       kaynakca: v.kitaplik.kaynakca || [], esitleme: v.guncelleme });
+                       kaynakca: v.kitaplik.kaynakca || [], takip: v.kitaplik.takip || D.takip || [], esitleme: v.guncelleme });
     try { localStorage.setItem(DEPO_ANAHTARI, JSON.stringify(D)); } catch (e) {}
     H.uygulaniyor = false;
     H.sonEsitleme = new Date().toISOString();

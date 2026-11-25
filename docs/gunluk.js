@@ -1,6 +1,6 @@
-/* Arkix — günün arkeolojik alanı: arka plan görseli, günde bir kez açılış kartı, Bugün sayfasındaki bilgi kartı.
- * Veri gunluk/gunluk.json (native de aynı dosyayı okur). Görseller yapay zekâ ile üretilmiş temsilî görsellerdir;
- * her gösterildiği yerde bu not yazılır. Gün sırası UTC gün sayısıdır; alan = sıra % alan sayısı,
+/* Arkix — Günün Ören Yeri: Bugün sayfasının başındaki fotoğraflı kart, günde bir kez açılış kartı, isteğe bağlı arka plan.
+ * Veri gunluk/gunluk.json (native de aynı dosyayı okur). Fotoğraflar Wikimedia Commons'tan özgür lisanslı (CC BY / CC BY-SA);
+ * gösterildiği her yerde çeken, lisans ve kaynak yazılır. Gün sırası UTC gün sayısıdır; alan = sıra % alan sayısı,
  * bilgi = (sıra / alan sayısı) % bilgi sayısı (7 alan × 3 bilgi: 21 günde bir tekrar). */
 (function () {
   let VERI = null;
@@ -25,7 +25,9 @@
     const g = gunSirasi(), n = VERI.alanlar.length, a = VERI.alanlar[g % n];
     const b = a.bilgiler[Math.floor(g / n) % a.bilgiler.length];
     const d = dil();
-    return { id: a.id, gorsel: a.gorsel, ad: a.ad[d] || a.ad.tr, bilgi: b[d] || b.tr, ai: (VERI.ai_notu || {})[d] || "" };
+    const f = a.foto || {};
+    return { id: a.id, gorsel: a.gorsel, ad: a.ad[d] || a.ad.tr, bilgi: b[d] || b.tr, foto: f,
+             kunye: f.yazar ? `${d === "en" ? "Photo" : "Fotoğraf"}: ${f.yazar} · ${f.lisans} · Wikimedia Commons` : "" };
   }
 
   /* kip: "gorsel" (günün alanı), "desen" (çizimler; desen.js) ya da "sade" */
@@ -41,12 +43,16 @@
     kat.style.backgroundImage = `url("${g.gorsel}")`;
   }
 
-  function kartHtml(metin) {
+  const kunyeHtml = g => g.kunye ? `<a class="gunluk-kunye" href="${kac(g.foto.sayfa || "#")}" target="_blank" rel="noopener">${kac(g.kunye)}</a>` : "";
+
+  /* Bugün sayfasının başındaki fotoğraflı kart */
+  function kahramanHtml(metin) {
     const g = bugun();
     if (!g) return "";
-    return `<section class="gunluk-kart" aria-label="${kac(metin.baslik)}">
-      <img src="${kac(g.gorsel)}" alt="${kac(g.ad)}" loading="lazy">
-      <div><small>${kac(metin.baslik)} · ${kac(g.ad)}</small><p>${kac(g.bilgi)}</p><em>${kac(g.ai)}</em></div></section>`;
+    return `<section class="gunluk-kahraman" aria-label="${kac(metin.baslik)}">
+      <img src="${kac(g.gorsel)}" alt="${kac(g.ad)}">
+      <div class="gunluk-kahraman-ic"><small>${kac(metin.baslik)}</small><h2>${kac(g.ad)}</h2><p>${kac(g.bilgi)}</p></div>
+      ${kunyeHtml(g)}</section>`;
   }
 
   /* Günde bir kez tam ekran kart. goruldu(gun) / yaz(gun) uygulamanın deposuna bakar. */
@@ -57,7 +63,7 @@
       const k = document.createElement("div");
       k.className = "gunluk-kapi"; k.setAttribute("role", "dialog"); k.setAttribute("aria-modal", "true"); k.setAttribute("aria-labelledby", "gunluk-baslik");
       k.innerHTML = `<div class="gunluk-kutu">
-        <figure><img src="${kac(g.gorsel)}" alt="${kac(g.ad)}"><figcaption>${kac(g.ai)}</figcaption></figure>
+        <figure><img src="${kac(g.gorsel)}" alt="${kac(g.ad)}"><figcaption>${kunyeHtml(g)}</figcaption></figure>
         <div class="gunluk-ic"><small>${kac(metin.baslik)}</small><h2 id="gunluk-baslik">${kac(g.ad)}</h2><p>${kac(g.bilgi)}</p>
         <button class="buyuk-dugme" type="button">${kac(metin.dugme)}</button></div></div>`;
       const kapat = () => { gunuYaz(gun); k.classList.add("gidiyor"); setTimeout(() => k.remove(), 250); document.removeEventListener("keydown", tus); tamam(); };
@@ -70,5 +76,5 @@
     });
   }
 
-  window.GUNLUK = { yukle, bugun, zemin, kartHtml, acilis };
+  window.GUNLUK = { yukle, bugun, zemin, kahramanHtml, acilis };
 })();
