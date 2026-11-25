@@ -317,7 +317,31 @@ def main() -> int:
     with ThreadPoolExecutor(max_workers=3) as h:
         list(h.map(cevirt, cevrilecek))
 
+    # İngilizce arayüz için: İngilizce olmayanların (Türkçeler dahil) İngilizcesi
+    ceviri_siniri_en = int(kullanici.get("ceviri_siniri_en", ceviri_siniri))
+    cevrilecek_en = [s for s in yeni if s.get("dil") and s["dil"] != "en"][:ceviri_siniri_en]
+
+    def cevirt_en(s):
+        try:
+            b, o, _servis = ceviri.kayit_cevir(s["baslik"], (s.get("ozet") or "")[:900], s["dil"], {}, hedef="en")
+            s["baslik_en"], s["ozet_en"] = b, o
+        except Exception:
+            pass
+    with ThreadPoolExecutor(max_workers=3) as h:
+        list(h.map(cevirt_en, cevrilecek_en))
+
     # eski kayıtlardan çevirisi eksik olanlara da sıra gelsin
+    kalan_en = ceviri_siniri_en - len(cevrilecek_en)
+    for k in list(eski_kayitlar.values()):
+        if kalan_en <= 0:
+            break
+        if k.get("l") and k["l"] != "en" and not k.get("be"):
+            try:
+                b, o, _ = ceviri.kayit_cevir(k["b"], (k.get("o") or "")[:900], k["l"], {}, hedef="en")
+                k["be"], k["oe"] = b, o
+            except Exception:
+                pass
+            kalan_en -= 1
     kalan_hak = ceviri_siniri - len(cevrilecek)
     for k in list(eski_kayitlar.values()):
         if kalan_hak <= 0:
@@ -338,6 +362,7 @@ def main() -> int:
             "o": (s.get("ozet") or "")[:900], "e": [e for e in (s.get("etiketler") or "").split(",") if e],
             "p": s.get("pdf_url") or "", "l": s.get("dil") or "", "g": calisma,
             "bt": s.get("baslik_tr", ""), "ot": s.get("ozet_tr", ""),
+            "be": s.get("baslik_en", ""), "oe": s.get("ozet_en", ""),
             "a": apa_html(s),
             "ku": kunye_kisa(s),
         }

@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.9.0";
+const SURUM = "1.9.1";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -123,27 +123,27 @@ if (SES.destek) { try { speechSynthesis.getVoices(); speechSynthesis.onvoicescha
 
 function okunacakMetin(r, kisa) {
   const bas = baslikGoster(r);
-  let oz = (DIL !== "en" && r.l && r.l !== "tr") ? (r.ot || "") : (r.o || "");
+  let oz = yabanciMi(r) ? cevOzet(r) : (r.o || "");
   if (kisa && oz.length > 350) oz = oz.slice(0, 350).replace(/\s+\S*$/, "") + "…";
   return `${String(bas || "").replace(/\.$/, "")}. ${r.w || r.s ? `${tx("Kaynak")}: ${r.w || r.s}. ` : ""}${oz}`;
 }
 async function kaydiDinle(r) {
-  if (r.l && r.l !== "tr" && (!r.bt || (r.o && !r.ot))) {
+  if (yabanciMi(r) && (!cevBaslik(r) || (r.o && !cevOzet(r)))) {
     bildir(tx("Okumadan önce Türkçeye çevriliyor…"));
-    try { if (!r.bt) r.bt = await cevir(r.b, r.l); if (r.o && !r.ot) r.ot = await cevir(r.o, r.l); }
+    try { if (!cevBaslik(r)) cevYaz(r, await cevir(r.b, r.l)); if (r.o && !cevOzet(r)) cevYaz(r, null, await cevir(r.o, r.l)); }
     catch (e) { bildir(tx("Çeviri servisine ulaşılamadı; kayıt Türkçe olmadığı için okunamıyor.")); return; }
   }
   SES.oku([okunacakMetin(r)], r.k === "Haber" ? tx("Haber okunuyor") : tx("Kayıt okunuyor"));
 }
 function bulteniDinle(kayitlar, ozet) {
   // okunacaklar arayüz dilinde: Türkçede Türkçe (ya da çevrilmiş), İngilizcede İngilizce kayıtlar
-  const turkce = r => DIL === "en" ? r.l === "en" : (!r.l || r.l === "tr" || r.bt);
+  const turkce = r => !yabanciMi(r) || !!cevBaslik(r);   // arayüz dilinde okunabilir
   const haber = kayitlar.filter(r => r.k === "Haber" && turkce(r)).slice(0, 8);
   const diger = kayitlar.filter(r => r.k !== "Haber" && turkce(r)).slice(0, 5);
   const atlanan = kayitlar.filter(r => !turkce(r)).length;
   const m = [String(ozet || "").trim()];
   if (haber.length) { m.push(tx("{n} haber okunacak.", { n: haber.length })); haber.forEach((r, i) => m.push(`${tx("Haber {n}.", { n: i + 1 })} ${okunacakMetin(r, true)}`)); }
-  if (diger.length) { m.push(tx("Yeni yayınlardan başlıklar.")); diger.forEach((r, i) => m.push(`${i + 1}. ${TUR_COGUL[r.k] ? turAdi(r.k) : ""}: ${String((r.l && r.l !== "tr" && r.bt) || r.b).replace(/\.$/, "")}.`)); }
+  if (diger.length) { m.push(tx("Yeni yayınlardan başlıklar.")); diger.forEach((r, i) => m.push(`${i + 1}. ${TUR_COGUL[r.k] ? turAdi(r.k) : ""}: ${String((yabanciMi(r) && cevBaslik(r)) || r.b).replace(/\.$/, "")}.`)); }
   if (atlanan && DIL !== "en") m.push(`Türkçeye çevrilmemiş ${atlanan} yabancı kayıt okunmadı; ayrıntısında Dinle'ye basınca çevrilip okunur.`);
   if (!haber.length && !diger.length) m.push(tx("Okunacak Türkçe kayıt yok."));
   SES.oku(m, tx("Bülten okunuyor"));
@@ -233,7 +233,14 @@ function saatYaz(iso) {
 }
 const yeniMi = r => !!ESIK && (r.g || "") > ESIK && !D.okundu[r.i];
 // İngilizce arayüzde özgün başlık; Türkçede yabancı kaydın (varsa) Türkçe çevirisi
-const baslikGoster = r => (DIL !== "en" && r.l && r.l !== "tr" && r.bt) ? r.bt : r.b;
+// Çeviri hedefi arayüz dilidir: Türkçe arayüzde Türkçe olmayanlar Türkçeye (bt/ot), İngilizce arayüzde İngilizce olmayanlar İngilizceye (be/oe)
+const HEDEF = DIL === "en" ? "en" : "tr";
+const HEDEF_AD = HEDEF === "en" ? "English" : "Türkçe";
+const yabanciMi = r => !!r.l && r.l !== HEDEF;
+const cevBaslik = r => (HEDEF === "en" ? r.be : r.bt) || "";
+const cevOzet = r => (HEDEF === "en" ? r.oe : r.ot) || "";
+const cevYaz = (r, b, o) => { if (b != null) r[HEDEF === "en" ? "be" : "bt"] = b; if (o != null) r[HEDEF === "en" ? "oe" : "ot"] = o; };
+const baslikGoster = r => (yabanciMi(r) && cevBaslik(r)) || r.b;
 
 let bildirimZamani;
 function bildir(metin) {
@@ -268,10 +275,10 @@ function satirHtml(r, secenek = {}) {
   const yazar = r.y && ["Makale", "Tez", "Kitap"].includes(r.k) ? r.y.split(";").slice(0, 3).join(",") : "";
   const alt = secenek.not ? D.notlar[r.i] : secenek.litAlt
     ? [yazar, (r.t || "").slice(0, 4), r.atif ? tx("{n} atıf", { n: r.atif }) : ""].filter(Boolean).join(" · ")
-    : (yazar || (DIL !== "en" && r.l !== "tr" && r.ot ? r.ot : r.o));
+    : (yazar || (yabanciMi(r) && cevOzet(r) ? cevOzet(r) : r.o));
   const etiketler = (r.e || []).filter(e => KAVRAM.has(e) && e !== "kazim").slice(0, 3)
     .map(e => `<span class="etiket">${esc(kavramAdi(KAVRAM.get(e)))}</span>`).join("");
-  const dil = r.l && r.l !== "tr" ? `<span class="dil" title="${esc(DIL_AD[r.l] || r.l)}">${esc(r.l.toUpperCase())}</span>` : "";
+  const dil = yabanciMi(r) ? `<span class="dil" title="${esc(DIL_AD[r.l] || r.l)}">${esc(r.l.toUpperCase())}</span>` : "";
   return `<li class="kayit${D.okundu[r.i] ? " okundu" : ""}" data-id="${esc(r.i)}">
     <div class="kaydirma-arka">${D.fav.includes(r.i) ? tx("Favoriden çıkar") : tx("Favorilere ekle")}</div>
     <a class="kayit-ic" href="#k/${encodeURIComponent(r.i)}">
@@ -386,7 +393,7 @@ function sabahOzeti() {
   const say = t => havuz.filter(r => r.k === t).length;
   const parca = [[say("Haber"), "{n} haber"], [say("Makale"), "{n} yeni makale"], [say("Tez"), "{n} tez"], [say("Rapor"), "{n} rapor"]]
     .filter(([n]) => n).map(([n, ad]) => tx(ad, { n }));
-  const turk = r => DIL === "en" ? r.l === "en" : (!r.l || r.l === "tr" || r.bt);
+  const turk = r => !yabanciMi(r) || !!cevBaslik(r);
   const oneCikanlar = [...havuz.filter(r => r.k === "Haber" && turk(r)).slice(0, 3), ...havuz.filter(r => r.k === "Makale").slice(0, 2),
     ...havuz.filter(r => r.k === "Tez").slice(0, 1)].slice(0, 5);
   const paragraf = havuz.length
@@ -427,7 +434,7 @@ function suzulmus(temel) {
     (!S.tur || r.k === S.tur) &&
     (!S.donem || (r.e || []).includes(S.donem)) &&
     (!S.dil || (S.dil === "diger" ? !["tr", "en"].includes(r.l || "") : r.l === S.dil)) &&
-    (!q || katla([r.b, r.bt, r.o, r.ot, r.y, r.w].join(" ")).includes(q)));
+    (!q || katla([r.b, r.bt, r.be, r.o, r.ot, r.oe, r.y, r.w].join(" ")).includes(q)));
 }
 
 function sayfaAkis(temel, baslikMetni, secenek = {}) {
@@ -682,12 +689,12 @@ function sayfaAyrinti(id) {
   const r = DIZIN.get(id);
   if (!r) { $("#sayfa").innerHTML = bosHtml(tx("Kayıt bulunamadı"), tx("Bu kayıt bültenden kaldırılmış olabilir.")); return; }
   if (!D.okundu[r.i]) { D.okundu[r.i] = 1; kaydet(); rozetGuncelle(); }
-  const yabanci = r.l && r.l !== "tr";
-  const cevrili = yabanci && (r.bt || r.ot);
+  const yabanci = yabanciMi(r);
+  const cevrili = yabanci && (cevBaslik(r) || cevOzet(r));
   const goster = { tr: cevrili, };
   const ciz = () => {
-    const bas = goster.tr && r.bt ? r.bt : r.b;
-    const ozet = goster.tr && r.ot ? r.ot : r.o;
+    const bas = goster.tr && cevBaslik(r) ? cevBaslik(r) : r.b;
+    const ozet = goster.tr && cevOzet(r) ? cevOzet(r) : r.o;
     const etiketler = (r.e || []).filter(e => KAVRAM.has(e)).map(e => kavramAdi(KAVRAM.get(e)));
     const satirlar = [
       [tx("Tür"), turAdi(r.k)], [tx("Yazar"), r.y], [tx("Yayın"), r.w || r.s], [tx("Tarih"), tarihYaz(r.t)],
@@ -695,23 +702,23 @@ function sayfaAyrinti(id) {
     ].filter(([, v]) => v);
     $("#sayfa").innerHTML = `<article class="ayrinti">
       <h2>${esc(bas)}</h2>
-      ${goster.tr && r.bt ? `<p class="ceviri-not">${tx("Özgün başlık:")} ${esc(r.b)}</p>` : ""}
+      ${goster.tr && cevBaslik(r) ? `<p class="ceviri-not">${tx("Özgün başlık:")} ${esc(r.b)}</p>` : ""}
       <dl class="form-tablo">${satirlar.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
       ${ozet ? `<div class="metin">${esc(ozet)}</div>` : `<p class="aciklama">${tx("Bu kayıt için özet yok.")}</p>`}
-      ${goster.tr && r.ot ? `<p class="ceviri-not">${tx("Makine çevirisidir; alıntı yapmadan önce özgün metne bakın.")}</p>` : ""}
+      ${goster.tr && cevOzet(r) ? `<p class="ceviri-not">${tx("Makine çevirisidir; alıntı yapmadan önce özgün metne bakın.")}</p>` : ""}
       ${(() => {
         const ad = r.k === "Makale" || r.k === "Tez" ? tx("Yayını aç") : tx("Haberi aç");
         if (!yabanci) return `<a class="buyuk-dugme" href="${esc(r.u)}" target="_blank" rel="noopener">${ad}</a>`;
         const tr = turkceAdres(r.u);
         return D.hepTurkce
-          ? `<a class="buyuk-dugme" href="${esc(tr)}" target="_blank" rel="noopener">${ad} (${tx("Türkçe")})</a>
+          ? `<a class="buyuk-dugme" href="${esc(tr)}" target="_blank" rel="noopener">${ad} (${HEDEF_AD})</a>
              <p class="cift-bag"><a href="${esc(r.u)}" target="_blank" rel="noopener">${tx("Özgün dilinde aç")}</a></p>`
           : `<div class="iki-dugme"><a class="buyuk-dugme" href="${esc(r.u)}" target="_blank" rel="noopener">${ad}</a>
-             <a class="buyuk-dugme ikinci" href="${esc(tr)}" target="_blank" rel="noopener">${tx("🌐 Türkçe aç")}</a></div>`;
+             <a class="buyuk-dugme ikinci" href="${esc(tr)}" target="_blank" rel="noopener">${HEDEF === "en" ? "🌐 Open in English" : "🌐 Türkçe aç"}</a></div>`;
       })()}
       <div class="eylemler">
         <button class="eylem" data-e="fav" aria-pressed="${D.fav.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>${tx("Favori")}</button>
-        ${yabanci ? `<button class="eylem" data-e="cevir" aria-pressed="${!!goster.tr}"><svg viewBox="0 0 24 24"><path d="M4 5h8M8 3v2m2 0c-1 4-3 7-6 9m2-5c1 2 3 4 5 5M13 21l4-10 4 10m-6.5-3h5"/></svg>${goster.tr ? tx("Özgün") : "Türkçe"}</button>` : ""}
+        ${yabanci ? `<button class="eylem" data-e="cevir" aria-pressed="${!!goster.tr}"><svg viewBox="0 0 24 24"><path d="M4 5h8M8 3v2m2 0c-1 4-3 7-6 9m2-5c1 2 3 4 5 5M13 21l4-10 4 10m-6.5-3h5"/></svg>${goster.tr ? tx("Özgün") : HEDEF_AD}</button>` : ""}
         <button class="eylem" data-e="konu"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg>${tx("Konuya ekle")}</button>
         <button class="eylem" data-e="not" aria-pressed="${!!D.notlar[r.i]}"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM8 12h8M8 16h5"/></svg>${tx("Not")}</button>
         <button class="eylem" data-e="kaynakca" aria-pressed="${D.kaynakca.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>${tx("Kaynakça")}</button>
@@ -729,8 +736,8 @@ function sayfaAyrinti(id) {
   };
   ciz();
   // başlık bulutta çevrilmiş ama özet çevrilmemişse özeti cihazda çevir
-  if (goster.tr && r.o && !r.ot) {
-    cevir(r.o, r.l).then(t => { r.ot = t; if (location.hash === "#k/" + encodeURIComponent(r.i)) ciz(); }).catch(() => {});
+  if (goster.tr && r.o && !cevOzet(r)) {
+    cevir(r.o, r.l).then(t => { cevYaz(r, null, t); if (location.hash === "#k/" + encodeURIComponent(r.i)) ciz(); }).catch(() => {});
   }
 }
 
@@ -739,11 +746,11 @@ async function eylem(ad, r, ciz, goster) {
   if (ad === "fav") { favDegistir(r); ciz(); }
   else if (ad === "acik") { acikKopyaAra(r); }
   else if (ad === "cevir") {
-    if (!goster.tr && (!r.bt || (r.o && !r.ot))) {
+    if (!goster.tr && (!cevBaslik(r) || (r.o && !cevOzet(r)))) {
       bildir(tx("Çevriliyor…"));
       try {
-        if (!r.bt) r.bt = await cevir(r.b, r.l);
-        if (r.o && !r.ot) r.ot = await cevir(r.o, r.l);
+        if (!cevBaslik(r)) cevYaz(r, await cevir(r.b, r.l));
+        if (r.o && !cevOzet(r)) cevYaz(r, null, await cevir(r.o, r.l));
         if (kullaniliyorMu(r.i)) { D.kayitlar[r.i] = r; kaydet(); }
       } catch (e) { bildir(tx("Çeviri servisine ulaşılamadı. Biraz sonra yeniden deneyin.")); return; }
     }
@@ -762,9 +769,9 @@ async function eylem(ad, r, ciz, goster) {
   else if (ad === "arsiv") pdfIndirArsivle(r);
 }
 
-/* Yabancı sayfayı Google Çeviri ile Türkçe açar (sayfa düzeni korunur). */
+/* Yabancı sayfayı Google Çeviri ile arayüz dilinde açar (sayfa düzeni korunur). */
 function turkceAdres(u) {
-  return `https://translate.google.com/translate?sl=auto&tl=tr&hl=tr&u=${encodeURIComponent(u)}`;
+  return `https://translate.google.com/translate?sl=auto&tl=${HEDEF}&hl=${HEDEF}&u=${encodeURIComponent(u)}`;
 }
 
 function favDegistir(r) {
@@ -828,7 +835,7 @@ async function cevir(metin, dil) {
   if (p) parcalar.push(p);
   const sonuc = [];
   for (const parca of parcalar.slice(0, 8)) {
-    const u = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(parca.slice(0, 480))}&langpair=${encodeURIComponent(dil || "en")}|tr`;
+    const u = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(parca.slice(0, 480))}&langpair=${encodeURIComponent(dil || (HEDEF === "en" ? "tr" : "en"))}|${HEDEF}`;
     const j = await (await fetch(u)).json();
     if (j.responseStatus !== 200 && j.responseStatus !== "200") throw new Error(j.responseDetails);
     sonuc.push(j.responseData.translatedText);
@@ -1135,7 +1142,7 @@ function sayfaAyarlar() {
       <a class="satir" style="color:inherit" href="mailto:harrixapp@gmail.com?subject=${encodeURIComponent("Harrix Bülten")}">${tx("Destek ve iletişim")}<span class="sag">harrixapp@gmail.com</span></a>
       <a class="satir" style="color:inherit" href="https://www.instagram.com/harrixapp/" target="_blank" rel="noopener">Instagram<span class="sag">@harrixapp</span></a>
       <a class="satir" style="color:inherit" href="#yasal">${tx("Kullanım koşulları ve KVKK")}</a>
-    </div><p class="aciklama">${tx("Soru, öneri ve sorunlar için Harrix ekibine yazabilirsiniz.")}</p></div>`;
+    </div><p class="aciklama">${tx("Soru, öneri ve sorunlar için Harrix ekibine yazabilirsiniz.")}</p><p class="aciklama">© ${new Date().getFullYear()} Harrix. ${tx("Tüm hakları saklıdır.")}</p></div>`;
   if (typeof hesapGrubuBagla === "function") hesapGrubuBagla();
   const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
   $("#oa-anahtar").onchange = e => { D.oaAnahtar = e.target.value.trim(); kaydet(); bildir(D.oaAnahtar ? tx("OpenAlex anahtarı kaydedildi") : tx("OpenAlex anahtarı kaldırıldı")); };

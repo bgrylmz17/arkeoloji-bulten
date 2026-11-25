@@ -77,6 +77,7 @@ const EN = {
  "Daha fazla sonuç": "More results",
  "Daha genel bir kelime ya da İngilizce karşılığını deneyin.": "Try a broader keyword or a different spelling.",
  "Destek ve iletişim": "Support and contact",
+ "Tüm hakları saklıdır.": "All rights reserved.",
  "Devam et": "Continue",
  "Devam etmeden önce kullanım koşullarını ve KVKK aydınlatma metnini okuyup onaylayın. Giriş yapmadan kullandığınızda kişisel verileriniz yalnız bu cihazda kalır.": "Before you continue, please read and accept the Terms of Use and the Privacy Notice. If you use the app without signing in, your personal data stays on this device only.",
  "Dil": "Language",
