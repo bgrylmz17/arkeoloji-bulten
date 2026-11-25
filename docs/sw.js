@@ -1,8 +1,8 @@
 /* Arkix — servis çalışanı
  * Uygulama dosyaları önbellekten (internetsiz açılır), bülten verisi önce ağdan, olmazsa önbellekten.
  * Android'de kurulu uygulama için arka planda yoklayıp yeni kayıt varsa bildirim gösterir. */
-const SURUM = "bulten-1.16.0";
-const KABUK = ["./", "index.html", "stil.css", "dil.js", "dil-en.js", "uygulama.js", "hesap.js", "firebase-ayar.js", "reklam.js", "desen.js", "gunluk.js", "gunluk/gunluk.json", "topluluk.js", "takip.js", "temalar.js", "tanitim.js", "menu.js", "kazi.js", "avatar/avatarlar.json", "manifest.webmanifest",
+const SURUM = "bulten-1.17.0";
+const KABUK = ["./", "index.html", "stil.css", "dil.js", "dil-en.js", "uygulama.js", "hesap.js", "firebase-ayar.js", "reklam.js", "desen.js", "gunluk.js", "gunluk/gunluk.json", "topluluk.js", "takip.js", "temalar.js", "tanitim.js", "menu.js", "kazi.js", "bildirimler.js", "avatar/avatarlar.json", "manifest.webmanifest",
   "ikon/logo.svg", "ikon/ikon-192.png", "ikon/ikon-512.png", "ikon/apple-touch-icon.png", "ikon/favicon-64.png"];
 
 self.addEventListener("install", e => {
@@ -73,6 +73,15 @@ async function yokla() {
     { body: (ilk.bt || ilk.b), icon: "ikon/ikon-192.png", badge: "ikon/favicon-64.png", tag: "bulten",
       data: { url: `./#k/${encodeURIComponent(ilk.i)}` } });
 }
+
+/* Telefona bildirim (FCM web push; gönderen: toplayici/bildirim_gonder.py). Yük: { data: { baslik, metin, url, tag } } */
+self.addEventListener("push", e => {
+  let v = {};
+  try { v = e.data ? e.data.json() : {}; } catch (h) { v = {}; }
+  const d = v.data || v;
+  e.waitUntil(self.registration.showNotification(d.baslik || "Arkix", { body: d.metin || "", icon: "ikon/ikon-192.png", badge: "ikon/favicon-64.png",
+    tag: d.tag || "arkix", data: { url: d.url || "./#ozet" } }));
+});
 
 self.addEventListener("periodicsync", e => { if (e.tag === "bulten-yokla") e.waitUntil(yokla()); });
 

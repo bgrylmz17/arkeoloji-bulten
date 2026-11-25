@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.16.0";
+const SURUM = "1.17.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -366,8 +366,9 @@ function sayfaBugun() {
     ${sd.length ? `<section class="son-dakika" aria-label="${tx("Son dakika ve öne çıkanlar")}"><h2><span class="nabiz" aria-hidden="true"></span>${tx("Son dakika ve öne çıkanlar")}</h2>
       <div class="sd-serit">${sd.map(d => `<a class="sd-kart${d.onemli ? " onemli" : ""}" href="${esc(d.adres)}" ${d.dis ? 'target="_blank" rel="noopener"' : ""}>
         <b>${esc(d.baslik)}</b><small>${esc(d.alt)}</small></a>`).join("")}</div></section>` : ""}
-    ${VERI.guncelleme ? `<button class="anlat-kart" id="anlat-ac"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>
-      <span><b>Arkix</b> ${tx("günü anlatsın")}</span><i>→</i></button>` : ""}
+    ${VERI.guncelleme ? `<button class="katman-kart" id="anlat-ac" aria-label="${tx("Günün Katmanları")}">
+      <span class="katman-simge" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span class="katman-yazi"><b>${tx("Günün Katmanları")}</b><small>${tx("Dünün {n} önemli gelişmesi, katman katman · dinle", { n: Math.max(1, sabahOzeti().oneCikanlar.length) })}</small></span><i class="katman-ok">›</i></button>` : ""}
     <p class="ozet">${!VERI.guncelleme ? tx("Bülten henüz ilk kez toplanmadı.") : yeni.length
       ? tx("Son bakışınızdan beri {b}{n} yeni kayıt{/b} geldi.", { n: yeni.length, b: "<b>", "/b": "</b>" })
       : tx("Son iki günde {n} kayıt toplandı.", { n: son.length })}${VERI.guncelleme ? " " + tx("Bülten {saat} güncellendi.", { saat: esc(saatYaz(VERI.guncelleme)) }) : ""}
@@ -389,32 +390,36 @@ function sayfaBugun() {
 function sayfaOzet() {
   const soz = gununSozu();
   const so = sabahOzeti();
-  const takipYeni = typeof takipYeniSayisi === "function" ? takipYeniSayisi() : 0;
-  const takipSon = typeof takipKayitlari === "function" ? takipKayitlari().filter(r => (r.g || "") > (D.takipGorulen || "")).slice(0, 3) : [];
-  $("#sayfa").innerHTML = `
+  const sinir = D.bildirimGoruldu || null;
+  const ciz = () => {
+    $("#sayfa").innerHTML = `
     ${VERI.guncelleme ? `<section class="sabah" aria-label="${tx("Dünün özeti")}">
       <div class="sabah-ust"><div><h2>${so.selam} · ${tx("Dünün özeti")}</h2><p>${esc(so.etiket)}</p></div>
         ${SES.destek && so.havuz.length ? `<button class="sabah-dinle" id="sabah-dinle"><svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg>${tx("Dinle")}</button>` : ""}</div>
       <p class="sabah-metin">${esc(so.paragraf)}</p>
       ${so.oneCikanlar.length ? `<div class="ozet-kartlar">${so.oneCikanlar.slice(0, 6).map(r => `<a class="ozet-kart" href="#k/${encodeURIComponent(r.i)}">
         <span class="tur" data-tur="${esc(r.k)}">${esc(turAdi(r.k))}</span><b>${esc(baslikGoster(r))}</b><small>${esc(r.w || r.s || "")}</small></a>`).join("")}</div>` : ""}
-    </section>` : bosHtml(tx("Özet henüz hazır değil"), tx("Bülten ilk kez toplanıyor olabilir; birkaç dakika sonra yeniden bakın."))}
-    <section class="ozet-bolumu"><h2>${tx("Takip ettiklerim")}</h2>
-      ${(D.takip || []).length ? `<a class="takip-serit${takipYeni ? " yeni" : ""}" href="#takip"><b>${takipYeni ? tx("{n} yeni kayıt", { n: takipYeni }) : tx("Yeni kayıt yok")}</b><span>${tx("Tümü")} ›</span></a>
-        ${takipSon.length ? `<ul class="liste">${takipSon.map(r => satirHtml(r)).join("")}</ul>` : ""}`
-        : `<a class="takip-serit" href="#takip"><b>${tx("Konunu takibe al")}</b><span>${tx("Dönem, yazar, dergi, anahtar kelime")} ›</span></a>`}
-    </section>
+    </section>` : ""}
+    <button class="push-serit" id="push-serit"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
+      <span><b>${tx("Telefona bildirim")}</b><small>${tx("Önemli gelişmeler telefonuna gelsin")}</small></span><em>${esc(typeof pushDurumMetni === "function" ? pushDurumMetni() : "")}</em><i>›</i></button>
+    <section class="ozet-bolumu bildirim-bolumu"><h2>${tx("Bildirimler")}</h2>${typeof bildirimAkisiHtml === "function" ? bildirimAkisiHtml(sinir) : ""}</section>
     ${soz ? `<a class="soz soz-bag kompakt" href="#sozler"><blockquote>${esc(soz)}</blockquote><span class="soz-kim">${tx("Günün sözü · Söz ekle")}</span></a>` : ""}`;
-  const sDinle = $("#sabah-dinle");
-  if (sDinle) sDinle.onclick = () => {
-    const mp3 = VERI.sesli_ozet;   // toplayıcının doğal sesle okuduğu özet; yalnız aynı "dün" içinse
-    if (mp3 && mp3.dosya && DIL !== "en" && !so.son48 && mp3.gun === gunOnce(1)) SES.mp3(`${mp3.dosya}?v=${mp3.imza}`, tx("Dünün özeti"), so.sesli);
-    else SES.oku(so.sesli, tx("Dünün özeti"));
+    $("#push-serit").onclick = () => pushLevhasi();
+    const sDinle = $("#sabah-dinle");
+    if (sDinle) sDinle.onclick = () => {
+      const mp3 = VERI.sesli_ozet;   // toplayıcının doğal sesle okuduğu özet; yalnız aynı "dün" içinse
+      if (mp3 && mp3.dosya && DIL !== "en" && !so.son48 && mp3.gun === gunOnce(1)) SES.mp3(`${mp3.dosya}?v=${mp3.imza}`, tx("Dünün özeti"), so.sesli);
+      else SES.oku(so.sesli, tx("Dünün özeti"));
+    };
   };
-  if (VERI.guncelleme && D.ozetGorulen !== VERI.guncelleme) { D.ozetGorulen = VERI.guncelleme; kaydet(); ozetRozeti(); }
+  ciz();
+  // kazı duyuruları Firestore'dan gelir; gelince akışı yeniden çiz
+  if (typeof kaziDuyurulariYukle === "function" && !KD.liste && !H.yok) kaziDuyurulariYukle().then(() => { if (location.hash.startsWith("#ozet")) ciz(); }).catch(() => {});
+  if (VERI.guncelleme && D.ozetGorulen !== VERI.guncelleme) D.ozetGorulen = VERI.guncelleme;
+  if (typeof bildirimleriGorulduSay === "function") bildirimleriGorulduSay();
 }
 
-/* "Arkix günü anlatsın": dünün öne çıkanları, kısa özetleriyle; altta oynatıcı (doğal sesli mp3 varsa ilerleme ve hız) */
+/* "Günün Katmanları": dünün öne çıkanları stratigrafi katmanları gibi üstten alta (en önemlisi en üstte); altta oynatıcı (doğal sesli mp3 varsa ilerleme ve hız) */
 function gunuAnlat() {
   const so = sabahOzeti();
   const mp3 = VERI.sesli_ozet;
@@ -423,9 +428,9 @@ function gunuAnlat() {
   const k = document.createElement("div");
   k.className = "anlat-kapi"; k.setAttribute("role", "dialog"); k.setAttribute("aria-modal", "true"); k.setAttribute("aria-labelledby", "anlat-baslik");
   k.innerHTML = `<div class="anlat-panel">
-    <div class="anlat-ust"><h2 id="anlat-baslik"><b>Arkix</b> ${tx("günü anlatsın")}</h2><button class="ikon-dugme" id="anlat-kapat" aria-label="${tx("Kapat")}"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
+    <div class="anlat-ust"><h2 id="anlat-baslik">${tx("Günün Katmanları")}<small>${esc(so.etiket)}</small></h2><button class="ikon-dugme" id="anlat-kapat" aria-label="${tx("Kapat")}"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
     <p class="anlat-giris">${esc(so.selam)}. ${esc(so.paragraf)}</p>
-    ${so.oneCikanlar.map(r => `<article class="anlat-madde"><a href="#k/${encodeURIComponent(r.i)}"><h3>${esc(baslikGoster(r))}</h3></a>
+    ${so.oneCikanlar.map((r, i) => `<article class="anlat-madde katman-${i % 5}"><span class="katman-no">${tx("Katman {n}", { n: i + 1 })} · ${esc(turAdi(r.k))}</span><a href="#k/${encodeURIComponent(r.i)}"><h3>${esc(baslikGoster(r))}</h3></a>
       ${(cevOzet(r) || r.o) ? `<p>${esc(kisa(yabanciMi(r) ? (cevOzet(r) || r.o) : r.o))}</p>` : ""}
       <p class="anlat-kaynak">${tx("Kaynak:")} <span>${esc(r.w || r.s || "")}</span></p></article>`).join("") || `<p class="aciklama">${tx("Dünden bu yana yeni kayıt gelmedi.")}</p>`}
     <div class="anlat-calar">
@@ -458,8 +463,8 @@ function gunuAnlat() {
     let caliyor = false;
     oynat.onclick = () => {
       if (caliyor) { SES.durdur(); caliyor = false; simge(false); return; }
-      const metin = [...so.sesli.slice(0, 2), ...so.oneCikanlar.map(r => `${baslikGoster(r)}. ${kisa(yabanciMi(r) ? (cevOzet(r) || "") : r.o)}`)];
-      SES.oku(metin, tx("Arkix günü anlatıyor")); caliyor = true; simge(true);
+      const metin = [tx("{selam}. Arkix, günün katmanları.", { selam: so.selam }), so.paragraf, ...so.oneCikanlar.map(r => `${baslikGoster(r)}. ${kisa(yabanciMi(r) ? (cevOzet(r) || "") : r.o)}`)];
+      SES.oku(metin, tx("Günün Katmanları")); caliyor = true; simge(true);
     };
   }
 }
@@ -481,14 +486,13 @@ function sayfaOzel(arg) {
     : bosHtml(tx("Henüz Arkix Özel yazısı yok"), tx("Sahadan notlar, duyurular ve kendi haberlerimiz burada yayımlanacak.")));
 }
 
-/* Özet sekmesindeki rozet: takip yenileri; yoksa yeni bülten varsa nokta */
+/* Bildirimler sekmesindeki rozet: okunmamış bildirim sayısı (bildirimler.js) */
 function ozetRozeti() {
   const r = document.getElementById("ozet-rozet"); if (!r) return;
-  const n = typeof takipYeniSayisi === "function" ? takipYeniSayisi() : 0;
-  const yeniBulten = VERI.guncelleme && D.ozetGorulen !== VERI.guncelleme;
-  r.hidden = !(n || yeniBulten);
-  r.textContent = n ? String(n) : "";
-  r.classList.toggle("nokta", !n);
+  const n = typeof bildirimOkunmamis === "function" ? bildirimOkunmamis() : 0;
+  r.hidden = !n;
+  r.textContent = n > 99 ? "99+" : String(n);
+  r.classList.remove("nokta");
 }
 function gunOnce(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
 function tumSozler() { return [...(D.ozelSozler || []), ...SOZLER]; }
@@ -1271,6 +1275,7 @@ function sayfaAyarlar() {
       <label class="satir">${tx("Tema")}<select id="tema"><option value="oto">${tx("Telefona uy")}</option><option value="acik">${dilSec("Açık", "Light")}</option><option value="koyu">${tx("Koyu")}</option></select></label>
       <label class="satir">${tx("Tema")} · ${tx("ören yeri")}<select id="palet">${TEMALAR.map(t => `<option value="${t.id}">${esc(temaAdi(t))}</option>`).join("")}</select></label>
       <label class="satir">${tx("Arka plan")}<select id="zemin"><option value="siluet">${tx("Ören yeri çizimi")}</option><option value="milimetrik">${tx("Milimetrik kâğıt")}</option><option value="sade">${tx("Sade")}</option></select></label>
+      <label class="satir">${tx("Menü")}<select id="menu-konum"><option value="sol">${tx("Soldan açılsın")}</option><option value="ust">${tx("Üstten insin")}</option></select></label>
       <label class="satir">${tx("Yazı boyutu")}<select id="yazi"><option value="0.9">${tx("Küçük")}</option><option value="1">${tx("Normal")}</option><option value="1.12">${tx("Büyük")}</option><option value="1.25">${tx("Çok büyük")}</option></select></label>
     </div>${D.zemin === "siluet" && window.GUNLUK && GUNLUK.bugun() ? `<p class="aciklama">${tx("Sayfanın altında her gün Günün Ören Yeri'nin çizimi. Bugün: {ad}.", { ad: GUNLUK.bugun().ad })}</p>` : ""}</div>
     <div class="grup"><h3>${tx("Çeviri")}</h3><div class="kutu">
@@ -1312,6 +1317,8 @@ function sayfaAyarlar() {
   const tt = $("#tanitim-tekrar"); if (tt) tt.onclick = () => tanitimGoster();
   const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
   $("#oa-anahtar").onchange = e => { D.oaAnahtar = e.target.value.trim(); kaydet(); bildir(D.oaAnahtar ? tx("OpenAlex anahtarı kaydedildi") : tx("OpenAlex anahtarı kaldırıldı")); };
+  $("#menu-konum").value = D.menuKonum === "ust" ? "ust" : "sol";
+  $("#menu-konum").onchange = e => { D.menuKonum = e.target.value; kaydet(); bildir(e.target.value === "ust" ? tx("Menü üstten inecek; üst çubuktan aşağı kaydırarak da açabilirsin.") : tx("Menü soldan açılacak")); };
   $("#zemin").value = D.zemin;
   $("#zemin").onchange = e => { D.zemin = e.target.value; kaydet(); temaUygula(); rota(true); };
   $("#hep-turkce").onchange = e => { D.hepTurkce = e.target.checked; kaydet(); bildir(D.hepTurkce ? tx("Yabancı sayfalar Türkçe açılacak") : tx("Sayfalar özgün dilinde açılacak")); };
@@ -1520,7 +1527,7 @@ function dilSeciciBagla(kok) {
 /* index.html'deki sabit yazılar (sekmeler, düğme etiketleri) */
 function statikCevir() {
   document.documentElement.lang = DIL;
-  const ad = { bugun: "Bugün", akis: "Ara", ozel: "Özel", ozet: "Özet", kitaplik: "Kitaplık" };
+  const ad = { bugun: "Bugün", akis: "Ara", ozel: "Özel", ozet: "Bildirimler", kitaplik: "Kitaplık" };
   document.querySelectorAll("#sekmeler [data-sekme]").forEach(a => { const sp = a.querySelector("span"); if (sp) sp.textContent = tx(ad[a.dataset.sekme]); });
   const etiket = { "#geri": "Geri", "#menu-ac": "Menü", "#bildir-ac": "Bildir", "#sekmeler": "Bölümler" };
   for (const [sec, m] of Object.entries(etiket)) { const el = $(sec); if (el) el.setAttribute("aria-label", tx(m)); }
@@ -1552,7 +1559,7 @@ function kaydirmaBagla() {
 }
 
 /* ---------------------------------------------------------------- yönlendirme */
-const UST = { bugun: tx("Bugün"), ozet: tx("Özet"), ozel: "Arkix Özel", akis: tx("Ara"), kitaplik: tx("Harrix Kitaplık"), ayarlar: tx("Ayarlar"), giris: tx("Giriş"),
+const UST = { bugun: tx("Bugün"), ozet: tx("Bildirimler"), ozel: "Arkix Özel", akis: tx("Ara"), kitaplik: tx("Harrix Kitaplık"), ayarlar: tx("Ayarlar"), giris: tx("Giriş"),
   favoriler: tx("Favoriler"), notlar: tx("Notlu kayıtlar"), kaynakca: tx("Kaynakçam"), durum: tx("Kaynakların durumu"), ara: tx("Ara"), konu: tx("Konu"), k: "",
   sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli"), takip: tx("Takip ettiklerim"), ayril: tx("E-posta özeti") };
 const ALT_SAYFA = { giris: null, favoriler: "kitaplik", notlar: "kitaplik", kaynakca: "kitaplik", konu: "kitaplik", durum: null, k: null, ara: "akis",

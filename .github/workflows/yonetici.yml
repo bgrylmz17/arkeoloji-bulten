@@ -1,4 +1,4 @@
-name: Yönetici bildirimi
+name: Yönetici ve telefon bildirimleri
 
 on:
   schedule:
@@ -32,3 +32,8 @@ jobs:
           SMTP_SIFRE: ${{ secrets.SMTP_SIFRE }}
           NTFY_KONU: ${{ secrets.NTFY_KONU }}
         run: python toplayici/yonetici_bildirim.py
+      - name: Telefona bildirim (abonelere)
+        if: always()
+        env:
+          FIREBASE_HIZMET_HESABI: ${{ secrets.FIREBASE_HIZMET_HESABI }}
+        run: python toplayici/bildirim_gonder.py

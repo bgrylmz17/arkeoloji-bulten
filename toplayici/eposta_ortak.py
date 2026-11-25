@@ -52,7 +52,7 @@ def erisim_jetonu() -> str:
     from google.oauth2 import service_account          # noqa: PLC0415
     import google.auth.transport.requests as gtr       # noqa: PLC0415
     bilgi = json.loads(ayar("FIREBASE_HIZMET_HESABI"))
-    k = service_account.Credentials.from_service_account_info(bilgi, scopes=["https://www.googleapis.com/auth/datastore"])
+    k = service_account.Credentials.from_service_account_info(bilgi, scopes=["https://www.googleapis.com/auth/datastore", "https://www.googleapis.com/auth/firebase.messaging"])
     k.refresh(gtr.Request())
     _jeton.update(deger=k.token, bitis=time.time() + 3000)
     return k.token

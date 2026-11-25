@@ -26,11 +26,14 @@ function cekmeceAc() {
       ${satir("#yasal", tx("Kullanım koşulları ve KVKK"))}
     </nav>
     <p class="cekmece-alt">Arkix ${SURUM} · <a href="https://www.instagram.com/harrixapp/" target="_blank" rel="noopener">@harrixapp</a></p>`;
+  c.classList.toggle("ust", D.menuKonum === "ust");
+  if (D.menuKonum === "ust") c.insertAdjacentHTML("beforeend", `<button class="cekmece-tutamak" aria-label="${tx("Kapat")}"><span></span></button>`);
   c.hidden = false; p.hidden = false;
   requestAnimationFrame(() => { c.classList.add("acik"); p.classList.add("acik"); });
   c.querySelectorAll("a").forEach(a => a.addEventListener("click", cekmeceKapat));
   const b = c.querySelector("#cekmece-bildir");
   if (b) b.onclick = () => { cekmeceKapat(); if (typeof bildirSecimi === "function") bildirSecimi(); };
+  const tut = c.querySelector(".cekmece-tutamak"); if (tut) tut.onclick = cekmeceKapat;
   const ilk = c.querySelector("a, button"); if (ilk) ilk.focus();
 }
 function cekmeceKapat() {
@@ -41,14 +44,21 @@ function cekmeceKapat() {
 $("#menu-ac").addEventListener("click", cekmeceAc);
 $("#cekmece-perde").addEventListener("click", cekmeceKapat);
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#cekmece").hidden) cekmeceKapat(); });
-/* soldan kaydırarak aç (ekranın sol kenarından) */
+/* kaydırarak aç: "sol" modda ekranın sol kenarından sağa; "ust" modda üst çubuktan (sayfa en üstteyken) aşağı.
+ * Üst modda açık menü yukarı kaydırılınca kapanır. */
 (function () {
-  let x0 = null, y0 = 0;
-  document.addEventListener("touchstart", e => { const t = e.touches[0]; x0 = t.clientX < 24 ? t.clientX : null; y0 = t.clientY; }, { passive: true });
+  let x0 = null, y0 = null, bas = null;
+  document.addEventListener("touchstart", e => {
+    const t = e.touches[0]; bas = { x: t.clientX, y: t.clientY };
+    const ustCubuk = $("#ust").getBoundingClientRect().bottom;
+    x0 = D.menuKonum !== "ust" && t.clientX < 24 ? t.clientX : null;
+    y0 = D.menuKonum === "ust" && t.clientY < ustCubuk + 8 && window.scrollY < 4 ? t.clientY : null;
+  }, { passive: true });
   document.addEventListener("touchend", e => {
-    if (x0 === null) return;
-    const t = e.changedTouches[0];
-    if (t.clientX - x0 > 60 && Math.abs(t.clientY - y0) < 50 && $("#cekmece").hidden) cekmeceAc();
-    x0 = null;
+    const t = e.changedTouches[0], kapali = $("#cekmece").hidden;
+    if (x0 !== null && kapali && t.clientX - x0 > 60 && Math.abs(t.clientY - bas.y) < 50) cekmeceAc();
+    else if (y0 !== null && kapali && t.clientY - y0 > 50 && Math.abs(t.clientX - bas.x) < 60) cekmeceAc();
+    else if (!kapali && D.menuKonum === "ust" && bas && bas.y - t.clientY > 60 && Math.abs(t.clientX - bas.x) < 60) cekmeceKapat();
+    x0 = y0 = null;
   });
 })();

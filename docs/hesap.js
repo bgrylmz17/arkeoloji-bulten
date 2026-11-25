@@ -166,6 +166,7 @@ async function oturumAcildi(kullanici) {
   dinle();
   acikProfilYaz();
   if (typeof epostaSorusuKontrol === "function") setTimeout(epostaSorusuKontrol, 1500);
+  if (typeof pushHesabaBagla === "function") pushHesabaBagla();
 }
 
 /* ---------------------------------------------------------------- giriş işlemleri */
