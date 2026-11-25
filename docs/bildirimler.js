@@ -4,7 +4,7 @@
  * Telefona bildirim (web push): Firebase Cloud Messaging. Abonelik Firestore bildirim_abonelik/{sha256(token)[:40]}
  *   { token, platform: "web"|"ios"|"android", kategoriler: [...], uid, dil, guncelleme }; gönderen: toplayici/bildirim_gonder.py (saatlik).
  * Native karşılığı: harrix-arkeoloji-mobil/src/services/bildirimler.ts ve app/(tabs)/ozet.tsx. */
-const FCM_VAPID = "";   // Firebase konsolu › Proje ayarları › Cloud Messaging › Web Push sertifikaları › Anahtar çifti (herkese açık anahtar)
+const FCM_VAPID = "BOMcDeXgJ5_vgZhS5wam6ejQC1JED7C8gxl0yFRU7bSanPygoZzNb5SFWEBWedNBMGa4cJ3aer1hurgEmh3bxMw";   // Firebase konsolu › Proje ayarları › Cloud Messaging › Web Push sertifikaları › Anahtar çifti (herkese açık anahtar)
 const PUSH_KATEGORILER = [
   ["ozel", "Arkix Özel yazıları"],
   ["sondakika", "Son dakika: çok kaynağın verdiği haberler"],

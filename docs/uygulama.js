@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.17.0";
+const SURUM = "1.17.1";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
