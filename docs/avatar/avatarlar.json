@@ -1,0 +1,53 @@
+{
+ "_aciklama": "Arkix profil avatarları (Harrix çizimi). Web ve native aynı listeyi okur; dosya avatar/<id>.png.",
+ "avatarlar": [
+  {
+   "id": "harri",
+   "ad": "Harri"
+  },
+  {
+   "id": "amfora",
+   "ad": "Amfora"
+  },
+  {
+   "id": "baykus",
+   "ad": "Baykuş"
+  },
+  {
+   "id": "dikilitas",
+   "ad": "Dikilitaş"
+  },
+  {
+   "id": "kup",
+   "ad": "Küp"
+  },
+  {
+   "id": "firca",
+   "ad": "Fırça"
+  },
+  {
+   "id": "okucu",
+   "ad": "Ok ucu"
+  },
+  {
+   "id": "keci",
+   "ad": "Dağ keçisi"
+  },
+  {
+   "id": "sutun",
+   "ad": "Sütun"
+  },
+  {
+   "id": "mamut",
+   "ad": "Mamut"
+  },
+  {
+   "id": "kandil",
+   "ad": "Kandil"
+  },
+  {
+   "id": "sikke",
+   "ad": "Sikke"
+  }
+ ]
+}

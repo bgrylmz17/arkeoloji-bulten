@@ -172,7 +172,7 @@ async function hesapBaslat() {
       if (k) { await oturumAcildi(k); }
       else { H.kullanici = null; H.dinleyiciler.forEach(c => c()); H.dinleyiciler = []; }
       H.hazir = true;
-      if (/^#(ayarlar|giris)/.test(location.hash)) rota(true);
+      if (/^#(ayarlar|giris|yonetim|k\/)/.test(location.hash)) rota(true);
     });
   } catch (e) { H.hazir = true; H.yok = true; }
 }
@@ -263,7 +263,8 @@ async function profilKaydet(degisen) {
   await fs.setDoc(fs.doc(H.db, "kullanicilar", H.kullanici.uid), { profil: D.profil }, { mergeFields: ["profil"] });
 }
 function profilFotosu() {
-  return profilAl().foto || (H.kullanici && H.kullanici.photoURL) || "";
+  const p = profilAl();
+  return p.foto || (p.avatar && typeof avatarAdresi === "function" ? avatarAdresi(p.avatar) : "") || (H.kullanici && H.kullanici.photoURL) || "";
 }
 /* Seçilen görseli ortadan kare kırpıp 160 px JPEG'e küçültür (~10 KB). */
 function fotoKucult(dosya) {
@@ -303,8 +304,8 @@ function hesapGrubuHtml() {
   const izin = (profilAl().eposta_izni || {}).izin === true;
   return `<div class="grup"><h3>${tx("Hesap")}</h3><div class="kutu">
     <div class="satir profil-satir">${avatarHtml()}<span class="profil-ad"><b>${esc(hesapAdi())}</b><small>${H.kullanici.providerData.some(p => p.providerId === "google.com") ? "Google" : tx("E-posta")}</small></span>
-      <label class="ikincil-dugme profil-foto-dugme">${tx("Fotoğraf")}<input type="file" id="profil-foto" accept="image/*" hidden></label></div>
-    ${profilAl().foto ? `<button class="satir" id="profil-foto-kaldir">${tx("Profil fotoğrafını kaldır")}</button>` : ""}
+      <button class="ikincil-dugme profil-foto-dugme" id="profil-resmi">${tx("Değiştir")}</button></div>
+    <button class="satir" id="gorunen-ad">${tx("Görünen ad")}<span class="sag">${esc(typeof gorunenAd === "function" ? gorunenAd() || tx("Belirlenmedi") : "")}</span></button>
     <label class="satir">${tx("Yenilikler e-postayla gelsin")}<input type="checkbox" class="anahtar" id="eposta-izni" ${izin ? "checked" : ""}></label>
     <div class="satir">${tx("Eşitleme")}<span class="sag">${esc(H.durum || (H.sonEsitleme ? tx("Eşitlendi, {saat}", { saat: saatYaz(H.sonEsitleme) }) : tx("Açık")))}</span></div>
     <button class="satir" id="cikis">${tx("Çıkış yap")}</button>
@@ -317,16 +318,10 @@ function hesapGrubuBagla() {
   if (c) c.onclick = async () => { await cikisYap(); bildir(tx("Çıkış yapıldı")); rota(true); };
   const sil = document.getElementById("hesap-sil");
   if (sil) sil.onclick = hesapSilLevhasi;
-  const foto = document.getElementById("profil-foto");
-  if (foto) foto.onchange = async e => {
-    const f = e.target.files && e.target.files[0];
-    if (!f) return;
-    try { await profilKaydet({ foto: await fotoKucult(f) }); bildir(tx("Profil fotoğrafı kaydedildi")); }
-    catch (err) { bildir(tx("Fotoğraf yüklenemedi.")); }
-    rota(true);
-  };
-  const kaldir = document.getElementById("profil-foto-kaldir");
-  if (kaldir) kaldir.onclick = async () => { await profilKaydet({ foto: "" }); rota(true); };
+  const resim = document.getElementById("profil-resmi");
+  if (resim && typeof avatarSecLevhasi === "function") resim.onclick = avatarSecLevhasi;
+  const ad = document.getElementById("gorunen-ad");
+  if (ad && typeof adLevhasi === "function") ad.onclick = () => adLevhasi();
   const izin = document.getElementById("eposta-izni");
   if (izin) izin.onchange = async e => {
     const acik = e.target.checked;

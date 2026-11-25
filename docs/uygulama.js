@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.9.5";
+const SURUM = "1.10.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -758,6 +758,7 @@ function sayfaAyrinti(id) {
         ${D.notlar[r.i] ? `<div class="kunye"><b>${tx("Notunuz:")}</b> ${esc(D.notlar[r.i])}</div>` : ""}
       </article>`;
       $("#sayfa").querySelectorAll("[data-e]").forEach(b => b.onclick = () => eylem(b.dataset.e, r, ciz, goster));
+      if (typeof yorumlarCiz === "function") yorumlarCiz(r);
       return;
     }
     $("#sayfa").innerHTML = `<article class="ayrinti">
@@ -794,6 +795,7 @@ function sayfaAyrinti(id) {
       <div class="kunye">${apaHtml(r)}</div>
     </article>`;
     $("#sayfa").querySelectorAll("[data-e]").forEach(b => b.onclick = () => eylem(b.dataset.e, r, ciz, goster));
+    if (typeof yorumlarCiz === "function") yorumlarCiz(r);
   };
   ciz();
   // başlık bulutta çevrilmiş ama özet çevrilmemişse özeti cihazda çevir
@@ -1200,6 +1202,7 @@ function sayfaAyarlar() {
       <button class="satir" id="yedek-al">${tx("Yedeği dışa aktar")}<span class="sag">${tx("{n} öge", { n: D.fav.length + D.kaynakca.length + Object.keys(D.notlar).length })}</span></button>
       <label class="satir" style="cursor:pointer">${tx("Yedeği içe aktar")}<input type="file" id="yedek-yukle" accept="application/json,.json" hidden></label>
     </div><p class="aciklama">${tx("Favoriler, konular, notlar ve kaynakça yalnızca bu telefonda tutulur. Telefon değiştirirken yedeği dışa aktarıp yenisine yükleyin.")}</p></div>
+    ${typeof toplulukGrubuHtml === "function" ? toplulukGrubuHtml() : ""}
     <div class="grup"><h3>${tx("Hakkında")}</h3><div class="kutu">
       <div class="satir">${tx("Arkix")}<span class="sag">${SURUM}</span></div>
       <a class="satir" style="color:inherit" href="mailto:harrixapp@gmail.com?subject=${encodeURIComponent("Harrix Bülten")}">${tx("Destek ve iletişim")}<span class="sag">harrixapp@gmail.com</span></a>
@@ -1207,6 +1210,7 @@ function sayfaAyarlar() {
       <a class="satir" style="color:inherit" href="#yasal">${tx("Kullanım koşulları ve KVKK")}</a>
     </div><p class="aciklama">${tx("Soru, öneri ve sorunlar için Harrix ekibine yazabilirsiniz.")}</p><p class="aciklama">© ${new Date().getFullYear()} Harrix. ${tx("Tüm hakları saklıdır.")}</p></div>`;
   if (typeof hesapGrubuBagla === "function") hesapGrubuBagla();
+  if (typeof toplulukGrubuBagla === "function") toplulukGrubuBagla();
   const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
   $("#oa-anahtar").onchange = e => { D.oaAnahtar = e.target.value.trim(); kaydet(); bildir(D.oaAnahtar ? tx("OpenAlex anahtarı kaydedildi") : tx("OpenAlex anahtarı kaldırıldı")); };
   $("#zemin").value = D.zemin;
@@ -1344,7 +1348,7 @@ async function sayfaPdfler() {
 }
 
 /* ---------------------------------------------------------------- kullanım koşulları ve KVKK */
-const KVKK_SURUM = "2026-11c" + (window.REKLAM && REKLAM.ACIK ? "-r" : "");   // metin değişince artırın: herkesten yeniden onay istenir; reklam açılınca da değişir
+const KVKK_SURUM = "2026-11d" + (window.REKLAM && REKLAM.ACIK ? "-r" : "");   // metin değişince artırın: herkesten yeniden onay istenir; reklam açılınca da değişir
 function sayfaYasal() { $("#sayfa").innerHTML = `<article class="ayrinti yasal">${yasalHtml()}</article>`; }
 /* İlk açılışta (ya da metin değişince) koşullar ve KVKK onaylanmadan uygulama kullanılamaz. */
 function kvkkKapisi() {
@@ -1370,13 +1374,14 @@ function kvkkKapisi() {
 function yasalHtml() {
   if (DIL === "en") return `
     <h2>Terms of Use</h2>
-    <p>Arkix presents archaeology headlines, abstracts and links collected from open academic databases (OpenAlex, Crossref, DergiPark) and publicly available news sources. All content remains the copyright of its original publishers; the app only provides links, references and personal research tools. Machine translations are an aid; check the original before quoting. Abstracts of publications without an open licence (such as CC BY or CC0) are shown shortened; the full text is on the publisher's page.</p>
+    <p>Arkix presents archaeology headlines, abstracts and links collected from open academic databases (OpenAlex, Crossref, DergiPark) and publicly available news sources. All content remains the copyright of its original publishers; the app only provides links, references and personal research tools. Machine translations are an aid; check the original before quoting. Comments must be respectful and on topic; insults, personal data, spam and copyrighted material are removed and the author may be blocked from commenting. Abstracts of publications without an open licence (such as CC BY or CC0) are shown shortened; the full text is on the publisher's page.</p>
     <p>If you are a rights holder and do not want your content to appear here, write to harrixapp@gmail.com; it will be removed within 48 hours and the source will no longer be collected.</p>
     <h2>Privacy Notice (Turkish Personal Data Protection Law, KVKK No. 6698)</h2>
     <p>Data controller: Harrix (harrixapp@gmail.com).</p>
     <ul>
       <li>If you use the app without signing in, your favorites, notes, topics, bibliography, PDF archive and settings are stored only on this device and are never sent to any server.</li>
       <li>If you choose to sign in, your email address (and your name, with Google sign-in) and your favorite, topic, note and bibliography lists are processed on Firebase (Google Cloud) solely to sync them between your devices.</li>
+      <li>Comments you write are public together with your display name and avatar; your email address is never shown. You can delete your comments at any time. Comments you report and bug reports or suggestions you send (with the email address and device information you choose to add) are seen only by the Arkix administrator and are used only to resolve them.</li>
       <li>A profile photo is optional. If you add one, a small copy (160 px) is stored in your account and can be removed at any time.</li>
       <li>Email updates are sent only if you give separate, explicit consent in Settings › Account. Your email address and the date of consent are kept for this purpose; you can withdraw consent at any time in Settings or via the link in every email.</li>
       <li>Only the searches you start are sent to OpenAlex and the translation services. Your OpenAlex key stays on this device.</li>
@@ -1385,13 +1390,14 @@ function yasalHtml() {
     </ul>`;
   return `
     <h2>Kullanım koşulları</h2>
-    <p>Arkix (Arkix); açık akademik veritabanlarından (OpenAlex, Crossref, DergiPark) ve kamuya açık haber kaynaklarından derlenen arkeoloji başlıklarını, özetlerini ve bağlantılarını sunar. İçeriklerin telif hakları özgün yayıncılarına aittir; uygulama yalnızca kaynağa bağlantı, künye ve kişisel araştırma araçları sağlar. Makine çevirileri yardımcıdır; alıntı yapmadan önce özgün metne bakın. Serbest lisanslı (CC BY, CC0 vb.) olmayan yayınların özetleri kısaltılmış olarak gösterilir; tamamı yayıncının sayfasındadır.</p>
+    <p>Arkix (Arkix); açık akademik veritabanlarından (OpenAlex, Crossref, DergiPark) ve kamuya açık haber kaynaklarından derlenen arkeoloji başlıklarını, özetlerini ve bağlantılarını sunar. İçeriklerin telif hakları özgün yayıncılarına aittir; uygulama yalnızca kaynağa bağlantı, künye ve kişisel araştırma araçları sağlar. Makine çevirileri yardımcıdır; alıntı yapmadan önce özgün metne bakın. Yorumlar saygılı ve konuyla ilgili olmalıdır; hakaret, kişisel veri, spam ve telifli içerik kaldırılır, yazarı yorum yazmaktan men edilebilir. Serbest lisanslı (CC BY, CC0 vb.) olmayan yayınların özetleri kısaltılmış olarak gösterilir; tamamı yayıncının sayfasındadır.</p>
     <p>Hak sahibiyseniz ve bir içeriğin burada yer almasını istemiyorsanız harrixapp@gmail.com adresine yazın; içerik en geç 48 saat içinde kaldırılır ve kaynak bir daha toplanmaz.</p>
     <h2>KVKK aydınlatma metni</h2>
     <p>6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında veri sorumlusu Harrix'tir (harrixapp@gmail.com).</p>
     <ul>
       <li>Giriş yapmadan kullandığınızda favorileriniz, notlarınız, konularınız, kaynakçanız, PDF arşiviniz ve ayarlarınız yalnızca bu cihazda saklanır; hiçbir sunucuya gönderilmez.</li>
       <li>İsteğe bağlı olarak giriş yaptığınızda e-posta adresiniz (Google ile girişte adınız) ve favori, konu, not ve kaynakça listeleriniz yalnızca cihazlarınız arasında eşitleme amacıyla Firebase (Google Cloud) altyapısında işlenir.</li>
+      <li>Yazdığınız yorumlar görünen adınız ve avatarınızla birlikte herkese açık görünür; e-posta adresiniz hiçbir yerde gösterilmez. Yorumlarınızı istediğiniz an silebilirsiniz. Bildirdiğiniz yorumları ve gönderdiğiniz hata bildirimi ya da önerileri (eklemeyi seçtiğiniz e-posta ve cihaz bilgisiyle) yalnız Arkix yöneticisi görür ve yalnız bunları çözmek için kullanır.</li>
       <li>Profil fotoğrafı isteğe bağlıdır. Eklerseniz küçük bir kopyası (160 piksel) hesabınızda saklanır; dilediğiniz an kaldırabilirsiniz.</li>
       <li>Yenilik ve duyuru e-postaları yalnızca Ayarlar › Hesap bölümünde ayrıca verdiğiniz açık rızayla gönderilir. Bu amaçla e-posta adresiniz ve rıza tarihiniz saklanır; rızanızı Ayarlar'dan ya da her e-postadaki bağlantıdan istediğiniz an geri alabilirsiniz.</li>
       <li>OpenAlex ve çeviri servislerine yalnızca sizin başlattığınız aramalar iletilir. OpenAlex anahtarınız bu cihazda kalır.</li>
@@ -1449,9 +1455,9 @@ function kaydirmaBagla() {
 /* ---------------------------------------------------------------- yönlendirme */
 const UST = { bugun: tx("Bugün"), akis: tx("Yayınlar"), kitaplik: tx("Harrix Kitaplık"), ayarlar: tx("Ayarlar"), giris: tx("Giriş"),
   favoriler: tx("Favoriler"), notlar: tx("Notlu kayıtlar"), kaynakca: tx("Kaynakçam"), durum: tx("Kaynakların durumu"), ara: tx("Ara"), konu: tx("Konu"), k: "",
-  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK") };
+  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli") };
 const ALT_SAYFA = { giris: "ayarlar", favoriler: "kitaplik", notlar: "kitaplik", kaynakca: "kitaplik", konu: "kitaplik", durum: "ayarlar", k: null, ara: "akis",
-  sozler: "kitaplik", pdfler: "kitaplik", yasal: "ayarlar" };
+  sozler: "kitaplik", pdfler: "kitaplik", yasal: "ayarlar", yonetim: "ayarlar" };
 let sonSekme = "bugun";
 
 function rota(kaydirmayiKoru) {
@@ -1483,6 +1489,7 @@ function rota(kaydirmayiKoru) {
   else if (ad === "sozler") sayfaSozler();
   else if (ad === "pdfler") sayfaPdfler();
   else if (ad === "yasal") sayfaYasal();
+  else if (ad === "yonetim") { if (typeof sayfaYonetim === "function") sayfaYonetim(); else location.replace("#ayarlar"); }
   else if (ad === "k") sayfaAyrinti(arg);
   else { location.hash = "#bugun"; return; }
   kaydirmaBagla();

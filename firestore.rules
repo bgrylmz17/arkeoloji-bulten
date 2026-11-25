@@ -1,0 +1,80 @@
+rules_version = '2';
+
+// Arkix (Firebase projesi: harrix-bulten) Firestore kuralları.
+// Yayımlama: Firebase konsolu › Firestore Database › Rules › bu dosyanın tamamını yapıştır › Publish.
+// Yönetici: aşağıdaki e-postayla (doğrulanmış) giriş yapan hesap. topluluk.js › ADMIN_EPOSTA ile aynı olmalı.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function girdi() { return request.auth != null; }
+    function ben(uid) { return girdi() && request.auth.uid == uid; }
+    function yonetici() {
+      return girdi() && request.auth.token.email == 'harrixapp@gmail.com' && request.auth.token.email_verified == true;
+    }
+    function engelli() { return exists(/databases/$(database)/documents/engelliler/$(request.auth.uid)); }
+    function uzman() { return exists(/databases/$(database)/documents/uzmanlar/$(request.auth.uid)); }
+
+    // Kişisel kitaplık, eşitlenen kayıtlar ve profil (fotoğraf, e-posta izni): yalnız sahibi
+    match /kullanicilar/{uid} {
+      allow read, write: if ben(uid);
+      match /{alt=**} {
+        allow read, write: if ben(uid);
+      }
+    }
+
+    // Yorumlar: gizli olmayanları herkes okur; giriş yapmış ve engellenmemiş kullanıcı yazar;
+    // yazarı ya da yönetici siler; yalnız yönetici gizler/gösterir.
+    match /yorumlar/{id} {
+      allow read: if resource.data.gizli == false || yonetici() || ben(resource.data.uid);
+      allow create: if girdi() && !engelli()
+        && request.resource.data.keys().hasOnly(['kayit', 'uid', 'ad', 'avatar', 'uzman', 'metin', 'tarih', 'gizli'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.kayit is string && request.resource.data.kayit.size() > 0 && request.resource.data.kayit.size() <= 300
+        && request.resource.data.ad is string && request.resource.data.ad.size() >= 2 && request.resource.data.ad.size() <= 40
+        && request.resource.data.avatar is string && request.resource.data.avatar.size() <= 40
+        && request.resource.data.metin is string && request.resource.data.metin.size() > 0 && request.resource.data.metin.size() <= 1000
+        && request.resource.data.gizli == false
+        && request.resource.data.tarih == request.time
+        && request.resource.data.uzman == uzman();
+      allow update: if yonetici() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gizli']);
+      allow delete: if yonetici() || ben(resource.data.uid);
+    }
+
+    // Yorum şikâyetleri: giriş yapmış kullanıcı yazar, yalnız yönetici okur/siler
+    match /sikayetler/{id} {
+      allow create: if girdi()
+        && request.resource.data.keys().hasOnly(['yorum', 'kayit', 'uid', 'neden', 'tarih'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.neden is string && request.resource.data.neden.size() <= 300
+        && request.resource.data.tarih == request.time;
+      allow read, delete: if yonetici();
+    }
+
+    // Hata bildirimi, istek ve öneri: herkes gönderebilir (giriş gerekmez), yalnız yönetici görür
+    match /geribildirim/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['tur', 'metin', 'eposta', 'uid', 'surum', 'cihaz', 'sayfa', 'tarih', 'durum'])
+        && request.resource.data.tur in ['hata', 'istek', 'diger']
+        && request.resource.data.metin is string && request.resource.data.metin.size() > 0 && request.resource.data.metin.size() <= 3000
+        && request.resource.data.eposta is string && request.resource.data.eposta.size() <= 120
+        && request.resource.data.surum is string && request.resource.data.surum.size() <= 40
+        && request.resource.data.cihaz is string && request.resource.data.cihaz.size() <= 200
+        && request.resource.data.sayfa is string && request.resource.data.sayfa.size() <= 120
+        && request.resource.data.durum == 'yeni'
+        && request.resource.data.tarih == request.time
+        && (request.resource.data.uid == null || ben(request.resource.data.uid));
+      allow read, update, delete: if yonetici();
+    }
+
+    // Uzman rozeti: herkes okur (yorum yazarken denetlenir), yalnız yönetici verir
+    match /uzmanlar/{uid} {
+      allow read: if true;
+      allow write: if yonetici();
+    }
+
+    // Yorumdan men edilenler: kişi kendi kaydını görebilir, yalnız yönetici yazar
+    match /engelliler/{uid} {
+      allow read: if yonetici() || ben(uid);
+      allow write: if yonetici();
+    }
+  }
+}
