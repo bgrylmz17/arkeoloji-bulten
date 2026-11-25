@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.9.4";
+const SURUM = "1.9.5";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -154,8 +154,10 @@ const D = Object.assign({
   fav: [], okundu: {}, notlar: {}, konular: [], kaynakca: [], kayitlar: {},
   gorulen: "", tema: "oto", palet: "kum", yazi: 1, bildirim: false, kurulumIpucu: true,
   uid: null, esitleme: 0, girisSoruldu: false, hepTurkce: false, desen: true, oaAnahtar: "", sesHiz: 1, sesId: "",
-  ozelSozler: [], kvkkSurum: "", dil: DIL,
+  ozelSozler: [], kvkkSurum: "", dil: DIL, zemin: "gorsel", gunlukGun: "", profil: {},
 }, guvenliOku());
+// arka plan: eski "desen" anahtarı kapalıysa sade, açıksa yeni varsayılan (günün görseli)
+if (!("zemin" in guvenliOku()) && D.desen === false) D.zemin = "sade";
 
 function guvenliOku() {
   try { return JSON.parse(localStorage.getItem(DEPO_ANAHTARI)) || {}; } catch (e) { return {}; }
@@ -266,7 +268,8 @@ function temaUygula() {
   kok.style.setProperty("--yazi-olcek", D.yazi);
   const koyu = D.tema === "koyu" || (D.tema === "oto" && matchMedia("(prefers-color-scheme: dark)").matches);
   document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute("content", koyu ? "#161916" : "#eef0e9"));
-  if (window.DESEN) DESEN.uygula(D.desen !== false);
+  if (window.DESEN) DESEN.uygula(D.zemin === "desen");
+  if (window.GUNLUK) GUNLUK.zemin(D.zemin);
 }
 
 /* ---------------------------------------------------------------- kayıt satırı */
@@ -372,6 +375,7 @@ function sayfaBugun() {
       <p class="sabah-metin">${esc(so.paragraf)}</p>
       ${so.oneCikanlar.slice(0, 2).map(r => `<a class="sabah-madde" href="#k/${encodeURIComponent(r.i)}">${esc(baslikGoster(r))}</a>`).join("")}
     </section>` : ""}
+    ${window.GUNLUK ? GUNLUK.kartHtml({ baslik: tx("Günün alanı") }) : ""}
     ${soz ? `<a class="soz soz-bag" href="#sozler"><blockquote>${esc(soz)}</blockquote><span class="soz-kim">${tx("Günün sözü · Söz ekle")}</span></a>` : ""}
     <form class="arama-kutu lit-hizli" id="lit-hizli"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
       <input id="lit-hizli-q" type="search" placeholder="${tx("Tüm literatürde ara (ör. Göbeklitepe taş alet)")}" enterkeyhint="search" autocomplete="off" aria-label="${tx("Tüm literatürde ara")}">
@@ -1166,9 +1170,10 @@ function sayfaAyarlar() {
       <div class="satir">Dil / Language${dilSeciciHtml()}</div>
       <label class="satir">${tx("Tema")}<select id="tema"><option value="oto">${tx("Telefona uy")}</option><option value="acik">${dilSec("Açık", "Light")}</option><option value="koyu">${tx("Koyu")}</option></select></label>
       <label class="satir">${tx("Toprak rengi")}<select id="palet"><option value="kum">${tx("Kum")}</option><option value="lacivert">${tx("Lacivert")}</option><option value="zeytin">${tx("Zeytin")}</option><option value="murdum">${tx("Mürdüm")}</option></select></label>
-      <label class="satir">${tx("Arka plan deseni")}<input type="checkbox" class="anahtar" id="desen-ac" ${D.desen !== false ? "checked" : ""}></label>
+      <label class="satir">${tx("Arka plan")}<select id="zemin"><option value="gorsel">${tx("Günün alanı")}</option><option value="desen">${tx("Çizim deseni")}</option><option value="sade">${tx("Sade")}</option></select></label>
       <label class="satir">${tx("Yazı boyutu")}<select id="yazi"><option value="0.9">${tx("Küçük")}</option><option value="1">${tx("Normal")}</option><option value="1.12">${tx("Büyük")}</option><option value="1.25">${tx("Çok büyük")}</option></select></label>
-    </div>${window.DESEN ? `<p class="aciklama">${tx("Arkeolojik çizimlerden oluşan desen her gün değişir. Bugün: {ad}.", { ad: DIL === "en" ? DESEN.bugun().en : DESEN.bugun().ad })}</p>` : ""}</div>
+    </div>${D.zemin === "desen" && window.DESEN ? `<p class="aciklama">${tx("Arkeolojik çizimlerden oluşan desen her gün değişir. Bugün: {ad}.", { ad: DIL === "en" ? DESEN.bugun().en : DESEN.bugun().ad })}</p>`
+      : D.zemin === "gorsel" && window.GUNLUK && GUNLUK.bugun() ? `<p class="aciklama">${tx("Her gün başka bir arkeolojik alan. Bugün: {ad}. Görseller yapay zekâ ile üretilmiş temsilî görsellerdir.", { ad: GUNLUK.bugun().ad })}</p>` : ""}</div>
     <div class="grup"><h3>${tx("Çeviri")}</h3><div class="kutu">
       <label class="satir">${tx("Yabancı sayfaları Türkçe aç")}<input type="checkbox" class="anahtar" id="hep-turkce" ${D.hepTurkce ? "checked" : ""}></label>
     </div><p class="aciklama">${tx("Açıkken İngilizce ve diğer dillerdeki haber ve makale sayfaları Google Çeviri ile Türkçe açılır. Kapalıyken yabancı kayıtlarda ayrıca “Türkçe aç” düğmesi görünür. Başlık ve özetler her durumda uygulama içinde Türkçe gösterilir.")}</p></div>
@@ -1204,7 +1209,8 @@ function sayfaAyarlar() {
   if (typeof hesapGrubuBagla === "function") hesapGrubuBagla();
   const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
   $("#oa-anahtar").onchange = e => { D.oaAnahtar = e.target.value.trim(); kaydet(); bildir(D.oaAnahtar ? tx("OpenAlex anahtarı kaydedildi") : tx("OpenAlex anahtarı kaldırıldı")); };
-  $("#desen-ac").onchange = e => { D.desen = e.target.checked; kaydet(); temaUygula(); };
+  $("#zemin").value = D.zemin;
+  $("#zemin").onchange = e => { D.zemin = e.target.value; kaydet(); temaUygula(); rota(true); };
   $("#hep-turkce").onchange = e => { D.hepTurkce = e.target.checked; kaydet(); bildir(D.hepTurkce ? tx("Yabancı sayfalar Türkçe açılacak") : tx("Sayfalar özgün dilinde açılacak")); };
   dilSeciciBagla($("#sayfa"));
   sec("tema", D.tema, v => D.tema = v);
@@ -1338,7 +1344,7 @@ async function sayfaPdfler() {
 }
 
 /* ---------------------------------------------------------------- kullanım koşulları ve KVKK */
-const KVKK_SURUM = "2026-11b" + (window.REKLAM && REKLAM.ACIK ? "-r" : "");   // metin değişince artırın: herkesten yeniden onay istenir; reklam açılınca da değişir
+const KVKK_SURUM = "2026-11c" + (window.REKLAM && REKLAM.ACIK ? "-r" : "");   // metin değişince artırın: herkesten yeniden onay istenir; reklam açılınca da değişir
 function sayfaYasal() { $("#sayfa").innerHTML = `<article class="ayrinti yasal">${yasalHtml()}</article>`; }
 /* İlk açılışta (ya da metin değişince) koşullar ve KVKK onaylanmadan uygulama kullanılamaz. */
 function kvkkKapisi() {
@@ -1371,6 +1377,8 @@ function yasalHtml() {
     <ul>
       <li>If you use the app without signing in, your favorites, notes, topics, bibliography, PDF archive and settings are stored only on this device and are never sent to any server.</li>
       <li>If you choose to sign in, your email address (and your name, with Google sign-in) and your favorite, topic, note and bibliography lists are processed on Firebase (Google Cloud) solely to sync them between your devices.</li>
+      <li>A profile photo is optional. If you add one, a small copy (160 px) is stored in your account and can be removed at any time.</li>
+      <li>Email updates are sent only if you give separate, explicit consent in Settings › Account. Your email address and the date of consent are kept for this purpose; you can withdraw consent at any time in Settings or via the link in every email.</li>
       <li>Only the searches you start are sent to OpenAlex and the translation services. Your OpenAlex key stays on this device.</li>
       ${reklamAcik() ? `<li>The free web version shows Google AdSense ads. Google and its partners may use cookies and similar technologies to serve and measure ads; visitors from the EEA, UK and Switzerland are asked for their ad choices in Google's consent window. Details: <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">policies.google.com/technologies/ads</a>.</li>` : ""}
       <li>To exercise your rights, write to harrixapp@gmail.com. You can export your data in Settings › Export backup, and permanently delete your account and all cloud data in Settings › Delete account.</li>
@@ -1384,6 +1392,8 @@ function yasalHtml() {
     <ul>
       <li>Giriş yapmadan kullandığınızda favorileriniz, notlarınız, konularınız, kaynakçanız, PDF arşiviniz ve ayarlarınız yalnızca bu cihazda saklanır; hiçbir sunucuya gönderilmez.</li>
       <li>İsteğe bağlı olarak giriş yaptığınızda e-posta adresiniz (Google ile girişte adınız) ve favori, konu, not ve kaynakça listeleriniz yalnızca cihazlarınız arasında eşitleme amacıyla Firebase (Google Cloud) altyapısında işlenir.</li>
+      <li>Profil fotoğrafı isteğe bağlıdır. Eklerseniz küçük bir kopyası (160 piksel) hesabınızda saklanır; dilediğiniz an kaldırabilirsiniz.</li>
+      <li>Yenilik ve duyuru e-postaları yalnızca Ayarlar › Hesap bölümünde ayrıca verdiğiniz açık rızayla gönderilir. Bu amaçla e-posta adresiniz ve rıza tarihiniz saklanır; rızanızı Ayarlar'dan ya da her e-postadaki bağlantıdan istediğiniz an geri alabilirsiniz.</li>
       <li>OpenAlex ve çeviri servislerine yalnızca sizin başlattığınız aramalar iletilir. OpenAlex anahtarınız bu cihazda kalır.</li>
       ${reklamAcik() ? `<li>Ücretsiz web sürümünde Google AdSense reklamları gösterilir. Google ve iş ortakları reklam sunmak ve ölçmek için çerez ve benzeri teknolojiler kullanabilir; Avrupa Ekonomik Alanı, Birleşik Krallık ve İsviçre'den erişimde reklam tercihleriniz Google'ın onay penceresinde sorulur. Ayrıntılar: <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">policies.google.com/technologies/ads</a>.</li>` : ""}
       <li>Kanunun 11. maddesindeki haklarınızı kullanmak için harrixapp@gmail.com adresine yazabilirsiniz. Verilerinizi Ayarlar › Yedeği dışa aktar ile alabilir, Ayarlar › Hesabı sil ile hesabınızı ve buluttaki bütün verilerinizi kalıcı olarak silebilirsiniz.</li>
@@ -1498,7 +1508,8 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", temaUygula
   const acilis = $("#acilis");
   const sure = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 950;
   const bekle = new Promise(r => setTimeout(r, sure));
-  await Promise.all([veriYukle(true), sozleriYukle(), bekle]);
+  await Promise.all([veriYukle(true), sozleriYukle(), bekle, window.GUNLUK ? GUNLUK.yukle() : null]);
+  temaUygula();   // günün görseli veri gelince
   // ilk açılışta bir kez giriş ekranını göster (isteyen "Giriş yapmadan devam et" der)
   if (!D.girisSoruldu && !D.uid && window.FIREBASE_AYAR && window.FIREBASE_AYAR.apiKey) {
     D.girisSoruldu = true; kaydet();
@@ -1508,6 +1519,7 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", temaUygula
   acilis.classList.add("bitti");
   setTimeout(() => acilis.remove(), 600);
   await kvkkKapisi();
+  if (window.GUNLUK) await GUNLUK.acilis({ baslik: tx("Günün alanı"), dugme: tx("Bugüne başla") }, D.gunlukGun, g => { D.gunlukGun = g; kaydet(); });
   if ("serviceWorker" in navigator) {
     try { await navigator.serviceWorker.register("sw.js"); if (D.bildirim) arkaPlanKaydi(); } catch (e) {}
   }

@@ -92,7 +92,9 @@ async function buluttaKaydet() {
   try {
     const parti = fs.writeBatch(H.db);
     const simdi = Date.now();
-    parti.set(fs.doc(H.db, "kullanicilar", uid), { kitaplik: kitaplikAl(), guncelleme: simdi, cihaz: CIHAZ });
+    // mergeFields: belgedeki öteki alanlar (profil) korunur
+    parti.set(fs.doc(H.db, "kullanicilar", uid), { kitaplik: kitaplikAl(), guncelleme: simdi, cihaz: CIHAZ },
+              { mergeFields: ["kitaplik", "guncelleme", "cihaz"] });
     let n = 0;
     for (const [id, r] of Object.entries(D.kayitlar)) {
       if (!H.bulutKayitlar.has(id) && n < 400) { parti.set(fs.doc(H.db, "kullanicilar", uid, "kayitlar", belgeAdi(id)), { r }); H.bulutKayitlar.add(id); n++; }
@@ -129,6 +131,7 @@ function dinle() {
   H.dinleyiciler.push(fs.onSnapshot(fs.doc(H.db, "kullanicilar", uid), belge => {
     if (!belge.exists() || belge.metadata.hasPendingWrites) return;
     const v = belge.data();
+    profilBuluttan(v.profil);
     if (v.cihaz === CIHAZ || !(v.guncelleme > (D.esitleme || 0))) return;
     H.uygulaniyor = true;
     Object.assign(D, { fav: v.kitaplik.fav || [], notlar: v.kitaplik.notlar || {}, konular: v.kitaplik.konular || [],
@@ -152,7 +155,7 @@ async function oturumAcildi(kullanici) {
         fs.getDocs(fs.collection(H.db, "kullanicilar", kullanici.uid, "kayitlar"))]);
       kayitlar.forEach(d => { const r = d.data().r; if (r && r.i) { H.bulutKayitlar.add(r.i); if (!D.kayitlar[r.i]) D.kayitlar[r.i] = r; if (!DIZIN.has(r.i)) DIZIN.set(r.i, r); } });
       const birlesik = birlestir(kitaplikAl(), belge.exists() ? belge.data().kitaplik : null);
-      Object.assign(D, birlesik, { uid: kullanici.uid });
+      Object.assign(D, birlesik, { uid: kullanici.uid, profil: (belge.exists() && belge.data().profil) || {} });
       try { localStorage.setItem(DEPO_ANAHTARI, JSON.stringify(D)); } catch (e) {}
       await buluttaKaydet();
     }
@@ -201,7 +204,7 @@ async function cikisYap() {
   const { auth } = await firebaseYukle();
   await buluttaKaydet();
   await auth.signOut(H.auth);
-  D.uid = null; D.esitleme = 0; kaydet();
+  D.uid = null; D.esitleme = 0; D.profil = {}; kaydet();
 }
 
 /* Hesabı ve buluttaki bütün verileri kalıcı olarak siler (KVKK m.11; App Store 5.1.1(v)).
@@ -223,7 +226,7 @@ async function hesabiSil() {
   await fs.deleteDoc(fs.doc(H.db, "kullanicilar", uid));
   H.kullanici = null;          // silme sırasında yeniden yazılmasın
   await auth.deleteUser(k);
-  D.uid = null; D.esitleme = 0; kaydet();
+  D.uid = null; D.esitleme = 0; D.profil = {}; kaydet();
 }
 function hesapSilLevhasi() {
   levhaAc(`<h3>${tx("Hesabı sil")}</h3>
@@ -242,6 +245,47 @@ function hesapSilLevhasi() {
   });
 }
 
+/* ---------------------------------------------------------------- profil: fotoğraf ve e-posta izni
+ * kullanicilar/{uid}.profil = { foto: "data:image/jpeg…" (160 px), eposta_izni: { izin, tarih, eposta, metin }, guncelleme }
+ * Yalnız giriş yapmış kullanıcı için. Fotoğraf belgede küçük JPEG olarak durur (Storage gerekmez). */
+const EPOSTA_IZIN_METNI = "2026-11";   // izin metni değişirse artırın
+const profilAl = () => D.profil || {};
+function profilBuluttan(p) {
+  if (!p || !(p.guncelleme > (profilAl().guncelleme || 0))) return;
+  D.profil = p;
+  try { localStorage.setItem(DEPO_ANAHTARI, JSON.stringify(D)); } catch (e) {}
+}
+async function profilKaydet(degisen) {
+  if (!H.kullanici) return;
+  D.profil = { ...profilAl(), ...degisen, guncelleme: Date.now() };
+  kaydet();
+  const { fs } = H.fb;
+  await fs.setDoc(fs.doc(H.db, "kullanicilar", H.kullanici.uid), { profil: D.profil }, { mergeFields: ["profil"] });
+}
+function profilFotosu() {
+  return profilAl().foto || (H.kullanici && H.kullanici.photoURL) || "";
+}
+/* Seçilen görseli ortadan kare kırpıp 160 px JPEG'e küçültür (~10 KB). */
+function fotoKucult(dosya) {
+  return new Promise((tamam, hata) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(img.width, img.height), c = document.createElement("canvas");
+      c.width = c.height = 160;
+      c.getContext("2d").drawImage(img, (img.width - k) / 2, (img.height - k) / 2, k, k, 0, 0, 160, 160);
+      URL.revokeObjectURL(img.src);
+      tamam(c.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = hata;
+    img.src = URL.createObjectURL(dosya);
+  });
+}
+function avatarHtml(boy = 56) {
+  const f = profilFotosu(), ad = hesapAdi() || "?";
+  return f ? `<img class="avatar" src="${esc(f)}" alt="" width="${boy}" height="${boy}" referrerpolicy="no-referrer">`
+    : `<span class="avatar avatar-bas" style="width:${boy}px;height:${boy}px">${esc(ad.trim()[0] || "?").toLocaleUpperCase("tr")}</span>`;
+}
+
 /* ---------------------------------------------------------------- arayüz */
 function hesapAdi() {
   const k = H.kullanici;
@@ -256,18 +300,41 @@ function hesapGrubuHtml() {
       <a class="satir" href="#giris">${tx("Giriş yap ya da hesap oluştur")}</a></div>
       <p class="aciklama">Giriş yaparsanız favorileriniz, konularınız, notlarınız ve kaynakçanız hesabınızda saklanır; başka telefonda ya da bilgisayarda da görünür.</p></div>`;
   }
+  const izin = (profilAl().eposta_izni || {}).izin === true;
   return `<div class="grup"><h3>${tx("Hesap")}</h3><div class="kutu">
-    <div class="satir"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(hesapAdi())}</span><span class="sag">${H.kullanici.providerData.some(p => p.providerId === "google.com") ? "Google" : "E-posta"}</span></div>
+    <div class="satir profil-satir">${avatarHtml()}<span class="profil-ad"><b>${esc(hesapAdi())}</b><small>${H.kullanici.providerData.some(p => p.providerId === "google.com") ? "Google" : tx("E-posta")}</small></span>
+      <label class="ikincil-dugme profil-foto-dugme">${tx("Fotoğraf")}<input type="file" id="profil-foto" accept="image/*" hidden></label></div>
+    ${profilAl().foto ? `<button class="satir" id="profil-foto-kaldir">${tx("Profil fotoğrafını kaldır")}</button>` : ""}
+    <label class="satir">${tx("Yenilikler e-postayla gelsin")}<input type="checkbox" class="anahtar" id="eposta-izni" ${izin ? "checked" : ""}></label>
     <div class="satir">${tx("Eşitleme")}<span class="sag">${esc(H.durum || (H.sonEsitleme ? tx("Eşitlendi, {saat}", { saat: saatYaz(H.sonEsitleme) }) : tx("Açık")))}</span></div>
     <button class="satir" id="cikis">${tx("Çıkış yap")}</button>
     <button class="satir" id="hesap-sil" style="color:var(--rapor)">${tx("Hesabı sil")}</button>
-  </div><p class="aciklama">Çıkış yapınca kayıtlarınız bu cihazda da kalır; hesabınızdakiler silinmez. "${tx("Hesabı sil")}" hesabı ve buluttaki bütün verileri kalıcı olarak siler.</p></div>`;
+  </div><p class="aciklama">${tx("E-posta izni isteğe bağlıdır: Arkix'in yeni özellikleri, Arkix Özel yazıları ve duyurular ayda birkaç kez {eposta} adresine gönderilir. İzni buradan istediğiniz an geri alabilirsiniz; her e-postada da ayrılma bağlantısı bulunur.", { eposta: H.kullanici.email || "" })}</p>
+  <p class="aciklama">Çıkış yapınca kayıtlarınız bu cihazda da kalır; hesabınızdakiler silinmez. "${tx("Hesabı sil")}" hesabı ve buluttaki bütün verileri kalıcı olarak siler.</p></div>`;
 }
 function hesapGrubuBagla() {
   const c = document.getElementById("cikis");
   if (c) c.onclick = async () => { await cikisYap(); bildir(tx("Çıkış yapıldı")); rota(true); };
   const sil = document.getElementById("hesap-sil");
   if (sil) sil.onclick = hesapSilLevhasi;
+  const foto = document.getElementById("profil-foto");
+  if (foto) foto.onchange = async e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    try { await profilKaydet({ foto: await fotoKucult(f) }); bildir(tx("Profil fotoğrafı kaydedildi")); }
+    catch (err) { bildir(tx("Fotoğraf yüklenemedi.")); }
+    rota(true);
+  };
+  const kaldir = document.getElementById("profil-foto-kaldir");
+  if (kaldir) kaldir.onclick = async () => { await profilKaydet({ foto: "" }); rota(true); };
+  const izin = document.getElementById("eposta-izni");
+  if (izin) izin.onchange = async e => {
+    const acik = e.target.checked;
+    try {
+      await profilKaydet({ eposta_izni: { izin: acik, tarih: new Date().toISOString(), eposta: H.kullanici.email || "", metin: EPOSTA_IZIN_METNI } });
+      bildir(acik ? tx("Yenilikler e-postanıza gelecek") : tx("E-posta izniniz geri alındı"));
+    } catch (err) { e.target.checked = !acik; bildir(tx("Kaydedilemedi; internet bağlantınızı kontrol edin.")); }
+  };
 }
 
 function sayfaGiris() {

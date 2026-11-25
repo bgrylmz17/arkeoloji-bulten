@@ -1,0 +1,90 @@
+{
+  "_aciklama": "Günün alanı ve bilgisi. Web (desen.js / uygulama.js) ve native aynı dosyayı okur. Gün sırası (UTC gün sayısı) % alan sayısı = alan; (gün sırası / alan sayısı) % bilgi sayısı = bilgi. Görseller yapay zekâ ile üretilmiş temsilî görsellerdir (Canva); gerçek fotoğraf değildir.",
+  "ai_notu": { "tr": "Yapay zekâ ile üretilmiş temsilî görsel", "en": "AI-generated illustrative image" },
+  "alanlar": [
+    {
+      "id": "gobeklitepe", "gorsel": "gunluk/gobeklitepe.jpg",
+      "ad": { "tr": "Göbeklitepe, Şanlıurfa", "en": "Göbekli Tepe, Şanlıurfa" },
+      "bilgiler": [
+        { "tr": "Göbeklitepe'nin en eski yapıları yaklaşık 11.500 yıl önce, çanak çömlek ve yerleşik tarım yaygınlaşmadan önce inşa edildi. T biçimli dikilitaşların en büyükleri 5 metreyi aşar.",
+          "en": "The oldest structures at Göbekli Tepe were built about 11,500 years ago, before pottery and settled farming became widespread. The largest T-shaped pillars are more than 5 metres tall." },
+        { "tr": "Dikilitaşların üzerinde tilki, yaban domuzu, yılan ve akbaba gibi hayvan kabartmaları bulunur. Bazı dikilitaşların yanlarındaki kol ve el kabartmaları, onların insan biçimli figürler olduğunu düşündürür.",
+          "en": "The pillars carry reliefs of animals such as foxes, wild boars, snakes and vultures. Arms and hands carved on the sides of some pillars suggest they represent human-like figures." },
+        { "tr": "Göbeklitepe, Şanlıurfa çevresindeki benzer Neolitik yerleşimlerle birlikte \"Taş Tepeler\" adıyla anılan bölgenin parçasıdır. Karahantepe bu yerleşimlerin en bilinenlerinden biridir. Göbeklitepe 2018'de UNESCO Dünya Mirası Listesi'ne girdi.",
+          "en": "Göbekli Tepe is part of the region known as the \"Taş Tepeler\" (Stone Hills), together with similar Neolithic sites around Şanlıurfa; Karahan Tepe is one of the best known. Göbekli Tepe joined the UNESCO World Heritage List in 2018." }
+      ]
+    },
+    {
+      "id": "stonehenge", "gorsel": "gunluk/stonehenge.jpg",
+      "ad": { "tr": "Stonehenge, İngiltere", "en": "Stonehenge, England" },
+      "bilgiler": [
+        { "tr": "Stonehenge'in büyük sarsen taşları yaklaşık MÖ 2500'de dikildi. Daha küçük \"mavi taşlar\" ise yaklaşık 240 km uzaktaki Galler'in Preseli Tepeleri'nden getirildi.",
+          "en": "Stonehenge's great sarsen stones were raised around 2500 BC. The smaller \"bluestones\" were brought from the Preseli Hills in Wales, about 240 km away." },
+        { "tr": "2024'te yayımlanan bir çalışma, Stonehenge'in ortasındaki \"Sunak Taşı\"nın yaklaşık 700 km uzaktaki kuzeydoğu İskoçya'dan geldiğini gösterdi.",
+          "en": "A study published in 2024 showed that the \"Altar Stone\" at the centre of Stonehenge came from north-east Scotland, about 700 km away." },
+        { "tr": "Stonehenge tek seferde yapılmadı. İlk evresi yaklaşık MÖ 3000'de kazılmış dairesel bir hendek ve settir; anıt sonraki bin yıl boyunca birkaç evrede değiştirildi. Taşlar yaz gündönümünde güneşin doğduğu yöne göre dizilmiştir.",
+          "en": "Stonehenge was not built in one go. Its first phase, around 3000 BC, was a circular ditch and bank; the monument was remodelled in several phases over the following thousand years. The stones are aligned on the midsummer sunrise." }
+      ]
+    },
+    {
+      "id": "catalhoyuk", "gorsel": "gunluk/catalhoyuk.jpg",
+      "ad": { "tr": "Çatalhöyük, Konya", "en": "Çatalhöyük, Konya" },
+      "bilgiler": [
+        { "tr": "Çatalhöyük'te yaklaşık MÖ 7100 ile 5950 arasında yaşandı. Evler birbirine bitişikti ve aralarında sokak yoktu; içeri damdaki bir açıklıktan merdivenle girilirdi.",
+          "en": "Çatalhöyük was inhabited from about 7100 to 5950 BC. Houses were built wall to wall with no streets between them; people entered through an opening in the roof by ladder." },
+        { "tr": "Çatalhöyük'te ölüler çoğunlukla evlerin tabanının altına gömülürdü. Evlerin duvarları sıvanıp boyanır, bazılarına yaban öküzü boynuzları yerleştirilirdi.",
+          "en": "At Çatalhöyük the dead were usually buried beneath the floors of houses. Walls were plastered and painted, and some held the horns of wild cattle (aurochs)." },
+        { "tr": "Çatalhöyük'ü 1958'de James Mellaart tespit etti ve 1961–1965'te kazdı. 1993'ten sonra Ian Hodder yönetiminde uzun soluklu yeni kazılar yapıldı. Alan 2012'de UNESCO Dünya Mirası Listesi'ne girdi.",
+          "en": "Çatalhöyük was identified by James Mellaart in 1958 and excavated by him in 1961–1965. From 1993 a long new project was led by Ian Hodder. The site joined the UNESCO World Heritage List in 2012." }
+      ]
+    },
+    {
+      "id": "efes", "gorsel": "gunluk/efes.jpg",
+      "ad": { "tr": "Efes, İzmir", "en": "Ephesus, İzmir" },
+      "bilgiler": [
+        { "tr": "Efes'teki Celsus Kütüphanesi MS 2. yüzyılın başında, Roma senatörü Tiberius Julius Celsus Polemaeanus'un anısına oğlu tarafından yaptırıldı. Celsus'un lahdi binanın altındaki mezar odasındadır.",
+          "en": "The Library of Celsus at Ephesus was built in the early 2nd century AD by the son of the Roman senator Tiberius Julius Celsus Polemaeanus in his memory. Celsus's sarcophagus lies in a burial chamber beneath the building." },
+        { "tr": "Celsus Kütüphanesi'nin bugün gördüğümüz cephesi, 1970'lerde yıkıntılardan özgün parçalar kullanılarak yeniden ayağa kaldırıldı. Bu yönteme anastilosis denir.",
+          "en": "The façade of the Library of Celsus seen today was re-erected in the 1970s using its original fallen blocks, a method called anastylosis." },
+        { "tr": "Efes'teki Artemis Tapınağı, Antik Dünyanın Yedi Harikası'ndan biriydi; bugün yerinde yalnız bir sütun ayaktadır. Efes 2015'te UNESCO Dünya Mirası Listesi'ne girdi.",
+          "en": "The Temple of Artemis at Ephesus was one of the Seven Wonders of the Ancient World; today a single column stands on its site. Ephesus joined the UNESCO World Heritage List in 2015." }
+      ]
+    },
+    {
+      "id": "hattusa", "gorsel": "gunluk/hattusa.jpg",
+      "ad": { "tr": "Hattuşa, Çorum", "en": "Hattusa, Çorum" },
+      "bilgiler": [
+        { "tr": "Hattuşa, Hitit İmparatorluğu'nun başkentiydi. Burada bulunan binlerce çivi yazılı kil tablet arasında, Hititler ile Mısır arasında yaklaşık MÖ 1259'da yapılan barış antlaşmasının bir nüshası da vardır.",
+          "en": "Hattusa was the capital of the Hittite Empire. Among the thousands of cuneiform clay tablets found there is a copy of the peace treaty made between the Hittites and Egypt around 1259 BC." },
+        { "tr": "Hattuşa'nın yakınındaki Yazılıkaya kaya tapınağında, Hitit tanrı ve tanrıçalarını sıra halinde gösteren kabartmalar bulunur.",
+          "en": "At the rock sanctuary of Yazılıkaya near Hattusa, reliefs show processions of Hittite gods and goddesses." },
+        { "tr": "Hattuşa'nın güney surlarının altından geçen Yerkapı tüneli 70 metreyi aşar. Şehir 1986'da UNESCO Dünya Mirası Listesi'ne girdi.",
+          "en": "The Yerkapı tunnel beneath Hattusa's southern walls is more than 70 metres long. The city joined the UNESCO World Heritage List in 1986." }
+      ]
+    },
+    {
+      "id": "nemrut", "gorsel": "gunluk/nemrut.jpg",
+      "ad": { "tr": "Nemrut Dağı, Adıyaman", "en": "Mount Nemrut, Adıyaman" },
+      "bilgiler": [
+        { "tr": "Nemrut Dağı'nın 2.134 metrelik zirvesindeki tümülüs, Kommagene Kralı I. Antiokhos'un (MÖ 1. yüzyıl) mezar anıtıdır. Depremlerle yıkılan dev heykellerin başları bugün terasların önünde durur.",
+          "en": "The tumulus on the 2,134-metre summit of Mount Nemrut is the funerary monument of King Antiochus I of Commagene (1st century BC). The heads of the colossal statues, toppled by earthquakes, now stand in front of the terraces." },
+        { "tr": "Nemrut'taki tümülüs yaklaşık 50 metre yüksekliğindedir ve kırma taştan yığılmıştır. Antiokhos'un mezar odası bugüne kadar bulunamadı.",
+          "en": "The tumulus on Mount Nemrut is about 50 metres high and made of crushed stone. Antiochus's burial chamber has never been found." },
+        { "tr": "Batı terasındaki \"Aslan Horoskobu\" kabartması, aslanın üzerindeki yıldızlar ve gezegenlerle bir gökyüzü dizilişini gösterir. Nemrut Dağı 1987'de UNESCO Dünya Mirası Listesi'ne girdi.",
+          "en": "The \"Lion Horoscope\" relief on the west terrace shows a lion with stars and planets, recording a configuration of the sky. Mount Nemrut joined the UNESCO World Heritage List in 1987." }
+      ]
+    },
+    {
+      "id": "gize", "gorsel": "gunluk/gize.jpg",
+      "ad": { "tr": "Gize piramitleri, Mısır", "en": "Pyramids of Giza, Egypt" },
+      "bilgiler": [
+        { "tr": "Gize'deki Büyük Piramit, Firavun Khufu (Keops) için yaklaşık MÖ 2560'ta tamamlandı. Yaklaşık 146 metrelik özgün yüksekliğiyle 3.800 yıldan uzun süre insan yapımı en yüksek yapı olarak kaldı.",
+          "en": "The Great Pyramid of Giza was completed for Pharaoh Khufu around 2560 BC. At its original height of about 146 metres it remained the tallest human-made structure for more than 3,800 years." },
+        { "tr": "Büyük Sfenks tek bir ana kaya kütlesinden oyulmuştur ve yaklaşık 73 metre uzunluğundadır.",
+          "en": "The Great Sphinx was carved from a single mass of bedrock and is about 73 metres long." },
+        { "tr": "Büyük Piramit'in yanında 1954'te sökülmüş halde bulunan \"Khufu Gemisi\", sedir ağacından yapılmış yaklaşık 43 metrelik bir teknedir.",
+          "en": "The \"Khufu ship\", found dismantled beside the Great Pyramid in 1954, is a cedar-wood vessel about 43 metres long." }
+      ]
+    }
+  ]
+}
