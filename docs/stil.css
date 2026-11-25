@@ -815,3 +815,34 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .kz-muzik { background: none; border: 1px solid var(--cizgi); border-radius: 99px; min-width: 34px; height: 30px; margin-left: 4px; font: inherit; color: var(--murekkep); cursor: pointer; }
 .kk-ipucu { text-align: center; margin: -4px 16px 10px; color: var(--murekkep); }
 .kk-ipucu small { color: var(--soluk); }
+
+/* Katman Sırala ve rozetler (sirala.js) */
+.sirala-simge { flex-direction: column; gap: 0 !important; width: 52px; height: 52px; border-radius: 10px; overflow: hidden; }
+.sirala-simge i { flex: 1; } .sirala-simge i:nth-child(1) { background: #d9a35a; } .sirala-simge i:nth-child(2) { background: #b8863b; }
+.sirala-simge i:nth-child(3) { background: #8f6236; } .sirala-simge i:nth-child(4) { background: #6b4527; }
+.sirala-oyun { padding: 4px 0 20px; }
+.sirala-ok { text-align: center; color: var(--soluk); font-size: 13px; margin: 4px 0; letter-spacing: .05em; }
+.sirala-liste { list-style: none; margin: 0 16px; padding: 0; display: grid; gap: 8px; counter-reset: k; }
+.sirala-kart { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 14px; border: 1px solid var(--cizgi); background: var(--kagit-2);
+  border-left: 6px solid color-mix(in srgb, var(--okr) 45%, var(--kagit)); }
+.sirala-kart:nth-child(2) { border-left-color: color-mix(in srgb, var(--okr) 60%, var(--kagit)); } .sirala-kart:nth-child(3) { border-left-color: var(--okr); }
+.sirala-kart:nth-child(4) { border-left-color: color-mix(in srgb, var(--okr) 75%, #2a1d12); } .sirala-kart:nth-child(5) { border-left-color: color-mix(in srgb, var(--okr) 55%, #2a1d12); }
+.sirala-kart.dogru { outline: 2px solid var(--okr); }
+.sirala-kart.acik { cursor: pointer; }
+.sirala-kart canvas { width: 48px; height: 48px; image-rendering: pixelated; flex: none; }
+.sirala-kart > span:nth-of-type(1) { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.sirala-kart small { color: var(--soluk); font-size: 12.5px; } .sirala-kart em { font-style: normal; color: var(--okr); font-weight: 600; }
+.sirala-oklar { display: flex; flex-direction: column; gap: 4px; }
+.sirala-oklar button { width: 40px; height: 30px; border-radius: 8px; border: 1px solid var(--cizgi); background: var(--kagit); color: var(--murekkep); font-size: 13px; cursor: pointer; }
+.sirala-oklar button:disabled { opacity: .3; }
+.sirala-durum { text-align: center; color: var(--soluk); margin: 10px 16px; }
+.rozetler { margin: 22px 16px 0; }
+.rozetler h3 small { color: var(--soluk); font-weight: 400; }
+.rozet-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.rozet { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 14px; border: 1px solid var(--cizgi); background: var(--kagit-2);
+  color: inherit; font: inherit; cursor: pointer; }
+.rozet span { font-size: 28px; line-height: 1; }
+.rozet small { font-size: 11.5px; text-align: center; line-height: 1.2; }
+.rozet.kilitli span { filter: grayscale(1); opacity: .3; } .rozet.kilitli small { color: var(--soluk); }
+.kz-defter-oge.altin { border: 2px solid #e3b341; box-shadow: 0 0 0 2px color-mix(in srgb, #e3b341 25%, transparent); }
+.kz-buluntu.nadir canvas { outline: 4px solid #e3b341; }

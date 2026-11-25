@@ -266,12 +266,17 @@ const ARKEOLOGLAR = [
 const arkeolog = () => ARKEOLOGLAR.find(a => a.id === D.kzArkeolog) || null;
 const arkAd = a => DIL === "en" ? a.ad_en : a.ad;
 const arkOzellik = a => DIL === "en" ? a.ozellik_en : a.ozellik;
+/* Haftanın alanı: ISO haftaya göre sırayla; o alanda buluntu puanı ×2 */
+function haftaninAlani() { const h = Number(oyunHaftasi().split("-W")[1]) + Number(oyunHaftasi().slice(0, 4)) * 53; return KZ_ALANLAR[h % KZ_ALANLAR.length]; }
 function kzCarpan(alan) {
-  const a = arkeolog(); if (!a) return 1;
-  if (a.id === "prehistorya" && alan.tarihOncesi) return 1.5;
-  if (a.id === "klasik" && !alan.tarihOncesi) return 1.5;
-  return 1;
+  const a = arkeolog();
+  let c = 1;
+  if (a && a.id === "prehistorya" && alan.tarihOncesi) c = 1.5;
+  if (a && a.id === "klasik" && !alan.tarihOncesi) c = 1.5;
+  if (haftaninAlani().id === alan.id) c *= 2;
+  return c;
 }
+const KZ_NADIR_OLASILIK = 0.07;   // değerli buluntunun "olağanüstü korunmuş" çıkma olasılığı (puan ×3, altın çerçeve)
 function arkeologSecimi(sonra) {
   levhaAc(`<h3>${tx("Arkeoloğunu seç")}</h3><p class="aciklama">${tx("Her arkeoloğun kazıda bir üstünlüğü var. İstediğin zaman değiştirebilirsin.")}</p>
     <div class="ark-izgara">${ARKEOLOGLAR.map(a => `<button class="ark-kart${D.kzArkeolog === a.id ? " secili" : ""}" data-ark="${a.id}">
@@ -407,11 +412,11 @@ function sayfaKaziOyun(arg) {
     <div class="kz-alanlar">${KZ_ALANLAR.map(a => {
       const bulunan = a.buluntular.filter(b => defter[b.id]).length;
       return `<button class="kz-alan" data-alan="${a.id}" ${kd.hak ? "" : "disabled"}><canvas width="160" height="48"></canvas>
-        <span><b>${esc(a.ad)}</b><small>${esc(a.il)} · ${esc(DIL === "en" ? a.donem_en : a.donem)}</small><em>${tx("Defter")}: ${bulunan}/${a.buluntular.length}${kzCarpan(a) > 1 ? " · ×1,5" : ""}</em></span></button>`;
+        <span><b>${esc(a.ad)}</b><small>${esc(a.il)} · ${esc(DIL === "en" ? a.donem_en : a.donem)}</small><em>${tx("Defter")}: ${bulunan}/${a.buluntular.length}${haftaninAlani().id === a.id ? ` · ⭐ ${tx("Haftanın alanı")}` : ""}${kzCarpan(a) > 1 ? ` · ×${String(kzCarpan(a)).replace(".", ",")}` : ""}</em></span></button>`;
     }).join("")}</div>
     ${kd.hak ? "" : `<p class="aciklama" style="text-align:center">${tx("Bugünkü kazı izinlerin bitti. Yarın yeni izin!")}</p>`}
     <section class="kz-defter"><h3>${tx("Buluntu Defteri")} <small>${Object.keys(defter).filter(id => tum.some(b => b.id === id)).length}/${tum.length}</small></h3>
-      <div class="kz-defter-izgara">${tum.map(b => `<button class="kz-defter-oge${defter[b.id] ? "" : " kayip"}" data-b="${b.id}" title="${defter[b.id] ? esc(kzAd(b)) : "?"}">
+      <div class="kz-defter-izgara">${tum.map(b => `<button class="kz-defter-oge${defter[b.id] ? "" : " kayip"}${(D.altinDefter || {})[b.id] ? " altin" : ""}" data-b="${b.id}" title="${defter[b.id] ? esc(kzAd(b)) : "?"}">
         <canvas width="48" height="48"></canvas><small>${defter[b.id] ? esc(kzAd(b)) : "?"}</small></button>`).join("")}</div></section>
     ${skorBolumuHtml("kazi")}</div>`;
   $(".oyun-skor h3").textContent = tx("Kazı Başı · Skor tablosu");
@@ -437,7 +442,7 @@ function kzBasla(alan) {
   const n = KZ_SUTUN * KZ_SATIR, yerler = [...Array(n).keys()].sort(() => Math.random() - .5);
   const hucreler = Array.from({ length: n }, () => ({ derinlik: 3, buluntu: null, bulKat: 0 }));
   // değerliler: 2–3 vuruşta (bulKat 1 ya da 0); sık buluntular: 1–3 vuruşta
-  alan.buluntular.forEach((b, i) => { hucreler[yerler[i]] = { derinlik: 3, buluntu: b, bulKat: Math.random() < .5 ? 1 : 0 }; });
+  alan.buluntular.forEach((b, i) => { hucreler[yerler[i]] = { derinlik: 3, buluntu: b, bulKat: Math.random() < .5 ? 1 : 0, nadir: Math.random() < KZ_NADIR_OLASILIK }; });
   const sikler = KZ_SIK.filter(b => (b.tarihOncesi ? alan.tarihOncesi : true) && (b.cag ? (!alan.tarihOncesi || alan.canak) : true));
   for (let i = alan.buluntular.length; i < alan.buluntular.length + KZ_SIK_SAYI; i++)
     hucreler[yerler[i]] = { derinlik: 3, buluntu: sikler[Math.floor(Math.random() * sikler.length)], bulKat: [2, 2, 1, 1, 0][Math.floor(Math.random() * 5)] };
@@ -500,7 +505,7 @@ function kzCiz() {
     if (h.derinlik > 0 && h.derinlik < 3) { ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(x, y, KZ_HUCRE, 1); ctx.fillRect(x, y, 1, KZ_HUCRE); }
     if (h.derinlik === 0) {
       ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(x, y, KZ_HUCRE, 2); ctx.fillRect(x, y, 2, KZ_HUCRE);
-      if (h.buluntu) spriteCiz(ctx, h.buluntu.id, x + 2, y + 2, 1);
+      if (h.buluntu) { if (h.nadir) { ctx.fillStyle = "#e3b341"; ctx.fillRect(x + 1, y + 1, 14, 14); ctx.fillStyle = t[3]; ctx.fillRect(x + 2, y + 2, 12, 12); } spriteCiz(ctx, h.buluntu.id, x + 2, y + 2, 1); }
       else {
         const d = kzYakinlik(i);
         if (d <= KZ.menzil) { ctx.fillStyle = d === 1 ? "#d2452b" : "#e0a12c"; for (const [a, b] of [[5, 6], [9, 9], [7, 11]].slice(0, d === 1 ? 3 : d === 2 ? 2 : 1)) ctx.fillRect(x + a, y + b, 2, 2); }
@@ -559,8 +564,9 @@ function kzKaz(i) {
   let yeni = null;
   if (h.buluntu && h.derinlik <= h.bulKat) {
     h.derinlik = 0; yeni = h.buluntu; KZ.bulunan.push(yeni);
-    const p = sikMi(yeni) ? yeni.puan : Math.round(yeni.puan * KZ.carpan);
-    KZ.puan += p; yeni = { ...yeni, kazanilan: p };
+    const p = sikMi(yeni) ? yeni.puan : Math.round(yeni.puan * KZ.carpan * (h.nadir ? 3 : 1));
+    KZ.puan += p; yeni = { ...yeni, kazanilan: p, nadir: !!h.nadir };
+    if (h.nadir) { D.altinDefter = D.altinDefter || {}; D.altinDefter[h.buluntu.id] = oyunGunu(); kaydet(); if (typeof rozetVer === "function") rozetVer("nadir"); }
     setTimeout(() => oyunSesi(sikMi(h.buluntu) ? "sik" : "buluntu"), 120);
   }
   kzCiz();
@@ -576,7 +582,7 @@ function kzKaz(i) {
 }
 function kzBuluntuLevhasi(b, alan, ilk, sonra, sik) {
   const ozel = sik === undefined ? !KZ_SIK.some(x => x.id === b.id) : !sik;
-  levhaAc(`<div class="kz-buluntu">${ilk ? `<p class="kz-yeni">${tx("Deftere yeni buluntu!")}</p>` : ""}
+  levhaAc(`<div class="kz-buluntu${b.nadir ? " nadir" : ""}">${b.nadir ? `<p class="kz-yeni">✨ ${tx("Olağanüstü korunmuş! Puan ×3")}</p>` : ""}${ilk ? `<p class="kz-yeni">${tx("Deftere yeni buluntu!")}</p>` : ""}
     <canvas width="144" height="144" id="kz-buyuk"></canvas>
     <h3>${esc(kzAd(b))}</h3>
     <p class="aciklama">${ozel ? `${esc(alan.ad)}, ${esc(alan.il)} · ${esc(DIL === "en" ? alan.donem_en : alan.donem)}` : tx("Sık buluntu")} · <b>+${b.kazanilan || b.puan}</b></p>
@@ -600,6 +606,7 @@ function kzSon(hepsi) {
   const kd = kaziDurumu();
   kd.toplam += KZ.puan; kd.kosular.push({ alan: KZ.alan.id, puan: KZ.puan }); kaydet();
   skorGonder("kazi", kd.toplam, `${kd.kosular.length} kazı`);
+  if (typeof rozetVer === "function") { rozetVer("ilk_kazi"); if (haftaninAlani().id === KZ.alan.id) rozetVer("haftanin"); rozetKontrol(); }
   const ozeller = KZ.bulunan.filter(b => !sikMi(b));
   levhaAc(`<div class="kz-buluntu"><h3>${hepsi ? tx("Açma tamamlandı!") : tx("Kazı bitti")}</h3>
     <p>${esc(KZ.alan.ad)} · ${tx("{n} değerli buluntu", { n: ozeller.length })} · ${tx("{n} sık buluntu", { n: KZ.bulunan.length - ozeller.length })}</p>

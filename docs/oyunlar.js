@@ -17,7 +17,7 @@ function oyunHaftasi(d = new Date()) {   // ISO hafta: 2026-W48
   const yb = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
   return `${t.getUTCFullYear()}-W${String(Math.ceil(((t - yb) / 864e5 + 1) / 7)).padStart(2, "0")}`;
 }
-const OYUN_ADI = { kelime: "Kelime Kazısı", kazi: "Kazı Başı" };
+const OYUN_ADI = { kelime: "Kelime Kazısı", kazi: "Kazı Başı", sirala: "Katman Sırala" };
 
 async function skorGonder(oyun, puan, ayrinti) {
   if (!H.kullanici || H.yok) return false;
@@ -122,9 +122,9 @@ function oyunSesBagla(id = "oyun-ses") {
 
 /* ---------------------------------------------------------------- oyunlar merkezi */
 function sayfaOyunlar() {
-  const kd = kelimeDurumu(), kz = typeof kaziDurumu === "function" ? kaziDurumu() : null;
+  const kd = kelimeDurumu(), kz = typeof kaziDurumu === "function" ? kaziDurumu() : null, sr = typeof siralaDurumu === "function" ? siralaDurumu() : null;
   $("#sayfa").innerHTML = `<div class="oyun-merkez">
-    <p class="aciklama" style="margin:14px 16px 4px">${tx("Her gün yeni bir kelime ve beş kazı izni. Oynarken öğren, skor tablosunda yüksel.")}</p>
+    <p class="aciklama" style="margin:14px 16px 4px">${tx("Her gün yeni bir kelime, yeni bir sıralama ve beş kazı izni. Oynarken öğren, rozet topla, skor tablosunda yüksel.")}</p>
     <a class="oyun-kart kelime-kart" href="#oyun/kelime">
       <span class="oyun-gorsel">${["K", "A", "Z", "I"].map((h, i) => `<i class="tas ${["yerinde", "var", "yok", "yerinde"][i]}">${h}</i>`).join("")}</span>
       <span class="oyun-yazi"><b>${tx("Kelime Kazısı")}</b><small>${tx("Günün arkeoloji terimini 6 denemede bul.")}</small>
@@ -132,12 +132,18 @@ function sayfaOyunlar() {
     <a class="oyun-kart kazioyun-kart" href="#oyun/kazi">
       <span class="oyun-gorsel"><canvas width="48" height="32" id="oyun-kart-kazi"></canvas></span>
       <span class="oyun-yazi"><b>${tx("Kazı Başı")}</b><small>${tx("Ünlü ören yerlerinde kaz, gerçek buluntuları çıkar ve tanı.")}</small>
-        <em>${kz ? tx("Bugün kalan kazı izni: {n}/{t}", { n: kz.hak, t: typeof KZ_HAK !== "undefined" ? KZ_HAK : 5 }) : ""}</em></span></a>
-    ${skorBolumuHtml("kelime")}${skorBolumuHtml("kazi")}
+        <em>${kz ? tx("Bugün kalan kazı izni: {n}/{t}", { n: kz.hak, t: typeof KZ_HAK !== "undefined" ? KZ_HAK : 5 }) : ""}${typeof haftaninAlani === "function" ? ` · ⭐ ${esc(haftaninAlani().ad)} ×2` : ""}</em></span></a>
+    <a class="oyun-kart" href="#oyun/sirala">
+      <span class="oyun-gorsel sirala-simge"><i></i><i></i><i></i><i></i></span>
+      <span class="oyun-yazi"><b>${tx("Katman Sırala")}</b><small>${tx("Günün 5 buluntusunu en eskiden en yeniye diz.")}</small>
+        <em>${sr && sr.bitti ? (sr.kazandi ? tx("Bugün çözdün · {n}/3", { n: sr.denemeler.length }) : tx("Bugün bitti · yarın yeni sıra")) : tx("Bugünün sırası seni bekliyor")}</em></span></a>
+    ${typeof rozetlerHtml === "function" ? rozetlerHtml() : ""}
+    ${skorBolumuHtml("kelime")}${skorBolumuHtml("kazi")}${skorBolumuHtml("sirala")}
   </div>`;
   $$(".oyun-skor h3").forEach(h => { const o = h.closest(".oyun-skor").dataset.oyun; h.textContent = `${tx(OYUN_ADI[o])} · ${tx("Skor tablosu")}`; });
   if (typeof kaziKartGorseli === "function") kaziKartGorseli($("#oyun-kart-kazi"));
   skorBolumuBagla($("#sayfa"));
+  if (typeof rozetleriBagla === "function") rozetleriBagla();
 }
 
 /* ---------------------------------------------------------------- Kelime Kazısı
@@ -268,6 +274,7 @@ function kelimeBitti(kd) {
   if (kd.kazandi) { s.seri = s.son === dun ? s.seri + 1 : 1; s.enIyi = Math.max(s.enIyi, s.seri); s.son = kd.gun; }
   else s.seri = 0;
   D.kelimeSeri = s;
+  if (typeof rozetKontrol === "function") rozetKontrol();
   const puan = kd.kazandi ? Math.max(50, (7 - kd.tahminler.length) * 100 - (kd.ipucu ? 100 : 0)) : 0;
   skorGonder("kelime", puan, `${kd.kazandi ? kd.tahminler.length : "X"}/6`).then(ok => { if (ok && location.hash === "#oyun/kelime") skorBolumuBagla($("#sayfa")); });
 }
