@@ -10,6 +10,8 @@ from __future__ import annotations
 import datetime as dt
 import re
 import urllib.parse
+import urllib.error
+import time
 import xml.etree.ElementTree as ET
 
 from . import kaynaklar
@@ -77,6 +79,21 @@ def kayit_coz(rec, kavramlar) -> dict | None:
     )
 
 
+def _nazik_indir(url: str, deneme: int = 4) -> bytes:
+    """DergiPark çok sık istekte 429 döndürür: Retry-After'a (yoksa 15, 30, 60 sn) uyup yeniden dener;
+    her istekten önce kısa bir ara verir."""
+    for i in range(deneme):
+        time.sleep(1.5)
+        try:
+            return kaynaklar.indir(url, zaman_asimi=60, api=True)[0]
+        except urllib.error.HTTPError as hata:
+            if hata.code not in (429, 503) or i == deneme - 1:
+                raise
+            bekle = hata.headers.get("Retry-After", "")
+            time.sleep(min(120, int(bekle)) if bekle.isdigit() else 15 * 2 ** i)
+    raise RuntimeError("DergiPark: yanıt alınamadı")
+
+
 def topla(son_zaman: str | None, kavramlar, gun: int = 30, bildir=lambda m: None) -> tuple[list[dict], str]:
     """Dönüş: (kayıtlar, bu toplamanın başlangıç zamanı — bir sonraki 'from' değeri)."""
     simdi = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
@@ -90,7 +107,7 @@ def topla(son_zaman: str | None, kavramlar, gun: int = 30, bildir=lambda m: None
     while sayfa < EN_FAZLA_SAYFA:
         sayfa += 1
         bildir(f"DergiPark: sayfa {sayfa}")
-        veri = kaynaklar.indir(TABAN + "?" + urllib.parse.urlencode(params), zaman_asimi=60, api=True)[0]
+        veri = _nazik_indir(TABAN + "?" + urllib.parse.urlencode(params))
         kok = ET.fromstring(veri)
         hata = kok.find("oai:error", NS)
         if hata is not None:

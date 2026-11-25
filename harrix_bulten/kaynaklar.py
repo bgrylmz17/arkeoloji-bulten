@@ -15,6 +15,7 @@ import datetime as dt
 import email.utils
 import gzip
 import hashlib
+import html
 import http.cookiejar
 import json
 import os
@@ -397,6 +398,22 @@ def _yerel(etiket: str) -> str:
     return etiket.rsplit("}", 1)[-1]
 
 
+def _wp_json_rss(veri: bytes) -> bytes:
+    """WordPress REST yanıtını (/wp-json/wp/v2/posts) en basit RSS 2.0'a çevirir: RSS'i kapatan siteler için."""
+    yazilar = json.loads(veri.decode("utf-8", "replace"))
+    kac = lambda s: html.escape(re.sub(r"<[^>]+>", "", html.unescape(s or "")).strip(), quote=False)
+    ogeler = []
+    for y in yazilar if isinstance(yazilar, list) else []:
+        tarih = y.get("date_gmt") or y.get("date") or ""
+        try:
+            tarih = email.utils.format_datetime(dt.datetime.fromisoformat(tarih).replace(tzinfo=dt.timezone.utc))
+        except ValueError:
+            pass
+        ogeler.append(f"<item><title>{kac((y.get('title') or {}).get('rendered'))}</title><link>{html.escape(y.get('link') or '')}</link>"
+                      f"<pubDate>{tarih}</pubDate><description>{kac((y.get('excerpt') or {}).get('rendered'))}</description></item>")
+    return ("<rss version=\"2.0\"><channel>" + "".join(ogeler) + "</channel></rss>").encode("utf-8")
+
+
 def rss_oku(url: str, kaynak_adi: str, kavramlar, kategori: str = "Haber",
             hepsini_al: bool = True, gun: int = 30, baglam_gerekli=False) -> list[dict]:
     """RSS 2.0 veya Atom akışını okur.
@@ -408,7 +425,10 @@ def rss_oku(url: str, kaynak_adi: str, kavramlar, kategori: str = "Haber",
     baglam_gerekli="siki" -> genel haber sitesi (Hürriyet, NTV…): daha sıkı arkeoloji denetimi.
     Akış yazının tamamını veriyorsa (content:encoded) uygulama içi okuyucu için saklanır.
     """
-    kok = xml_coz(_indir(url))
+    ham = _indir(url)
+    if "/wp-json/" in url and ham.lstrip()[:1] == b"[":
+        ham = _wp_json_rss(ham)
+    kok = xml_coz(ham)
     sinir = (dt.date.today() - dt.timedelta(days=gun)).isoformat()
     ogeler = [e for e in kok.iter() if _yerel(e.tag) in ("item", "entry")]
     # akışın dili: <language>tr-TR</language>, xml:lang ya da Google Haberler'in hl= parametresi

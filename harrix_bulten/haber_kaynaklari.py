@@ -28,7 +28,8 @@ from __future__ import annotations
 AKISLAR = [
     # --- doğrudan arkeoloji / tarih
     ("Arkeofili", "https://arkeofili.com/feed/", "arkeo", "tr"),
-    ("Arkeonews", "https://arkeonews.net/feed/", "arkeo", "en"),
+    # RSS kapandı (Kasım 2026: /feed/ ana sayfaya yönleniyor); WordPress REST adresi aynı yazıları veriyor
+    ("Arkeonews", "https://arkeonews.net/wp-json/wp/v2/posts?per_page=30&_fields=title,link,date_gmt,excerpt", "arkeo", "en"),
     ("ScienceDaily Arkeoloji", "https://www.sciencedaily.com/rss/fossils_ruins/archaeology.xml", "bilim", "en"),
     ("Phys.org Arkeoloji", "https://phys.org/rss-feed/science-news/archaeology/", "bilim", "en"),
     ("Live Science", "https://www.livescience.com/feeds.xml", "bilim", "en"),
@@ -59,7 +60,7 @@ AKISLAR = [
     ("Evrim Ağacı", "https://evrimagaci.org/rss.xml", "genel", "tr"),
     ("Bant Mag", "https://bantmag.com/feed/", "genel", "tr"),
     # --- Türkiye'den İngilizce yayınlar (Anadolu kazıları sık geçer)
-    ("Türkiye Today", "https://www.turkiyetoday.com/feed", "genel", "en"),
+    # Türkiye Today: akış Kasım 2026'da kaldırıldı; site Google Haberler site sorgusuyla taranıyor (SITE_GRUPLARI)
     ("Hürriyet Daily News", "https://www.hurriyetdailynews.com/rss", "genel", "en"),
     ("Daily Sabah", "https://www.dailysabah.com/rss/arts", "genel", "en"),
 ]
