@@ -175,7 +175,9 @@ def duyurular_ve_banner(kullanici: dict, simdiki: str) -> dict:
         if not isinstance(d, dict) or not d.get("baslik") or (d.get("bitis") and d["bitis"] < bugun):
             continue
         duyurular.append({"id": d.get("id") or f"duyuru-{i}", "baslik": d["baslik"], "ozet": d.get("ozet", ""),
-                          "url": d.get("url", ""), "tarih": d.get("tarih", bugun), "onemli": bool(d.get("onemli", True))})
+                          "url": d.get("url", ""), "tarih": d.get("tarih", bugun), "onemli": bool(d.get("onemli", True)),
+                          # yalnizEskiAdres: yalnız eski github.io kopyasında görünür (yeni kod gizler)
+                          **({"yalnizEskiAdres": True} if d.get("yalnizEskiAdres") else {})})
     banner = kullanici.get("banner")
     sonuc = {}
     if duyurular:
