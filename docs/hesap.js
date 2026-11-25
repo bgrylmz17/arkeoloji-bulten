@@ -39,22 +39,22 @@ async function firebaseYukle() {
 }
 
 const HATA_METNI = {
-  "auth/invalid-email": "E-posta adresi geçerli değil.",
-  "auth/missing-password": "Şifreyi yazın.",
-  "auth/weak-password": "Şifre en az 6 karakter olmalı.",
-  "auth/email-already-in-use": "Bu e-postayla zaten bir hesap var. \"Giriş yap\"ı deneyin.",
-  "auth/invalid-credential": "E-posta ya da şifre yanlış.",
-  "auth/wrong-password": "E-posta ya da şifre yanlış.",
-  "auth/user-not-found": "Bu e-postayla bir hesap yok. \"Hesap oluştur\"u deneyin.",
-  "auth/too-many-requests": "Çok fazla deneme yapıldı. Birkaç dakika sonra yeniden deneyin.",
-  "auth/network-request-failed": "İnternet bağlantısı yok.",
-  "auth/popup-closed-by-user": "Google penceresi kapatıldı.",
-  "auth/cancelled-popup-request": "Google penceresi kapatıldı.",
-  "auth/unauthorized-domain": "Bu adres Firebase'de izinli değil (yönetici ayarı).",
-  "ayar-yok": "Hesap sistemi henüz kurulmadı.",
-  "auth/requires-recent-login": "Güvenlik için önce çıkış yapıp yeniden giriş yapın, sonra hesabı silin.",
+  "auth/invalid-email": tx("E-posta adresi geçerli değil."),
+  "auth/missing-password": tx("Şifreyi yazın."),
+  "auth/weak-password": tx("Şifre en az 6 karakter olmalı."),
+  "auth/email-already-in-use": tx("Bu e-postayla zaten bir hesap var. \"Giriş yap\"ı deneyin."),
+  "auth/invalid-credential": tx("E-posta ya da şifre yanlış."),
+  "auth/wrong-password": tx("E-posta ya da şifre yanlış."),
+  "auth/user-not-found": tx("Bu e-postayla bir hesap yok. \"Hesap oluştur\"u deneyin."),
+  "auth/too-many-requests": tx("Çok fazla deneme yapıldı. Birkaç dakika sonra yeniden deneyin."),
+  "auth/network-request-failed": tx("İnternet bağlantısı yok."),
+  "auth/popup-closed-by-user": tx("Google penceresi kapatıldı."),
+  "auth/cancelled-popup-request": tx("Google penceresi kapatıldı."),
+  "auth/unauthorized-domain": tx("Bu adres Firebase'de izinli değil (yönetici ayarı)."),
+  "ayar-yok": tx("Hesap sistemi henüz kurulmadı."),
+  "auth/requires-recent-login": tx("Güvenlik için önce çıkış yapıp yeniden giriş yapın, sonra hesabı silin."),
 };
-const hataMetni = e => HATA_METNI[e && (e.code || e.message)] || "Giriş yapılamadı. Biraz sonra yeniden deneyin.";
+const hataMetni = e => HATA_METNI[e && (e.code || e.message)] || tx("Giriş yapılamadı. Biraz sonra yeniden deneyin.");
 
 /* ---------------------------------------------------------------- birleştirme */
 function birlestir(yerel, bulut) {
@@ -105,7 +105,7 @@ async function buluttaKaydet() {
     try { localStorage.setItem(DEPO_ANAHTARI, JSON.stringify(D)); } catch (e) {}
     if (n >= 400) hesapDegisti();   // kalanlar bir sonraki partide
   } catch (e) {
-    H.durum = "Eşitlenemedi; internet gelince yeniden denenecek.";
+    H.durum = tx("Eşitlenemedi; internet gelince yeniden denenecek.");
   }
 }
 
@@ -156,7 +156,7 @@ async function oturumAcildi(kullanici) {
       try { localStorage.setItem(DEPO_ANAHTARI, JSON.stringify(D)); } catch (e) {}
       await buluttaKaydet();
     }
-  } catch (e) { H.durum = "Hesaptaki kayıtlar şimdi alınamadı; internet gelince eşitlenecek."; }
+  } catch (e) { H.durum = tx("Hesaptaki kayıtlar şimdi alınamadı; internet gelince eşitlenecek."); }
   dinle();
 }
 
@@ -226,14 +226,14 @@ async function hesabiSil() {
   D.uid = null; D.esitleme = 0; kaydet();
 }
 function hesapSilLevhasi() {
-  levhaAc(`<h3>Hesabı sil</h3>
+  levhaAc(`<h3>${tx("Hesabı sil")}</h3>
     <p class="aciklama">${esc(hesapAdi())} hesabı ve hesapta saklanan favoriler, konular, notlar ve kaynakça kalıcı olarak silinir. Bu işlem geri alınamaz. Bu cihazdaki kayıtlarınız silinmez.</p>
-    <p style="margin:14px 0 0"><button class="buyuk-dugme tehlike" id="sil-onay">Hesabı kalıcı olarak sil</button></p>
-    <p style="text-align:center"><button class="ikincil-dugme" id="sil-vazgec">Vazgeç</button></p>`, lv => {
+    <p style="margin:14px 0 0"><button class="buyuk-dugme tehlike" id="sil-onay">${tx("Hesabı kalıcı olarak sil")}</button></p>
+    <p style="text-align:center"><button class="ikincil-dugme" id="sil-vazgec">${tx("Vazgeç")}</button></p>`, lv => {
     lv.querySelector("#sil-vazgec").onclick = levhaKapat;
     lv.querySelector("#sil-onay").onclick = async e => {
-      e.target.disabled = true; e.target.textContent = "Siliniyor…";
-      try { await hesabiSil(); levhaKapat(); bildir("Hesabınız ve buluttaki verileriniz silindi"); rota(true); }
+      e.target.disabled = true; e.target.textContent = tx("Siliniyor…");
+      try { await hesabiSil(); levhaKapat(); bildir(tx("Hesabınız ve buluttaki verileriniz silindi")); rota(true); }
       catch (err) {
         levhaKapat(); bildir(hataMetni(err));
         if (H.auth && H.auth.currentUser) { H.kullanici = H.auth.currentUser; dinle(); }
@@ -245,58 +245,58 @@ function hesapSilLevhasi() {
 /* ---------------------------------------------------------------- arayüz */
 function hesapAdi() {
   const k = H.kullanici;
-  return k ? (k.displayName || k.email || "Hesabınız") : "";
+  return k ? (k.displayName || k.email || tx("Hesabınız")) : "";
 }
 
 function hesapGrubuHtml() {
   if (H.yok) return "";
-  if (!H.hazir) return `<div class="grup"><h3>Hesap</h3><div class="kutu"><div class="satir">Yükleniyor…</div></div></div>`;
+  if (!H.hazir) return `<div class="grup"><h3>${tx("Hesap")}</h3><div class="kutu"><div class="satir">${tx("Yükleniyor…")}</div></div></div>`;
   if (!H.kullanici) {
-    return `<div class="grup"><h3>Hesap</h3><div class="kutu">
-      <a class="satir" href="#giris">Giriş yap ya da hesap oluştur</a></div>
+    return `<div class="grup"><h3>${tx("Hesap")}</h3><div class="kutu">
+      <a class="satir" href="#giris">${tx("Giriş yap ya da hesap oluştur")}</a></div>
       <p class="aciklama">Giriş yaparsanız favorileriniz, konularınız, notlarınız ve kaynakçanız hesabınızda saklanır; başka telefonda ya da bilgisayarda da görünür.</p></div>`;
   }
-  return `<div class="grup"><h3>Hesap</h3><div class="kutu">
+  return `<div class="grup"><h3>${tx("Hesap")}</h3><div class="kutu">
     <div class="satir"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(hesapAdi())}</span><span class="sag">${H.kullanici.providerData.some(p => p.providerId === "google.com") ? "Google" : "E-posta"}</span></div>
-    <div class="satir">Eşitleme<span class="sag">${esc(H.durum || (H.sonEsitleme ? "Eşitlendi, " + saatYaz(H.sonEsitleme) : "Açık"))}</span></div>
-    <button class="satir" id="cikis">Çıkış yap</button>
-    <button class="satir" id="hesap-sil" style="color:var(--rapor)">Hesabı sil</button>
-  </div><p class="aciklama">Çıkış yapınca kayıtlarınız bu cihazda da kalır; hesabınızdakiler silinmez. "Hesabı sil" hesabı ve buluttaki bütün verileri kalıcı olarak siler.</p></div>`;
+    <div class="satir">${tx("Eşitleme")}<span class="sag">${esc(H.durum || (H.sonEsitleme ? tx("Eşitlendi, {saat}", { saat: saatYaz(H.sonEsitleme) }) : tx("Açık")))}</span></div>
+    <button class="satir" id="cikis">${tx("Çıkış yap")}</button>
+    <button class="satir" id="hesap-sil" style="color:var(--rapor)">${tx("Hesabı sil")}</button>
+  </div><p class="aciklama">Çıkış yapınca kayıtlarınız bu cihazda da kalır; hesabınızdakiler silinmez. "${tx("Hesabı sil")}" hesabı ve buluttaki bütün verileri kalıcı olarak siler.</p></div>`;
 }
 function hesapGrubuBagla() {
   const c = document.getElementById("cikis");
-  if (c) c.onclick = async () => { await cikisYap(); bildir("Çıkış yapıldı"); rota(true); };
+  if (c) c.onclick = async () => { await cikisYap(); bildir(tx("Çıkış yapıldı")); rota(true); };
   const sil = document.getElementById("hesap-sil");
   if (sil) sil.onclick = hesapSilLevhasi;
 }
 
 function sayfaGiris() {
   if (H.kullanici) {
-    $("#sayfa").innerHTML = bosHtml(`${hesapAdi()} olarak giriş yapıldı`, "Kayıtlarınız hesabınızla eşitleniyor.",
-      `<a class="ikincil-dugme" href="#bugun">Bültene dön</a>`);
+    $("#sayfa").innerHTML = bosHtml(`${hesapAdi()} olarak giriş yapıldı`, tx("Kayıtlarınız hesabınızla eşitleniyor."),
+      `<a class="ikincil-dugme" href="#bugun">${tx("Bültene dön")}</a>`);
     return;
   }
   $("#sayfa").innerHTML = `<div class="giris">
     <img src="ikon/logo.svg" alt="" class="giris-logo">
-    <h2>Kayıtlarınız her cihazda</h2>
+    <h2>${tx("Kayıtlarınız her cihazda")}</h2>
     <p class="giris-metin">Giriş yaparsanız favorileriniz, konularınız, notlarınız ve kaynakçanız hesabınızda saklanır.
       Telefon değişse de kaybolmaz; bilgisayardan da açabilirsiniz.</p>
     <button class="buyuk-dugme google" id="g-google">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" stroke="none" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z"/><path fill="#34A853" stroke="none" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path fill="#FBBC05" stroke="none" d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1a10 10 0 0 0 0 9.2z"/><path fill="#EA4335" stroke="none" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.4L6.4 10C7.2 7.8 9.4 6 12 6z"/></svg>
       Google ile devam et</button>
-    <div class="ayrac"><span>ya da e-postayla</span></div>
+    <div class="ayrac"><span>${tx("ya da e-postayla")}</span></div>
     <form id="g-form" novalidate>
       <label class="alan"><span>E-posta</span><input id="g-eposta" type="email" autocomplete="email" inputmode="email" autocapitalize="off" required></label>
-      <label class="alan"><span>Şifre</span><input id="g-sifre" type="password" autocomplete="current-password" minlength="6" required></label>
+      <label class="alan"><span>${tx("Şifre")}</span><input id="g-sifre" type="password" autocomplete="current-password" minlength="6" required></label>
       <p class="giris-hata" id="g-hata" role="alert"></p>
       <div class="iki-dugme">
-        <button class="buyuk-dugme" type="submit" id="g-gir">Giriş yap</button>
-        <button class="buyuk-dugme ikinci" type="button" id="g-yeni">Hesap oluştur</button>
+        <button class="buyuk-dugme" type="submit" id="g-gir">${tx("Giriş yap")}</button>
+        <button class="buyuk-dugme ikinci" type="button" id="g-yeni">${tx("Hesap oluştur")}</button>
       </div>
-      <p style="text-align:center;margin:14px 0 0"><a href="#" id="g-unuttum">Şifremi unuttum</a></p>
+      <p style="text-align:center;margin:14px 0 0"><a href="#" id="g-unuttum">${tx("Şifremi unuttum")}</a></p>
     </form>
-    <p style="text-align:center;margin:26px 0 0"><a href="#bugun" id="g-gec" class="ikincil-dugme">Giriş yapmadan devam et</a></p>
-    <p class="aciklama" style="text-align:center">Giriş yapmazsanız kayıtlarınız yalnızca bu cihazda kalır. İstediğiniz zaman Ayarlar'dan giriş yapabilirsiniz.</p>
+    <p style="text-align:center;margin:26px 0 0"><a href="#bugun" id="g-gec" class="ikincil-dugme">${tx("Giriş yapmadan devam et")}</a></p>
+    <p class="aciklama" style="text-align:center">${tx("Giriş yapmazsanız kayıtlarınız yalnızca bu cihazda kalır. İstediğiniz zaman Ayarlar'dan giriş yapabilirsiniz.")}</p>
   </div>`;
   const hata = m => { $("#g-hata").textContent = m || ""; };
   const kilitle = k => document.querySelectorAll(".giris button").forEach(b => b.disabled = k);
@@ -310,8 +310,8 @@ function sayfaGiris() {
   const eposta = async yeni => {
     hata("");
     const ep = $("#g-eposta").value.trim(), sf = $("#g-sifre").value;
-    if (!ep || !sf) { hata("E-posta ve şifreyi yazın."); return; }
-    if (yeni && sf.length < 6) { hata("Şifre en az 6 karakter olmalı."); return; }
+    if (!ep || !sf) { hata(tx("E-posta ve şifreyi yazın.")); return; }
+    if (yeni && sf.length < 6) { hata(tx("Şifre en az 6 karakter olmalı.")); return; }
     kilitle(true);
     try { await epostaIleGir(ep, sf, yeni); bitti(); } catch (e) { hata(hataMetni(e)); }
     kilitle(false);
@@ -321,8 +321,8 @@ function sayfaGiris() {
   $("#g-unuttum").onclick = async e => {
     e.preventDefault();
     const ep = $("#g-eposta").value.trim();
-    if (!ep) { hata("Önce e-posta adresinizi yazın."); return; }
-    try { await sifreSifirla(ep); bildir("Şifre yenileme bağlantısı e-postanıza gönderildi"); hata(""); }
+    if (!ep) { hata(tx("Önce e-posta adresinizi yazın.")); return; }
+    try { await sifreSifirla(ep); bildir(tx("Şifre yenileme bağlantısı e-postanıza gönderildi")); hata(""); }
     catch (er) { hata(hataMetni(er)); }
   };
 }
