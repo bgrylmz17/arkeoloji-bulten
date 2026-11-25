@@ -497,6 +497,52 @@ def ozel_yazilar(eski_kayitlar: dict, calisma: str) -> list[dict]:
     return yazilar
 
 
+# ---------------------------------------------------------------- topluluk (Firestore, herkese açık okuma)
+# Yorum sayıları ve son yorumlar bültene yazılır: listede sayı, Bugün'de "Tartışılanlar". Yöneticinin bültenden
+# kaldırdığı kayıtlar (gizli_kayitlar/{kimlik}) atılır. Kurallar: mobil/firestore.rules.
+FIRESTORE = "https://firestore.googleapis.com/v1/projects/harrix-bulten/databases/(default)/documents"
+
+
+def _fs_deger(v: dict):
+    if "stringValue" in v: return v["stringValue"]
+    if "booleanValue" in v: return v["booleanValue"]
+    if "integerValue" in v: return int(v["integerValue"])
+    if "timestampValue" in v: return v["timestampValue"]
+    return None
+
+
+def _fs_sorgu(koleksiyon: str, suzgec: dict | None = None) -> list[dict]:
+    govde = {"structuredQuery": {"from": [{"collectionId": koleksiyon}], **({"where": suzgec} if suzgec else {}), "limit": 5000}}
+    istek = urllib.request.Request(FIRESTORE + ":runQuery", data=json.dumps(govde).encode(), headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(istek, timeout=30) as y:
+        sonuc = json.load(y)
+    belgeler = []
+    for s in sonuc:
+        b = s.get("document")
+        if b:
+            belgeler.append({"_id": b["name"].rsplit("/", 1)[-1], **{a: _fs_deger(v) for a, v in b.get("fields", {}).items()}})
+    return belgeler
+
+
+def topluluk_oku() -> tuple[dict, list[dict], set[str]]:
+    """(yorum sayıları {kayit: n}, son yorumlar, bültenden kaldırılan kayıt kimlikleri). Hata olursa boş döner."""
+    sayilar, son, gizli = {}, [], set()
+    try:
+        yorumlar = _fs_sorgu("yorumlar", {"fieldFilter": {"field": {"fieldPath": "gizli"}, "op": "EQUAL", "value": {"booleanValue": False}}})
+        for y in yorumlar:
+            sayilar[y.get("kayit", "")] = sayilar.get(y.get("kayit", ""), 0) + 1
+        yorumlar.sort(key=lambda y: y.get("tarih") or "", reverse=True)
+        son = [{"k": y.get("kayit", ""), "ad": (y.get("ad") or "")[:40], "av": y.get("avatar") or "", "u": bool(y.get("uzman")),
+                "m": re.sub(r"\s+", " ", y.get("metin") or "")[:160], "t": (y.get("tarih") or "")[:19]} for y in yorumlar[:8]]
+    except Exception as hata:  # noqa: BLE001
+        print(f"Yorumlar okunamadı: {hata}", flush=True)
+    try:
+        gizli = {b.get("kayit") or urllib.parse.unquote(b["_id"]) for b in _fs_sorgu("gizli_kayitlar")}
+    except Exception as hata:  # noqa: BLE001
+        print(f"Kaldırılan kayıtlar okunamadı: {hata}", flush=True)
+    return sayilar, son, gizli
+
+
 def satira_cevir(r) -> dict:
     return {k: r[k] for k in r.keys()}
 
@@ -656,8 +702,21 @@ def main() -> int:
         once = len(tum)
         tum = [k for k in tum if not engelli_mi(k, engel)]
         print(f"Kaldırma talebiyle engellenen: {once - len(tum)} kayıt", flush=True)
+    # topluluk: yöneticinin kaldırdığı kayıtlar atılır; yorum sayıları ve son yorumlar eklenir
+    yorum_sayilari, son_yorumlar, gizli_kayitlar = topluluk_oku()
+    if gizli_kayitlar:
+        once = len(tum)
+        tum = [k for k in tum if k["i"] not in gizli_kayitlar]
+        print(f"Yöneticinin kaldırdığı: {once - len(tum)} kayıt", flush=True)
     # Arkix Özel yazılar saklama süresine ve kayıt sınırına takılmaz
     tum = sorted(ozeller + tum, key=lambda k: (k.get("g", ""), k.get("t", "")), reverse=True)
+    for k in tum:
+        if yorum_sayilari.get(k["i"]):
+            k["ys"] = yorum_sayilari[k["i"]]
+        else:
+            k.pop("ys", None)
+    kimlikler = {k["i"] for k in tum}
+    son_yorumlar = [y for y in son_yorumlar if y["k"] in kimlikler][:5]
 
     kavramlar = [{"id": k.kimlik, "ad": k.kisa, "en": k.en[0], "grup": k.grup,
                   "q": terimler.openalex_sorgusu(k)} for k in terimler.TERIMLER]
@@ -673,6 +732,7 @@ def main() -> int:
         "kazi": harrix_hesap.ozet_metni(kazi) if kazi else "",
         "kavramlar": kavramlar, "kayitlar": tum,
         **({"sesli_ozet": ozet_ses} if ozet_ses else {}),
+        **({"son_yorumlar": son_yorumlar} if son_yorumlar else {}),
         **duyurular_ve_banner(kullanici, calisma),
     })
     yaz(VERI / "sozler.json", sozler.SOZLER)

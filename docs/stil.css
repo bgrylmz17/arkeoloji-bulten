@@ -513,3 +513,32 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .takip-cip button { border: 0; background: none; color: var(--soluk); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
 .takip-form .bolumlu { margin: 0; }
 .grup h3 small { color: var(--soluk); font-weight: 400; }
+
+/* 1.12 — yorumlar görünür, bildir, tartışılanlar, tanıtım */
+.yorum-sayi { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--okr); font-weight: 700; }
+.yorum-sayi svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.eylem.eylem-yorum { border-color: var(--okr); background: var(--okr-zemin); }
+.kayit-bildir { margin: 10px 0 0; text-align: center; }
+.kayit-bildir button { background: none; border: 0; padding: 4px 8px; color: var(--soluk); font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; }
+.tartisilan { margin: 0 16px 14px; }
+.tartisilan h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--okr); margin: 0 0 8px; }
+.tartisilan-kart { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; margin-bottom: 8px; border-radius: 12px;
+  border: 1px solid var(--cizgi); background: var(--kagit-2); color: inherit; text-decoration: none; }
+.tartisilan-kart img { width: 32px; height: 32px; border-radius: 50%; flex: none; }
+.tartisilan-kart p { margin: 0; font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tartisilan-kart p span:not(.uzman-rozet) { color: var(--murekkep); }
+.tartisilan-kart small { display: block; margin-top: 3px; color: var(--soluk); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tanitim-kutu { position: relative; text-align: center; max-width: 460px; }
+.tanitim-atla { position: absolute; top: 10px; right: 12px; background: none; border: 0; color: var(--soluk); font: inherit; font-size: 14px; cursor: pointer; }
+.tanitim-ikon { margin: 8px auto 6px; width: 96px; height: 96px; display: grid; place-items: center; border-radius: 50%; background: var(--okr-zemin); }
+.tanitim-ikon img { width: 96px; height: 96px; border-radius: 50%; }
+.tanitim-ikon span { font-size: 46px; line-height: 1; }
+.tanitim-kutu p { text-align: left; line-height: 1.55; min-height: 7.5em; }
+.tanitim-nokta { display: flex; justify-content: center; gap: 6px; margin: 6px 0 14px; }
+.tanitim-nokta i { width: 7px; height: 7px; border-radius: 50%; background: var(--cizgi); }
+.tanitim-nokta i.secili { background: var(--okr); width: 20px; border-radius: 99px; }
+.tanitim-dugmeler { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.tanitim-dugmeler .buyuk-dugme { flex: 1; }
+.yorum-cip { margin-left: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 99px; border: 1px solid var(--okr);
+  background: var(--okr-zemin); color: var(--okr); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; vertical-align: middle; }
+.yorum-cip svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }

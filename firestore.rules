@@ -50,10 +50,10 @@ service cloud.firestore {
       allow read, delete: if yonetici();
     }
 
-    // Hata bildirimi, istek ve öneri: herkes gönderebilir (giriş gerekmez), yalnız yönetici görür
+    // Hata bildirimi, istek, öneri ve kayıt bildirimi (alakasız/hatalı haber): herkes gönderebilir, yalnız yönetici görür
     match /geribildirim/{id} {
       allow create: if request.resource.data.keys().hasOnly(['tur', 'metin', 'eposta', 'uid', 'surum', 'cihaz', 'sayfa', 'tarih', 'durum'])
-        && request.resource.data.tur in ['hata', 'istek', 'diger']
+        && request.resource.data.tur in ['hata', 'istek', 'diger', 'kayit']
         && request.resource.data.metin is string && request.resource.data.metin.size() > 0 && request.resource.data.metin.size() <= 3000
         && request.resource.data.eposta is string && request.resource.data.eposta.size() <= 120
         && request.resource.data.surum is string && request.resource.data.surum.size() <= 40
@@ -63,6 +63,12 @@ service cloud.firestore {
         && request.resource.data.tarih == request.time
         && (request.resource.data.uid == null || ben(request.resource.data.uid));
       allow read, update, delete: if yonetici();
+    }
+
+    // Yöneticinin bültenden kaldırdığı kayıtlar: toplayıcı okur (herkese açık), yalnız yönetici yazar
+    match /gizli_kayitlar/{id} {
+      allow read: if true;
+      allow write: if yonetici();
     }
 
     // Uzman rozeti: herkes okur (yorum yazarken denetlenir), yalnız yönetici verir

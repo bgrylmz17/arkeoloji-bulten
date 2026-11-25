@@ -89,7 +89,11 @@ async function yorumlarCiz(r) {
   const makale = document.querySelector("#sayfa article.ayrinti");
   if (!makale || H.yok) return;
   let bolum = document.getElementById("yorumlar");
-  if (!bolum) { bolum = document.createElement("section"); bolum.id = "yorumlar"; bolum.className = "yorumlar"; makale.appendChild(bolum); }
+  if (!bolum) {
+    bolum = document.createElement("section"); bolum.id = "yorumlar"; bolum.className = "yorumlar";
+    const kunye = makale.querySelector(":scope > .kunye");   // yorumlar APA künyesinin üstünde, eylemlerin hemen altında
+    if (kunye) makale.insertBefore(bolum, kunye); else makale.appendChild(bolum);
+  }
   bolum.innerHTML = `<h3>${tx("Yorumlar")}</h3><p class="aciklama">${tx("Yükleniyor…")}</p>`;
   let liste = [];
   try { liste = (await yorumlariGetir(r.i)).filter(y => !gizliKisiler().includes(y.uid)); }
@@ -153,17 +157,24 @@ async function yorumEylemi(tur, id, liste, r) {
 }
 
 /* ---------------------------------------------------------------- hata bildirimi, istek ve öneri */
-function geriBildirimLevhasi(tur) {
-  const baslik = tur === "hata" ? tx("Hata bildir") : tx("İstek ya da öneri");
+const KAYIT_NEDENLERI = ["Arkeolojiyle ilgisi yok", "Aynı haber birden çok kez var", "Çeviri ya da başlık yanlış", "Bağlantı açılmıyor", "Tarih ya da tür yanlış"];
+function geriBildirimLevhasi(tur, r) {
+  const baslik = tur === "hata" ? tx("Hata bildir") : tur === "kayit" ? tx("Bu kaydı bildir") : tx("İstek ya da öneri");
   levhaAc(`<h3>${baslik}</h3>
-    <p class="aciklama">${tur === "hata" ? tx("Ne yapıyordunuz, ne oldu, ne bekliyordunuz? Ne kadar ayrıntı, o kadar hızlı çözüm.") : tx("Hangi kaynağı, hangi özelliği görmek istersiniz? Her öneriyi okuyoruz.")}</p>
-    <textarea id="gb-metin" maxlength="3000" rows="6" style="width:100%"></textarea>
+    ${tur === "kayit" && r ? `<p class="aciklama"><b>${esc(baslikGoster(r))}</b></p>
+      <div class="kutu">${KAYIT_NEDENLERI.map((n, i) => `<label class="satir"><span>${tx(n)}</span><input type="radio" name="gb-neden" value="${esc(n)}" ${i === 0 ? "checked" : ""}></label>`).join("")}</div>
+      <p class="aciklama" style="margin-top:10px">${tx("İsterseniz kısaca açıklayın:")}</p>`
+    : `<p class="aciklama">${tur === "hata" ? tx("Ne yapıyordunuz, ne oldu, ne bekliyordunuz? Ne kadar ayrıntı, o kadar hızlı çözüm.") : tx("Hangi kaynağı, hangi özelliği görmek istersiniz? Her öneriyi okuyoruz.")}</p>`}
+    <textarea id="gb-metin" maxlength="3000" rows="${tur === "kayit" ? 3 : 6}" style="width:100%"></textarea>
     <input id="gb-eposta" type="email" maxlength="120" style="width:100%;margin-top:8px" placeholder="${tx("E-posta (isteğe bağlı, size dönmemiz için)")}" value="${esc((H.kullanici && H.kullanici.email) || "")}">
     <label class="onay-satir" style="margin-top:8px"><input type="checkbox" id="gb-cihaz" checked> ${tx("Sürüm ve cihaz bilgisini ekle")}</label>
     <p style="margin:14px 0 0"><button class="buyuk-dugme" id="gb-gonder">${tx("Gönder")}</button></p>`, lv => {
     lv.querySelector("#gb-gonder").onclick = async e => {
-      const metin = lv.querySelector("#gb-metin").value.trim();
-      if (!metin) { bildir(tx("Lütfen birkaç cümle yazın")); return; }
+      let metin = lv.querySelector("#gb-metin").value.trim();
+      if (tur === "kayit") {
+        const neden = (lv.querySelector('input[name="gb-neden"]:checked') || {}).value || "";
+        metin = `[${neden}] ${r ? r.b : ""}${metin ? "\n" + metin : ""}`;
+      } else if (!metin) { bildir(tx("Lütfen birkaç cümle yazın")); return; }
       e.target.disabled = true;
       try {
         const { fs } = await firebaseYukle();
@@ -171,11 +182,23 @@ function geriBildirimLevhasi(tur) {
         await fs.addDoc(fs.collection(H.db, "geribildirim"), {
           tur, metin: metin.slice(0, 3000), eposta: lv.querySelector("#gb-eposta").value.trim().slice(0, 120),
           uid: H.kullanici ? H.kullanici.uid : null, surum: `web ${SURUM}`,
-          cihaz: cihaz ? navigator.userAgent.slice(0, 200) : "", sayfa: cihaz ? location.hash.slice(0, 120) : "",
+          cihaz: cihaz ? navigator.userAgent.slice(0, 200) : "", sayfa: tur === "kayit" && r ? `k/${r.i}`.slice(0, 120) : cihaz ? location.hash.slice(0, 120) : "",
           tarih: fs.serverTimestamp(), durum: "yeni" });
-        levhaKapat(); bildir(tx("Teşekkürler! Bildiriminiz bize ulaştı."));
+        levhaKapat(); bildir(tur === "kayit" ? tx("Teşekkürler! Kayıt incelenecek.") : tx("Teşekkürler! Bildiriminiz bize ulaştı."));
       } catch (err) { e.target.disabled = false; bildir(tx("Gönderilemedi. Biraz sonra yeniden deneyin ya da harrixapp@gmail.com adresine yazın.")); }
     };
+  });
+}
+
+/* Üst çubuktaki bildir simgesi: ayrıntı sayfasındaysa o kaydı bildirme seçeneği de çıkar */
+function bildirSecimi() {
+  const m = /^#k\/(.+)$/.exec(location.hash), r = m ? DIZIN.get(decodeURIComponent(m[1])) : null;
+  levhaAc(`<h3>${tx("Bildir")}</h3><div class="kutu">
+    ${r ? `<button class="satir" data-b="kayit">${tx("Bu kaydı bildir (alakasız, yinelenen, hatalı)")}</button>` : ""}
+    <button class="satir" data-b="hata">${tx("Uygulamada hata bildir")}</button>
+    <button class="satir" data-b="istek">${tx("İstek ya da öneri")}</button></div>
+    <p class="aciklama">${tx("Arkeolojiyle ilgisiz bir haber görürseniz kaydın altındaki “Bildir” bağlantısını kullanın; bülteni birlikte temizliyoruz.")}</p>`, lv => {
+    lv.querySelectorAll("[data-b]").forEach(b => b.onclick = () => geriBildirimLevhasi(b.dataset.b, r));
   });
 }
 
@@ -208,15 +231,23 @@ async function sayfaYonetim() {
       const a = await fs.getDocs(fs.query(fs.collection(H.db, "geribildirim"), fs.orderBy("tarih", "desc"), fs.limit(200)));
       const l = a.docs.map(d => ({ id: d.id, ...d.data() }));
       kutu.innerHTML = l.length ? `<ul class="yon-liste">${l.map(g => `<li class="yon-kart durum-${esc(g.durum)}" data-id="${g.id}">
-        <p class="yon-ust"><span class="etiket">${g.tur === "hata" ? tx("Hata") : g.tur === "istek" ? tx("İstek") : tx("Diğer")}</span><span class="etiket">${esc(g.durum)}</span><small>${esc(tarihSaat(g.tarih))} · ${esc(g.surum || "")}</small></p>
+        <p class="yon-ust"><span class="etiket">${g.tur === "hata" ? tx("Hata") : g.tur === "istek" ? tx("İstek") : g.tur === "kayit" ? tx("Kayıt") : tx("Diğer")}</span><span class="etiket">${esc(g.durum)}</span><small>${esc(tarihSaat(g.tarih))} · ${esc(g.surum || "")}</small></p>
         <p class="yon-metin">${esc(g.metin)}</p>
         ${g.eposta ? `<p><a href="mailto:${esc(g.eposta)}?subject=${encodeURIComponent("Arkix geri bildiriminiz")}">${esc(g.eposta)}</a></p>` : ""}
         ${g.cihaz ? `<p><small>${esc(g.cihaz)} ${esc(g.sayfa || "")}</small></p>` : ""}
-        <p class="yon-eylem"><button data-g="inceleniyor">${tx("İnceleniyor")}</button><button data-g="cozuldu">${tx("Çözüldü")}</button><button data-g="sil">${tx("Sil")}</button></p></li>`).join("")}</ul>`
+        ${/^k\//.test(g.sayfa || "") ? `<p><a href="#${esc(g.sayfa)}">${tx("Kaydı aç")}</a></p>` : ""}
+        <p class="yon-eylem">${/^k\//.test(g.sayfa || "") ? `<button data-g="kaldir" data-kayit="${esc(g.sayfa.slice(2))}">${tx("Kaydı bültenden kaldır")}</button>` : ""}<button data-g="inceleniyor">${tx("İnceleniyor")}</button><button data-g="cozuldu">${tx("Çözüldü")}</button><button data-g="sil">${tx("Sil")}</button></p></li>`).join("")}</ul>`
         : bosHtml(tx("Bildirim yok"), "");
       kutu.querySelectorAll("[data-g]").forEach(b => b.onclick = async () => {
         const id = b.closest("[data-id]").dataset.id, ref = fs.doc(H.db, "geribildirim", id);
         if (b.dataset.g === "sil") { if (!confirm(tx("Silinsin mi?"))) return; await fs.deleteDoc(ref); }
+        else if (b.dataset.g === "kaldir") {
+          if (!confirm(tx("Bu kayıt bir sonraki toplamada bültenden kalkacak ve bir daha alınmayacak. Emin misiniz?"))) return;
+          const kayit = b.dataset.kayit;
+          await fs.setDoc(fs.doc(H.db, "gizli_kayitlar", encodeURIComponent(kayit).replace(/\./g, "%2E")), { kayit, tarih: fs.serverTimestamp() });
+          await fs.updateDoc(ref, { durum: "cozuldu" });
+          bildir(tx("Kayıt kaldırılacak (en geç 6 saat içinde)"));
+        }
         else await fs.updateDoc(ref, { durum: b.dataset.g });
         sayfaYonetim();
       });

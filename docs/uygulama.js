@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.11.0";
+const SURUM = "1.12.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -154,7 +154,7 @@ const D = Object.assign({
   fav: [], okundu: {}, notlar: {}, konular: [], kaynakca: [], kayitlar: {},
   gorulen: "", tema: "oto", palet: "gobeklitepe", yazi: 1, bildirim: false, kurulumIpucu: true,
   uid: null, esitleme: 0, girisSoruldu: false, hepTurkce: false, desen: true, oaAnahtar: "", sesHiz: 1, sesId: "",
-  ozelSozler: [], kvkkSurum: "", dil: DIL, zemin: "desen", gunlukGun: "", profil: {}, temaSecildi: false, takip: [], takipGorulen: "",
+  ozelSozler: [], kvkkSurum: "", dil: DIL, zemin: "desen", gunlukGun: "", profil: {}, temaSecildi: false, takip: [], takipGorulen: "", tanitimGoruldu: 0,
 }, guvenliOku());
 // arka plan: eski "desen" anahtarı kapalıysa sade. 1.11: tam ekran fotoğraf yerine Bugün'ün başında kart; arka plan çizim deseni
 if (!("zemin" in guvenliOku()) && D.desen === false) D.zemin = "sade";
@@ -290,7 +290,7 @@ function satirHtml(r, secenek = {}) {
   return `<li class="kayit${D.okundu[r.i] ? " okundu" : ""}${r.oz ? " ozel" : ""}" data-id="${esc(r.i)}">
     <div class="kaydirma-arka">${D.fav.includes(r.i) ? tx("Favoriden çıkar") : tx("Favorilere ekle")}</div>
     <a class="kayit-ic" href="#k/${encodeURIComponent(r.i)}">
-      <div class="kayit-ust">${yeniMi(r) ? '<span class="yeni-nokta" title="Yeni"></span>' : ""}<span class="tur" data-tur="${esc(tur)}">${esc(turAdi(tur))}</span><span class="kaynak">${esc(kaynak || "")}</span>${D.fav.includes(r.i) ? "<span aria-label='Favori'>★</span>" : ""}${dil}</div>
+      <div class="kayit-ust">${yeniMi(r) ? '<span class="yeni-nokta" title="Yeni"></span>' : ""}<span class="tur" data-tur="${esc(tur)}">${esc(turAdi(tur))}</span><span class="kaynak">${esc(kaynak || "")}</span>${r.ys ? `<span class="yorum-sayi" title="${tx("{n} yorum", { n: r.ys })}"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>${r.ys}</span>` : ""}${D.fav.includes(r.i) ? "<span aria-label='Favori'>★</span>" : ""}${dil}</div>
       ${r.oz && r.gv ? `<img class="kayit-kapak" src="${esc(r.gv)}" alt="" loading="lazy">` : ""}
       <h3 class="kayit-baslik">${esc(baslikGoster(r))}</h3>
       ${alt ? `<p class="kayit-alt">${esc(alt)}</p>` : ""}
@@ -377,6 +377,11 @@ function sayfaBugun() {
       <div class="ozel-serit">${ozeller.map(r => `<a class="ozel-kart" href="#k/${encodeURIComponent(r.i)}">
         ${r.gv ? `<img src="${esc(r.gv)}" alt="" loading="lazy">` : ""}
         <div><b>${esc(baslikGoster(r))}</b><small>${esc(tarihYaz(r.t))}${r.y ? " · " + esc(r.y) : ""}</small></div></a>`).join("")}</div></section>` : ""}
+    ${(VERI.son_yorumlar || []).length ? `<section class="tartisilan" aria-label="${tx("Tartışılanlar")}"><h2>${tx("Tartışılanlar")}</h2>
+      ${VERI.son_yorumlar.slice(0, 3).map(y => { const kr = DIZIN.get(y.k); return kr ? `<a class="tartisilan-kart" href="#k/${encodeURIComponent(y.k)}">
+        ${y.av ? `<img src="avatar/${esc(y.av)}.png" alt="" width="32" height="32">` : `<span class="avatar avatar-bas" style="width:32px;height:32px;font-size:14px">${esc((y.ad || "?")[0])}</span>`}
+        <div><p><b>${esc(y.ad)}</b>${y.u ? `<span class="uzman-rozet">${tx("Uzman")}</span>` : ""} <span>${esc(y.m)}</span></p><small>${esc(baslikGoster(kr))}${kr.ys > 1 ? ` · ${tx("{n} yorum", { n: kr.ys })}` : ""}</small></div></a>` : ""; }).join("")}
+    </section>` : ""}
     ${VERI.guncelleme ? `<section class="sabah" aria-label="${tx("Dünün özeti")}">
       <div class="sabah-ust"><div><h2>${so.selam} · ${tx("Dünün özeti")}</h2><p>${esc(so.etiket)}</p></div>
         ${SES.destek && so.havuz.length ? `<button class="sabah-dinle" id="sabah-dinle"><svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg>${tx("Dinle")}</button>` : ""}</div>
@@ -749,17 +754,20 @@ function sayfaAyrinti(id) {
       $("#sayfa").innerHTML = `<article class="ayrinti ozel-yazi">
         <p class="ozel-etiket">Arkix Özel</p>
         <h2>${esc(baslikGoster(r))}</h2>
-        <p class="ozel-kunye">${[r.y, tarihYaz(r.t)].filter(Boolean).map(esc).join(" · ")}</p>
+        <p class="ozel-kunye">${[r.y, tarihYaz(r.t)].filter(Boolean).map(esc).join(" · ")}
+          <button class="yorum-cip" data-e="yorumlar"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>${r.ys ? tx("{n} yorum", { n: r.ys }) : tx("Yorum yaz")}</button></p>
         ${r.gv ? `<figure class="ozel-kapak"><img src="${esc(r.gv)}" alt="${esc(r.ga || "")}">${r.ga ? `<figcaption>${esc(r.ga)}</figcaption>` : ""}</figure>` : ""}
         ${DIL === "en" ? `<p class="ceviri-not">${tx("Bu yazı yalnız Türkçe yayımlandı.")}</p>` : ""}
         <div class="ozel-govde">${r.h || `<p>${esc(r.o || "")}</p>`}</div>
         <div class="eylemler">
-          <button class="eylem" data-e="fav" aria-pressed="${D.fav.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>${tx("Favori")}</button>
+          <button class="eylem eylem-yorum" data-e="yorumlar"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>${r.ys ? tx("{n} yorum", { n: r.ys }) : tx("Yorum yaz")}</button>
+        <button class="eylem" data-e="fav" aria-pressed="${D.fav.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>${tx("Favori")}</button>
           <button class="eylem" data-e="konu"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg>${tx("Konuya ekle")}</button>
           <button class="eylem" data-e="not" aria-pressed="${!!D.notlar[r.i]}"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM8 12h8M8 16h5"/></svg>${tx("Not")}</button>
           ${SES.destek ? `<button class="eylem" data-e="dinle"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6"/></svg>${tx("Dinle")}</button>` : ""}
           <button class="eylem" data-e="paylas"><svg viewBox="0 0 24 24"><path d="M12 15V3m-4 4l4-4 4 4M5 12v8h14v-8"/></svg>${tx("Paylaş")}</button>
         </div>
+        <p class="kayit-bildir"><button data-e="bildir">${tx("Bir sorun mu var? Bildir")}</button></p>
         ${D.notlar[r.i] ? `<div class="kunye"><b>${tx("Notunuz:")}</b> ${esc(D.notlar[r.i])}</div>` : ""}
       </article>`;
       $("#sayfa").querySelectorAll("[data-e]").forEach(b => b.onclick = () => eylem(b.dataset.e, r, ciz, goster));
@@ -784,6 +792,7 @@ function sayfaAyrinti(id) {
              <a class="buyuk-dugme ikinci" href="${esc(tr)}" target="_blank" rel="noopener">${HEDEF === "en" ? "🌐 Open in English" : "🌐 Türkçe aç"}</a></div>`;
       })()}
       <div class="eylemler">
+        <button class="eylem eylem-yorum" data-e="yorumlar"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>${r.ys ? tx("{n} yorum", { n: r.ys }) : tx("Yorum yaz")}</button>
         <button class="eylem" data-e="fav" aria-pressed="${D.fav.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>${tx("Favori")}</button>
         ${yabanci ? `<button class="eylem" data-e="cevir" aria-pressed="${!!goster.tr}"><svg viewBox="0 0 24 24"><path d="M4 5h8M8 3v2m2 0c-1 4-3 7-6 9m2-5c1 2 3 4 5 5M13 21l4-10 4 10m-6.5-3h5"/></svg>${goster.tr ? tx("Özgün") : HEDEF_AD}</button>` : ""}
         <button class="eylem" data-e="takip"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="5"/></svg>${tx("Takip et")}</button>
@@ -797,6 +806,7 @@ function sayfaAyrinti(id) {
         <button class="eylem" data-e="kunye"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>${tx("APA kopyala")}</button>
         ${r.p ? `<button class="eylem" data-e="arsiv"><svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM6 8v12h12V8M10 12h4"/></svg>${tx("PDF'i arşive al")}</button>` : ""}
       </div>
+      <p class="kayit-bildir"><button data-e="bildir">${tx("Alakasız ya da hatalı mı? Bildir")}</button></p>
       ${D.notlar[r.i] ? `<div class="kunye"><b>${tx("Notunuz:")}</b> ${esc(D.notlar[r.i])}</div>` : ""}
       <div class="kunye">${apaHtml(r)}</div>
     </article>`;
@@ -813,6 +823,8 @@ function sayfaAyrinti(id) {
 async function eylem(ad, r, ciz, goster) {
   titres();
   if (ad === "takip") { if (typeof takipLevhasi === "function") takipLevhasi(r); return; }
+  if (ad === "bildir") { if (typeof geriBildirimLevhasi === "function") geriBildirimLevhasi("kayit", r); return; }
+  if (ad === "yorumlar") { const y = document.getElementById("yorumlar"); if (y) y.scrollIntoView({ behavior: "smooth", block: "start" }); const g = document.getElementById("yorum-metin"); if (g) setTimeout(() => g.focus(), 400); return; }
   if (ad === "fav") { favDegistir(r); ciz(); }
   else if (ad === "acik") { acikKopyaAra(r); }
   else if (ad === "cevir") {
@@ -1217,10 +1229,12 @@ function sayfaAyarlar() {
       <div class="satir">${tx("Arkix")}<span class="sag">${SURUM}</span></div>
       <a class="satir" style="color:inherit" href="mailto:harrixapp@gmail.com?subject=${encodeURIComponent("Harrix Bülten")}">${tx("Destek ve iletişim")}<span class="sag">harrixapp@gmail.com</span></a>
       <a class="satir" style="color:inherit" href="https://www.instagram.com/harrixapp/" target="_blank" rel="noopener">Instagram<span class="sag">@harrixapp</span></a>
+      <button class="satir" id="tanitim-tekrar">${tx("Tanıtımı yeniden göster")}</button>
       <a class="satir" style="color:inherit" href="#yasal">${tx("Kullanım koşulları ve KVKK")}</a>
     </div><p class="aciklama">${tx("Soru, öneri ve sorunlar için Harrix ekibine yazabilirsiniz.")}</p><p class="aciklama">© ${new Date().getFullYear()} Harrix. ${tx("Tüm hakları saklıdır.")}</p></div>`;
   if (typeof hesapGrubuBagla === "function") hesapGrubuBagla();
   if (typeof toplulukGrubuBagla === "function") toplulukGrubuBagla();
+  const tt = $("#tanitim-tekrar"); if (tt) tt.onclick = () => tanitimGoster();
   const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
   $("#oa-anahtar").onchange = e => { D.oaAnahtar = e.target.value.trim(); kaydet(); bildir(D.oaAnahtar ? tx("OpenAlex anahtarı kaydedildi") : tx("OpenAlex anahtarı kaldırıldı")); };
   $("#zemin").value = D.zemin;
@@ -1510,6 +1524,7 @@ function rota(kaydirmayiKoru) {
 
 $("#geri").addEventListener("click", () => { if (history.length > 1) history.back(); else location.hash = "#" + sonSekme; });
 $("#ara-ac").addEventListener("click", () => { location.hash = "#ara"; });
+$("#bildir-ac").addEventListener("click", () => { if (typeof bildirSecimi === "function") bildirSecimi(); });
 window.addEventListener("hashchange", () => rota());
 document.addEventListener("visibilitychange", async () => {
   if (document.visibilityState === "visible") {
@@ -1540,6 +1555,9 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", temaUygula
   if (!D.temaSecildi && typeof temaSecici === "function") {
     D.palet = await temaSecici(D.palet || "gobeklitepe", id => { D.palet = id; temaUygula(); });
     D.temaSecildi = true; kaydet(); temaUygula(); rota(true);
+  }
+  if (typeof tanitimGoster === "function" && (D.tanitimGoruldu || 0) < TANITIM_SURUM) {
+    await tanitimGoster(); D.tanitimGoruldu = TANITIM_SURUM; kaydet();
   }
   if (window.GUNLUK) await GUNLUK.acilis({ baslik: tx("Günün Ören Yeri"), dugme: tx("Bugüne başla") }, D.gunlukGun, g => { D.gunlukGun = g; kaydet(); });
   if ("serviceWorker" in navigator) {
