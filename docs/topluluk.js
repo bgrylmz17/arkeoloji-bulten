@@ -287,13 +287,14 @@ const YON = { sekme: "geri" };
 async function sayfaYonetim() {
   if (!yoneticiMi()) { $("#sayfa").innerHTML = bosHtml(tx("Yetkiniz yok"), tx("Bu sayfa yalnız yönetici hesabıyla açılır.")); return; }
   const { fs } = H.fb;
-  const sekmeler = [["geri", tx("Geri bildirim")], ["sikayet", tx("Şikâyetler")], ["yorum", tx("Son yorumlar")]];
+  const sekmeler = [["geri", tx("Geri bildirim")], ["kazi", tx("Kazı duyuruları")], ["sikayet", tx("Şikâyetler")], ["yorum", tx("Son yorumlar")]];
   $("#sayfa").innerHTML = `<div class="bolumlu" role="group">${sekmeler.map(([k, ad]) => `<button data-ys="${k}" aria-pressed="${YON.sekme === k}">${ad}</button>`).join("")}</div>
     <div id="yon-icerik"><p class="aciklama" style="margin:16px">${tx("Yükleniyor…")}</p></div>`;
   $("#sayfa").querySelectorAll("[data-ys]").forEach(b => b.onclick = () => { YON.sekme = b.dataset.ys; sayfaYonetim(); });
   const kutu = $("#yon-icerik");
   const tarihSaat = t => (t && t.toDate ? t.toDate() : new Date()).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" });
   try {
+    if (YON.sekme === "kazi") { await kaziYonetimHtml(kutu); return; }
     if (YON.sekme === "geri") {
       const a = await fs.getDocs(fs.query(fs.collection(H.db, "geribildirim"), fs.orderBy("tarih", "desc"), fs.limit(200)));
       const l = a.docs.map(d => ({ id: d.id, ...d.data() }));

@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.15.0";
+const SURUM = "1.16.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -465,13 +465,20 @@ function gunuAnlat() {
 }
 
 /* Arkix Özel: kendi yazılarımız (alt bardaki ★) */
-function sayfaOzel() {
+function sayfaOzel(arg) {
+  const kazi = arg === "kazi";
+  const sekme = `<div class="bolumlu ozel-sekme" role="group"><a href="#ozel" aria-pressed="${!kazi}">Arkix Özel</a><a href="#ozel/kazi" aria-pressed="${kazi}">${tx("Kazı duyuruları")}</a></div>`;
+  if (kazi) {
+    $("#sayfa").innerHTML = sekme + `<div id="kazi-kap"></div>`;
+    if (typeof kaziBolumuCiz === "function") kaziBolumuCiz($("#kazi-kap"));
+    return;
+  }
   const yazilar = VERI.kayitlar.filter(r => r.oz).sort((x, y) => (y.t || "").localeCompare(x.t || ""));
-  $("#sayfa").innerHTML = yazilar.length ? `<div class="ozel-sayfa">${yazilar.map((r, i) => `<a class="ozel-buyuk${i ? "" : " ilk"}" href="#k/${encodeURIComponent(r.i)}">
+  $("#sayfa").innerHTML = sekme + (yazilar.length ? `<div class="ozel-sayfa">${yazilar.map((r, i) => `<a class="ozel-buyuk${i ? "" : " ilk"}" href="#k/${encodeURIComponent(r.i)}">
       ${r.gv ? `<img src="${esc(r.gv)}" alt="${esc(r.ga || "")}" loading="${i ? "lazy" : "eager"}">` : ""}
       <div><small>${esc(tarihYaz(r.t))}${r.y ? " · " + esc(r.y) : ""}${r.ys ? ` · ${tx("{n} yorum", { n: r.ys })}` : ""}</small>
         <h2>${esc(baslikGoster(r))}</h2><p>${esc(r.o || "")}</p></div></a>`).join("")}</div>`
-    : bosHtml(tx("Henüz Arkix Özel yazısı yok"), tx("Sahadan notlar, duyurular ve kendi haberlerimiz burada yayımlanacak."));
+    : bosHtml(tx("Henüz Arkix Özel yazısı yok"), tx("Sahadan notlar, duyurular ve kendi haberlerimiz burada yayımlanacak.")));
 }
 
 /* Özet sekmesindeki rozet: takip yenileri; yoksa yeni bülten varsa nokta */
@@ -1568,7 +1575,7 @@ function rota(kaydirmayiKoru) {
   levhaKapat();
   if (ad === "bugun") sayfaBugun();
   else if (ad === "ozet") sayfaOzet();
-  else if (ad === "ozel") sayfaOzel();
+  else if (ad === "ozel") sayfaOzel(arg);
   else if (ad === "ayril") { if (typeof sayfaAyril === "function") sayfaAyril(arg); }
   else if (ad === "akis") { if (S.mod === "lit") sayfaLiteratur(); else sayfaAkis(VERI.kayitlar, tx("Yayınlar"), { modDugmesi: true }); }
   else if (ad === "ara") { sayfaAkis(VERI.kayitlar, tx("Ara"), { odakla: !kaydirmayiKoru }); }

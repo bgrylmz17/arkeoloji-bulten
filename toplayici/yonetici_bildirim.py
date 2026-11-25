@@ -25,14 +25,15 @@ def main() -> int:
     gb = E.sorgu("geribildirim", E.buyuk("tarih", son))
     sk = E.sorgu("sikayetler", E.buyuk("tarih", son))
     yeni_yorum = E.sorgu("yorumlar", E.buyuk("tarih", son))
+    kazi = [k for k in E.sorgu("kazi_duyurulari", E.buyuk("tarih", son)) if k.get("durum") == "bekliyor"]
     E.yaz("sistem/yonetici_bildirim", {"son": simdi.isoformat().replace("+00:00", "Z")})
-    if not (gb or sk):
+    if not (gb or sk or kazi):
         print(f"Yeni yok (geri bildirim 0, şikâyet 0, yorum {len(yeni_yorum)}).")
         return 0
     sayac = {}
     for g in gb:
         sayac[g.get("tur", "diger")] = sayac.get(g.get("tur", "diger"), 0) + 1
-    parcalar = [f"{n} {TUR_AD.get(t, t)}" for t, n in sayac.items()] + ([f"{len(sk)} yorum şikâyeti"] if sk else [])
+    parcalar = ([f"{len(kazi)} kazı duyurusu onay bekliyor"] if kazi else []) + [f"{n} {TUR_AD.get(t, t)}" for t, n in sayac.items()] + ([f"{len(sk)} yorum şikâyeti"] if sk else [])
     ozet = ", ".join(parcalar)
     if yeni_yorum:
         ozet += f" · {len(yeni_yorum)} yeni yorum"
