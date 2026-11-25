@@ -9,6 +9,7 @@ on:
     paths:
       - "toplayici/**"
       - "harrix_bulten/**"
+      - "docs/ozel/**"           # Arkix Özel yazısı eklenince ya da değişince
 
 permissions:
   contents: write

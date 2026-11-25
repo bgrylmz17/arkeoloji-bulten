@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.9.3";
+const SURUM = "1.9.4";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -280,10 +280,11 @@ function satirHtml(r, secenek = {}) {
   const etiketler = (r.e || []).filter(e => KAVRAM.has(e) && e !== "kazim").slice(0, 3)
     .map(e => `<span class="etiket">${esc(kavramAdi(KAVRAM.get(e)))}</span>`).join("");
   const dil = yabanciMi(r) ? `<span class="dil" title="${esc(DIL_AD[r.l] || r.l)}">${esc(r.l.toUpperCase())}</span>` : "";
-  return `<li class="kayit${D.okundu[r.i] ? " okundu" : ""}" data-id="${esc(r.i)}">
+  return `<li class="kayit${D.okundu[r.i] ? " okundu" : ""}${r.oz ? " ozel" : ""}" data-id="${esc(r.i)}">
     <div class="kaydirma-arka">${D.fav.includes(r.i) ? tx("Favoriden çıkar") : tx("Favorilere ekle")}</div>
     <a class="kayit-ic" href="#k/${encodeURIComponent(r.i)}">
       <div class="kayit-ust">${yeniMi(r) ? '<span class="yeni-nokta" title="Yeni"></span>' : ""}<span class="tur" data-tur="${esc(tur)}">${esc(turAdi(tur))}</span><span class="kaynak">${esc(kaynak || "")}</span>${D.fav.includes(r.i) ? "<span aria-label='Favori'>★</span>" : ""}${dil}</div>
+      ${r.oz && r.gv ? `<img class="kayit-kapak" src="${esc(r.gv)}" alt="" loading="lazy">` : ""}
       <h3 class="kayit-baslik">${esc(baslikGoster(r))}</h3>
       ${alt ? `<p class="kayit-alt">${esc(alt)}</p>` : ""}
       ${etiketler ? `<div class="isaretler">${etiketler}</div>` : ""}
@@ -354,12 +355,17 @@ function sayfaBugun() {
   const so = sabahOzeti();
   const sd = sonDakika();
   const b = VERI.banner;
+  const ozeller = VERI.kayitlar.filter(r => r.oz && (r.t || "") >= gunOnce(60)).sort((x, y) => (y.t || "").localeCompare(x.t || "")).slice(0, 3);
   const ust = `
     ${b && b.aktif ? `<a class="harrix-banner" ${b.url ? `href="${esc(b.url)}" target="_blank" rel="noopener"` : ""}>
       <span class="banner-etiket">${esc(b.etiket || "HARRIX")}</span><span class="banner-metin"><b>${esc(b.baslik)}</b>${b.altBaslik ? `<small>${esc(b.altBaslik)}</small>` : ""}</span></a>` : ""}
     ${sd.length ? `<section class="son-dakika" aria-label="${tx("Son dakika")}"><h2><span class="nabiz" aria-hidden="true"></span>${tx("Son dakika")}</h2>
       <div class="sd-serit">${sd.map(d => `<a class="sd-kart${d.onemli ? " onemli" : ""}" href="${esc(d.adres)}" ${d.dis ? 'target="_blank" rel="noopener"' : ""}>
         <b>${esc(d.baslik)}</b><small>${esc(d.alt)}</small></a>`).join("")}</div></section>` : ""}
+    ${ozeller.length ? `<section class="ozel-bolum" aria-label="Arkix Özel"><h2>Arkix Özel</h2>
+      <div class="ozel-serit">${ozeller.map(r => `<a class="ozel-kart" href="#k/${encodeURIComponent(r.i)}">
+        ${r.gv ? `<img src="${esc(r.gv)}" alt="" loading="lazy">` : ""}
+        <div><b>${esc(baslikGoster(r))}</b><small>${esc(tarihYaz(r.t))}${r.y ? " · " + esc(r.y) : ""}</small></div></a>`).join("")}</div></section>` : ""}
     ${VERI.guncelleme ? `<section class="sabah" aria-label="${tx("Dünün özeti")}">
       <div class="sabah-ust"><div><h2>${so.selam} · ${tx("Dünün özeti")}</h2><p>${esc(so.etiket)}</p></div>
         ${SES.destek && so.havuz.length ? `<button class="sabah-dinle" id="sabah-dinle"><svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg>${tx("Dinle")}</button>` : ""}</div>
@@ -730,6 +736,26 @@ function sayfaAyrinti(id) {
       [tx("Tür"), turAdi(r.k)], [tx("Yazar"), r.y], [tx("Yayın"), r.w || r.s], [tx("Tarih"), tarihYaz(r.t)],
       [tx("Dil"), DIL_AD[r.l] || r.l], [tx("Dönem / konu"), etiketler.join(", ")], ["DOI", r.d], [tx("Kaynak"), r.s],
     ].filter(([, v]) => v);
+    if (r.oz) {
+      $("#sayfa").innerHTML = `<article class="ayrinti ozel-yazi">
+        <p class="ozel-etiket">Arkix Özel</p>
+        <h2>${esc(baslikGoster(r))}</h2>
+        <p class="ozel-kunye">${[r.y, tarihYaz(r.t)].filter(Boolean).map(esc).join(" · ")}</p>
+        ${r.gv ? `<figure class="ozel-kapak"><img src="${esc(r.gv)}" alt="${esc(r.ga || "")}">${r.ga ? `<figcaption>${esc(r.ga)}</figcaption>` : ""}</figure>` : ""}
+        ${DIL === "en" ? `<p class="ceviri-not">${tx("Bu yazı yalnız Türkçe yayımlandı.")}</p>` : ""}
+        <div class="ozel-govde">${r.h || `<p>${esc(r.o || "")}</p>`}</div>
+        <div class="eylemler">
+          <button class="eylem" data-e="fav" aria-pressed="${D.fav.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>${tx("Favori")}</button>
+          <button class="eylem" data-e="konu"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg>${tx("Konuya ekle")}</button>
+          <button class="eylem" data-e="not" aria-pressed="${!!D.notlar[r.i]}"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM8 12h8M8 16h5"/></svg>${tx("Not")}</button>
+          ${SES.destek ? `<button class="eylem" data-e="dinle"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6"/></svg>${tx("Dinle")}</button>` : ""}
+          <button class="eylem" data-e="paylas"><svg viewBox="0 0 24 24"><path d="M12 15V3m-4 4l4-4 4 4M5 12v8h14v-8"/></svg>${tx("Paylaş")}</button>
+        </div>
+        ${D.notlar[r.i] ? `<div class="kunye"><b>${tx("Notunuz:")}</b> ${esc(D.notlar[r.i])}</div>` : ""}
+      </article>`;
+      $("#sayfa").querySelectorAll("[data-e]").forEach(b => b.onclick = () => eylem(b.dataset.e, r, ciz, goster));
+      return;
+    }
     $("#sayfa").innerHTML = `<article class="ayrinti">
       <h2>${esc(bas)}</h2>
       ${goster.tr && cevBaslik(r) ? `<p class="ceviri-not">${tx("Özgün başlık:")} ${esc(r.b)}</p>` : ""}

@@ -35,6 +35,7 @@ from harrix_bulten.veritabani import Depo  # noqa: E402
 
 VERI = KOK / "docs" / "veri"
 AYAR_DOSYASI = KOK / "toplayici" / "ayar.json"
+OZEL = KOK / "docs" / "ozel"   # Arkix Özel yazıları (*.md) ve fotoğrafları; yazım kılavuzu: docs/ozel/_ornek.md
 
 
 def oku(yol: Path, varsayilan):
@@ -272,19 +273,20 @@ HABER_OZET = 300
 
 
 def lisanslari_bul(kayitlar: list[dict], eposta: str = "") -> int:
-    """DOI'si olup lisansı henüz sorulmamış kayıtlara OpenAlex'ten lisans yazar ('lz'; bulunamazsa "").
-    Sorgu başarısız olursa 'lz' yazılmaz, sonraki çalışmada yeniden denenir."""
+    """DOI'si olup henüz sorulmamış kayıtlara OpenAlex'ten lisans ('lz'; bulunamazsa "") ve ilk üç konunun
+    alt alan kimliklerini ('kz', ör. [1204, 3314]) yazar. Sorgu başarısız olursa ikisi de yazılmaz,
+    sonraki çalışmada yeniden denenir."""
     def temiz(doi: str) -> str:
         doi = (doi or "").strip().lower()
         for on in ("https://doi.org/", "http://doi.org/", "doi:"):
             doi = doi.removeprefix(on)
         return doi
-    sor = [k for k in kayitlar if "lz" not in k and temiz(k.get("d")) and not set(",|") & set(k["d"])]
+    sor = [k for k in kayitlar if ("lz" not in k or "kz" not in k) and temiz(k.get("d")) and not set(",|") & set(k["d"])]
     bulunan = 0
     for i in range(0, len(sor), 50):
         parca = {temiz(k["d"]): k for k in sor[i:i + 50]}
         params = kaynaklar._openalex_parametre({
-            "filter": "doi:" + "|".join(parca), "select": "doi,best_oa_location,primary_location", "per-page": "50",
+            "filter": "doi:" + "|".join(parca), "select": "doi,best_oa_location,primary_location,topics", "per-page": "50",
         }, eposta)
         try:
             veri = json.loads(kaynaklar._indir("https://api.openalex.org/works?" + urllib.parse.urlencode(params)))
@@ -292,13 +294,15 @@ def lisanslari_bul(kayitlar: list[dict], eposta: str = "") -> int:
             print(f"Lisans sorgusu başarısız ({hata}); sonraki çalışmada denenecek.", flush=True)
             continue
         for k in parca.values():
-            k["lz"] = ""
+            k["lz"], k["kz"] = "", []
         for w in veri.get("results", []):
             k = parca.get(temiz(w.get("doi")))
             if k:
                 k["lz"] = ((w.get("best_oa_location") or {}).get("license")
                            or (w.get("primary_location") or {}).get("license") or "").lower()
                 bulunan += bool(k["lz"])
+                k["kz"] = [int(t["subfield"]["id"].rsplit("/", 1)[-1]) for t in (w.get("topics") or [])[:3]
+                           if (t.get("subfield") or {}).get("id")]
     return bulunan
 
 
@@ -335,6 +339,31 @@ def telif_uygula(k: dict) -> None:
             k["kisa"] = 1
 
 
+# ---------------------------------------------------------------- konu süzgeci (OpenAlex / Crossref)
+# Akademik aramalar kelime eşleşmesiyle arkeoloji dışı yayınlar da getirir (tıp, jeoloji, ekonomi...).
+# Yayın, OpenAlex'in ilk üç konusundan biri arkeolojiyle ilgili bir alt alandaysa ya da başlık/özette
+# kesin arkeoloji sözcükleri geçiyorsa kalır. Konu bilgisi yoksa (DOI yok) yalnız sözcük süzgeci.
+ARKEO_ALT_ALAN = {1204, 3302, 3314, 1205, 1206, 1209}   # Archeology (x2), Anthropology, Classics, Conservation, Museology
+TARIH_ALT_ALAN = {1202, 1911}                             # History, Paleontology: yalnız eski dönem sözcüğüyle
+ESKI_DONEM = re.compile(r"\b(ancient|antik|antique|maya|aztec|inca|roman|byzant\w*|bizans|hellenist\w*|helenist\w*|"
+                        r"medieval|ortaça\w*|bronze age|iron age|tunç ça\w*|demir ça\w*|neolit\w*|paleolit\w*|"
+                        r"mesolit\w*|chalcolith\w*|kalkolit\w*|prehistor\w*|tarih öncesi|hominin\w*|neanderthal\w*|"
+                        r"pleistocene|holocene|fossil\w*|fosil\w*)\b", re.I)
+AKADEMIK_KAYNAK = {"OpenAlex", "Crossref"}
+
+
+def konu_uygun(k: dict) -> bool:
+    if k.get("s") not in AKADEMIK_KAYNAK:
+        return True
+    kz = set(k.get("kz") or [])
+    if kz & ARKEO_ALT_ALAN:
+        return True
+    metin = f'{k.get("b", "")} {k.get("o", "")}'
+    if kz & TARIH_ALT_ALAN and ESKI_DONEM.search(metin):
+        return True
+    return arkeoloji_kesin(k.get("b", ""), k.get("o", ""))
+
+
 def engelli_mi(k: dict, engel: list[str]) -> bool:
     """ayar.json 'engelli_kaynaklar': kaynak adı ya da alan adı (alt alan adları dahil) eşleşen kayıt yayımlanmaz."""
     if not engel:
@@ -342,6 +371,119 @@ def engelli_mi(k: dict, engel: list[str]) -> bool:
     ad = (k.get("s") or "").strip().lower()
     alan = (urllib.parse.urlparse(k.get("u") or "").hostname or "").lower()
     return any(e == ad or (alan and (alan == e or alan.endswith("." + e))) for e in engel)
+
+
+# ---------------------------------------------------------------- Arkix Özel (kendi haberlerimiz)
+# docs/ozel/AAAA-AA-GG-kisa-ad.md dosyaları her çalışmada yeniden okunur; dosya silinirse yazı da kalkar.
+# Biçim ve kurallar docs/ozel/_ornek.md içinde. Alt çizgiyle başlayan dosyalar yayımlanmaz.
+GORSEL_UZANTI = (".jpg", ".jpeg", ".png", ".webp")
+_SATIR_ICI = [
+    (re.compile(r"\*\*(.+?)\*\*"), r"<b>\1</b>"),
+    (re.compile(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])"), r"<i>\1</i>"),
+]
+_BAG = re.compile(r"\[([^\]]+)\]\((https?://[^\s)]+)\)")
+_RESIM = re.compile(r"^!\[([^\]]*)\]\(([^\s)]+)\)$")
+
+
+def _satir_ici(metin: str) -> str:
+    """Kaçışlanmış metinde **kalın**, *eğik* ve [bağlantı](https://…)."""
+    for desen, yerine in _SATIR_ICI:
+        metin = desen.sub(yerine, metin)
+    return _BAG.sub(lambda m: f'<a href="{m.group(2)}" target="_blank" rel="noopener">{m.group(1)}</a>', metin)
+
+
+def md_html(govde: str, uyari: list[str]) -> str:
+    """Yazı gövdesinin güvenli HTML'i. Desteklenen: paragraf, ## ara başlık, > alıntı, - madde,
+    ![açıklama](dosya.jpg) (yalnız docs/ozel içindeki kendi fotoğraflarımız), **kalın**, *eğik*, [bağlantı](https://…)."""
+    parcalar = []
+    for blok in re.split(r"\n\s*\n", govde.strip()):
+        blok = blok.strip()
+        if not blok:
+            continue
+        resim = _RESIM.match(blok)
+        if resim:
+            aciklama, dosya = resim.groups()
+            if "/" in dosya or not (OZEL / dosya).is_file():
+                uyari.append(f"fotoğraf bulunamadı ya da docs/ozel dışında: {dosya}")
+                continue
+            parcalar.append(f'<figure><img src="ozel/{html.escape(dosya)}" alt="{html.escape(aciklama)}" loading="lazy">'
+                            f'{f"<figcaption>{html.escape(aciklama)}</figcaption>" if aciklama else ""}</figure>')
+            continue
+        guvenli = html.escape(blok, quote=False)
+        if blok.startswith("## "):
+            parcalar.append(f"<h3>{_satir_ici(guvenli[3:].strip())}</h3>")
+        elif all(sat.startswith("> ") or sat == ">" for sat in blok.splitlines()):
+            ic = html.escape(" ".join(sat[1:].strip() for sat in blok.splitlines()), quote=False)
+            parcalar.append(f"<blockquote>{_satir_ici(ic)}</blockquote>")
+        elif all(sat.startswith("- ") for sat in blok.splitlines()):
+            parcalar.append("<ul>" + "".join(f"<li>{_satir_ici(sat[2:].strip())}</li>" for sat in guvenli.splitlines()) + "</ul>")
+        else:
+            parcalar.append("<p>" + "<br>".join(_satir_ici(sat.strip()) for sat in guvenli.splitlines()) + "</p>")
+    return "\n".join(parcalar)
+
+
+def _on_bilgi(metin: str) -> tuple[dict, str]:
+    """'---' satırları arasındaki 'anahtar: değer' satırları ve kalan gövde."""
+    if not metin.startswith("---"):
+        return {}, metin
+    _, ust, govde = (metin.split("---", 2) + ["", ""])[:3]
+    bilgi = {}
+    for satir in ust.splitlines():
+        if ":" in satir:
+            a, v = satir.split(":", 1)
+            bilgi[a.strip().lower()] = v.strip()
+    return bilgi, govde
+
+
+def ozel_yazilar(eski_kayitlar: dict, calisma: str) -> list[dict]:
+    yazilar = []
+    for dosya in sorted(OZEL.glob("*.md")) if OZEL.is_dir() else []:
+        if dosya.name.startswith("_"):
+            continue
+        uyari: list[str] = []
+        bilgi, govde = _on_bilgi(dosya.read_text(encoding="utf-8"))
+        tarih = bilgi.get("tarih") or dosya.stem[:10]
+        if not bilgi.get("baslik") or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", tarih) or not govde.strip():
+            print(f"  Arkix Özel atlandı ({dosya.name}): başlık, tarih ya da metin eksik", flush=True)
+            continue
+        if bilgi.get("yayin", "evet").lower() in ("hayır", "hayir", "taslak", "no"):
+            continue
+        kimlik = "ozel-" + re.sub(r"[^a-z0-9-]", "", dosya.stem.lower())
+        kapak = bilgi.get("kapak") or next((dosya.stem + u for u in GORSEL_UZANTI if (OZEL / (dosya.stem + u)).is_file()), "")
+        if kapak and ("/" in kapak or not (OZEL / kapak).is_file()):
+            uyari.append(f"kapak bulunamadı: {kapak}")
+            kapak = ""
+        govde_html = md_html(govde, uyari)
+        for gorsel in [kapak] + re.findall(r'src="ozel/([^"]+)"', govde_html):
+            if gorsel and (OZEL / gorsel).stat().st_size > 900_000:
+                uyari.append(f"fotoğraf büyük ({(OZEL / gorsel).stat().st_size // 1000} KB), 1600 px'e küçültün: {gorsel}")
+        ilk_paragraf = re.sub(r"<[^>]*>", "", govde.strip().split("\n\n")[0])
+        ilk_paragraf = re.sub(r"\s+", " ", re.sub(r"[*#>\[\]]|\(https?://[^)]*\)", "", ilk_paragraf)).strip()
+        ozet = bilgi.get("ozet") or ozet_kisalt(ilk_paragraf, HABER_OZET)
+        onceki = eski_kayitlar.get(kimlik, {})
+        k = {
+            "i": kimlik, "k": "Haber", "s": "Arkix Özel", "oz": 1, "b": bilgi["baslik"], "o": ozet,
+            "y": bilgi.get("yazar", ""), "t": tarih, "l": "tr",
+            "g": onceki.get("g") or calisma, "u": f"https://arkix.harrixapp.com/#k/{kimlik}",
+            "e": [e for e in (x.strip() for x in bilgi.get("kavramlar", "").split(",")) if e],
+            "h": govde_html, "d": "", "p": "", "w": "",
+        }
+        if kapak:
+            k["gv"] = f"ozel/{kapak}"
+            if bilgi.get("kapak_aciklama"):
+                k["ga"] = bilgi["kapak_aciklama"]
+        # İngilizce arayüz için başlık ve özet çevirisi; metin değişmedikçe yeniden çevrilmez
+        if onceki.get("b") == k["b"] and onceki.get("o") == k["o"] and onceki.get("be"):
+            k["be"], k["oe"] = onceki["be"], onceki.get("oe", "")
+        else:
+            try:
+                k["be"], k["oe"], _ = ceviri.kayit_cevir(k["b"], k["o"], "tr", {}, hedef="en")
+            except Exception:  # noqa: BLE001
+                pass
+        for u in uyari:
+            print(f"  Arkix Özel uyarı ({dosya.name}): {u}", flush=True)
+        yazilar.append(k)
+    return yazilar
 
 
 def satira_cevir(r) -> dict:
@@ -389,13 +531,21 @@ def main() -> int:
         list(h.map(coz, google))
 
     # --- telif: lisansı serbest olmayan yayınların özeti çeviriden önce kısaltılır
-    vekil = [{"d": s.get("doi") or "", "k": s["kategori"], "o": s.get("ozet") or ""} for s in yeni]
+    vekil = [{"d": s.get("doi") or "", "k": s["kategori"], "o": s.get("ozet") or "", "b": s["baslik"], "s": s["kaynak"]}
+             for s in yeni]
     lisans_sayisi = lisanslari_bul(vekil + list(eski_kayitlar.values()), kullanici.get("eposta", ""))
+    # konu süzgeci: arkeoloji dışı akademik yayınlar (yeni ve eski) atılır, çeviri hakkı boşa gitmez
+    once = len(yeni) + len(eski_kayitlar)
+    yeni, vekil = [s for s, v in zip(yeni, vekil) if konu_uygun(v)], [v for v in vekil if konu_uygun(v)]
+    eski_kayitlar = {i: k for i, k in eski_kayitlar.items() if konu_uygun(k)}
+    print(f"Konu süzgeciyle atılan: {once - len(yeni) - len(eski_kayitlar)}", flush=True)
     for s, v in zip(yeni, vekil):
         telif_uygula(v)
         s["ozet"] = v["o"]
         if "lz" in v:
             s["lisans"] = v["lz"]
+        if "kz" in v:
+            s["konular"] = v["kz"]
         if v.get("kisa"):
             s["kisa"] = 1
     for k in eski_kayitlar.values():
@@ -468,9 +618,16 @@ def main() -> int:
             eski_kayitlar[s["id"]]["m"] = s["eslesen"]
         if "lisans" in s:
             eski_kayitlar[s["id"]]["lz"] = s["lisans"]
+        if "konular" in s:
+            eski_kayitlar[s["id"]]["kz"] = s["konular"]
         if s.get("kisa"):
             eski_kayitlar[s["id"]]["kisa"] = 1
         telif_uygula(eski_kayitlar[s["id"]])   # çeviriler de sınıra insin
+
+    # --- Arkix Özel: dosyalardan her seferinde yeniden kurulur, eski kopyaları atılır
+    ozeller = ozel_yazilar(eski_kayitlar, calisma)
+    eski_kayitlar = {i: k for i, k in eski_kayitlar.items() if not i.startswith("ozel-")}
+    print(f"Arkix Özel yazı: {len(ozeller)}", flush=True)
 
     # kaç sitede çıktı (ks): kopyaları atılan kayıtların sayacı birikir
     for kid, n in kopya_sayisi.items():
@@ -488,6 +645,8 @@ def main() -> int:
         once = len(tum)
         tum = [k for k in tum if not engelli_mi(k, engel)]
         print(f"Kaldırma talebiyle engellenen: {once - len(tum)} kayıt", flush=True)
+    # Arkix Özel yazılar saklama süresine ve kayıt sınırına takılmaz
+    tum = sorted(ozeller + tum, key=lambda k: (k.get("g", ""), k.get("t", "")), reverse=True)
 
     kavramlar = [{"id": k.kimlik, "ad": k.kisa, "en": k.en[0], "grup": k.grup,
                   "q": terimler.openalex_sorgusu(k)} for k in terimler.TERIMLER]

@@ -360,5 +360,6 @@ const EN = {
  "Reklam": "Ad",
  "Kısaltılmış özet; tamamı yayıncının sayfasında.": "Shortened abstract; the full text is on the publisher's page.",
  "Arka plan deseni": "Background pattern",
- "Arkeolojik çizimlerden oluşan desen her gün değişir. Bugün: {ad}.": "The pattern of archaeological drawings changes every day. Today: {ad}."
+ "Arkeolojik çizimlerden oluşan desen her gün değişir. Bugün: {ad}.": "The pattern of archaeological drawings changes every day. Today: {ad}.",
+ "Bu yazı yalnız Türkçe yayımlandı.": "This article is published in Turkish only."
 };

@@ -356,3 +356,24 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 :root[data-tema="koyu"] #zemin-desen { background-color: var(--t1); opacity: .09; }
 @media (prefers-color-scheme: dark) { :root:not([data-tema="acik"]) #zemin-desen { background-color: var(--t1); opacity: .09; } }
 @media print { #zemin-desen { display: none; } }
+
+/* Arkix Özel: kendi haberlerimiz (docs/ozel) */
+.ozel-bolum { margin: 14px 16px 4px; }
+.ozel-bolum h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--okr); margin: 0 0 8px; }
+.ozel-serit { display: grid; gap: 10px; }
+.ozel-kart { display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 14px; background: var(--kagit-2);
+  border: 1px solid var(--cizgi); border-left: 4px solid var(--okr); color: inherit; text-decoration: none; }
+.ozel-kart img { width: 88px; height: 66px; object-fit: cover; border-radius: 9px; flex: none; }
+.ozel-kart b { display: block; font-size: 15.5px; line-height: 1.3; }
+.ozel-kart small { display: block; margin-top: 4px; color: var(--soluk); font-size: 12.5px; }
+.kayit.ozel .kayit-ic { border-left: 4px solid var(--okr); }
+.kayit-kapak { width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; margin: 6px 0 4px; display: block; }
+.ozel-yazi .ozel-etiket { margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--okr); }
+.ozel-yazi .ozel-kunye { margin: 4px 0 12px; color: var(--soluk); font-size: 14px; }
+.ozel-kapak, .ozel-govde figure { margin: 12px 0 16px; }
+.ozel-kapak img, .ozel-govde img { width: 100%; height: auto; border-radius: 12px; display: block; }
+.ozel-kapak figcaption, .ozel-govde figcaption { margin-top: 6px; font-size: 12.5px; color: var(--soluk); }
+.ozel-govde { font-family: var(--font-okuma); font-size: 1.08rem; line-height: 1.65; }
+.ozel-govde h3 { font-family: var(--font); font-size: 1.1rem; margin: 22px 0 6px; }
+.ozel-govde blockquote { margin: 16px 0; padding: 4px 0 4px 14px; border-left: 3px solid var(--okr); font-style: italic; }
+.ozel-govde a { color: var(--okr); }

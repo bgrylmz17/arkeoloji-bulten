@@ -59,3 +59,10 @@ uygulamada **Ayarlar → Kaynakların durumu** gösterir.
 - Depo herkese açıktır; içinde yalnızca zaten yayımlanmış haber ve makale bilgileri vardır. Kişisel
   notlarınız, konularınız ve kaynakçanız telefondan dışarı çıkmaz. Telefon değiştirirken
   **Ayarlar → Yedeği dışa aktar** ile taşıyın.
+
+## Arkix Özel (kendi haberlerimiz)
+
+GitHub'da depoda `docs/ozel` klasörüne bir `.md` dosyası ve aynı adlı fotoğraf yükleyin
+(ör. `2026-12-01-kizilin-sezon-sonu.md` ve `2026-12-01-kizilin-sezon-sonu.jpg`). Biçim ve kurallar
+`docs/ozel/_ornek.md` içinde. Yükleme toplayıcıyı başlatır; yazı birkaç dakika içinde Bugün sayfasındaki
+**Arkix Özel** bölümünde görünür. Yalnız kendi çektiğiniz ya da yayın izni alınmış fotoğrafları kullanın.
