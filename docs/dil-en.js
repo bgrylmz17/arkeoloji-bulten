@@ -356,5 +356,9 @@ const EN = {
  "“Dünün özeti” doğal bir insan sesiyle (Microsoft Emel) hazır gelir. Haberler ve diğer metinler telefonun en doğal Türkçe sesiyle okunur; “Otomatik” en iyisini seçer (Edge’de “Emel Online (Natural)”, iPhone’da Yelda Gelişmiş). Türkçe ses yoksa telefonun ayarlarından (Android: Metin okuma çıkışı; iPhone: Erişilebilirlik › Seslendirilen İçerik › Sesler) Türkçe ses indirin. Ekran kapanınca okuma çoğu telefonda durur.": "Texts are read with your device’s most natural English voice; “Automatic” picks the best one. For a better voice, download an Enhanced voice in your phone settings (iPhone: Accessibility › Spoken Content › Voices). Reading stops on most phones when the screen turns off.",
  "★ Favoriler": "★ Favorites",
  "✓ Ekli": "✓ Added",
- "🌐 Türkçe aç": "🌐 Open in Turkish"
+ "🌐 Türkçe aç": "🌐 Open in Turkish",
+ "Reklam": "Ad",
+ "Kısaltılmış özet; tamamı yayıncının sayfasında.": "Shortened abstract; the full text is on the publisher's page.",
+ "Arka plan deseni": "Background pattern",
+ "Arkeolojik çizimlerden oluşan desen her gün değişir. Bugün: {ad}.": "The pattern of archaeological drawings changes every day. Today: {ad}."
 };

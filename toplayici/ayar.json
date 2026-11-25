@@ -11,6 +11,8 @@
   "google_cozme_siniri": 120,
   "eposta": "",
   "_duyurular_aciklama": "duyurular: son dakika şeridinde en önde görünen elle yazılmış duyurular. Örnek: [{\"baslik\": \"Göbeklitepe'de yeni sezon başladı\", \"ozet\": \"Kültür ve Turizm Bakanlığı\", \"url\": \"https://...\", \"bitis\": \"2026-12-31\"}]. banner: uygulamanın en üstündeki Harrix alanı, ör. {\"aktif\": true, \"etiket\": \"HARRIX\", \"baslik\": \"Kazı Takip pilot başvuruları açık\", \"altBaslik\": \"harrixapp@gmail.com\", \"url\": \"https://...\"}. Kapatmak için null.",
+  "_engelli_aciklama": "engelli_kaynaklar: hak sahibinin kaldırma talebiyle yayımlanmayacak kaynaklar. Kaynak adı (ör. \"Arkeofili\") ya da alan adı (ör. \"ornek.com\"; alt alan adları dahil). Mevcut kayıtlar da bir sonraki toplamada kalkar.",
+  "engelli_kaynaklar": [],
   "duyurular": [
     {"id": "yeni-adres", "baslik": "Arkix yeni adreste: arkix.harrixapp.com", "ozet": "Önce Ayarlar › Yedeği dışa aktar, sonra dokunup yeni adresi açın ve ana ekrana ekleyin.", "url": "https://arkix.harrixapp.com/", "bitis": "2027-03-31", "onemli": true, "yalnizEskiAdres": true}
   ],

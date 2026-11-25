@@ -22,6 +22,7 @@ import os
 import sys
 import tempfile
 import time
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -262,6 +263,87 @@ def sesli_ozet(tum: list[dict], eski: dict | None) -> dict | None:
     return {"gun": dun, "dosya": "veri/ozet.mp3", "imza": imza, "ses": OZET_SESI, "metin": metin}
 
 
+# ---------------------------------------------------------------- telif: lisansa göre özet
+# Serbest lisanslı (CC BY, CC BY-SA, CC0, kamu malı) yayınların özeti tam gösterilir. Ötekilerin (lisansı
+# bilinmeyen, CC BY-NC/ND, yayıncıya ait) özeti birkaç cümleye kısaltılır; tamamı yayıncının sayfasındadır.
+SERBEST_LISANS = {"cc-by", "cc-by-sa", "cc0", "public-domain"}
+KISA_OZET = 240
+HABER_OZET = 300
+
+
+def lisanslari_bul(kayitlar: list[dict], eposta: str = "") -> int:
+    """DOI'si olup lisansı henüz sorulmamış kayıtlara OpenAlex'ten lisans yazar ('lz'; bulunamazsa "").
+    Sorgu başarısız olursa 'lz' yazılmaz, sonraki çalışmada yeniden denenir."""
+    def temiz(doi: str) -> str:
+        doi = (doi or "").strip().lower()
+        for on in ("https://doi.org/", "http://doi.org/", "doi:"):
+            doi = doi.removeprefix(on)
+        return doi
+    sor = [k for k in kayitlar if "lz" not in k and temiz(k.get("d")) and not set(",|") & set(k["d"])]
+    bulunan = 0
+    for i in range(0, len(sor), 50):
+        parca = {temiz(k["d"]): k for k in sor[i:i + 50]}
+        params = kaynaklar._openalex_parametre({
+            "filter": "doi:" + "|".join(parca), "select": "doi,best_oa_location,primary_location", "per-page": "50",
+        }, eposta)
+        try:
+            veri = json.loads(kaynaklar._indir("https://api.openalex.org/works?" + urllib.parse.urlencode(params)))
+        except Exception as hata:  # noqa: BLE001
+            print(f"Lisans sorgusu başarısız ({hata}); sonraki çalışmada denenecek.", flush=True)
+            continue
+        for k in parca.values():
+            k["lz"] = ""
+        for w in veri.get("results", []):
+            k = parca.get(temiz(w.get("doi")))
+            if k:
+                k["lz"] = ((w.get("best_oa_location") or {}).get("license")
+                           or (w.get("primary_location") or {}).get("license") or "").lower()
+                bulunan += bool(k["lz"])
+    return bulunan
+
+
+def ozet_kisalt(metin: str, sinir: int = KISA_OZET) -> str:
+    """Özeti tam cümlelerle 'sinir' karakterin altına indirir."""
+    metin = (metin or "").strip()
+    if len(metin) <= sinir:
+        return metin
+    sonuc = ""
+    for cumle in re.split(r"(?<=[.!?])\s+", metin):
+        if len(sonuc) + len(cumle) + 1 > sinir:
+            break
+        sonuc = f"{sonuc} {cumle}".strip()
+    if not sonuc:
+        sonuc = metin[:sinir].rsplit(" ", 1)[0]
+    return sonuc + " …"
+
+
+def telif_uygula(k: dict) -> None:
+    """Kayıt yayımlanmadan önce: haber özetleri en çok HABER_OZET, serbest lisanslı olmayan yayınların
+    özetleri (ve çevirileri) en çok KISA_OZET karakter. Görsel adresi yayın yeri alanına sızmışsa silinir."""
+    if (k.get("w") or "").startswith("http"):
+        k["w"] = ""
+    if k.get("k") == "Haber":
+        for alan in ("o", "ot", "oe"):
+            if len(k.get(alan) or "") > HABER_OZET:
+                k[alan] = ozet_kisalt(k[alan], HABER_OZET)
+        return
+    if k.get("lz") in SERBEST_LISANS:
+        return
+    for alan in ("o", "ot", "oe"):
+        if len(k.get(alan) or "") > KISA_OZET + 2:
+            k[alan] = ozet_kisalt(k[alan])
+            k["kisa"] = 1
+
+
+def engelli_mi(k: dict, engel: list[str]) -> bool:
+    """ayar.json 'engelli_kaynaklar': kaynak adı ya da alan adı (alt alan adları dahil) eşleşen kayıt yayımlanmaz."""
+    if not engel:
+        return False
+    ad = (k.get("s") or "").strip().lower()
+    alan = (urllib.parse.urlparse(k.get("u") or "").hostname or "").lower()
+    return any(e == ad or (alan and (alan == e or alan.endswith("." + e))) for e in engel)
+
+
 def satira_cevir(r) -> dict:
     return {k: r[k] for k in r.keys()}
 
@@ -305,6 +387,20 @@ def main() -> int:
             pass
     with ThreadPoolExecutor(max_workers=4) as h:
         list(h.map(coz, google))
+
+    # --- telif: lisansı serbest olmayan yayınların özeti çeviriden önce kısaltılır
+    vekil = [{"d": s.get("doi") or "", "k": s["kategori"], "o": s.get("ozet") or ""} for s in yeni]
+    lisans_sayisi = lisanslari_bul(vekil + list(eski_kayitlar.values()), kullanici.get("eposta", ""))
+    for s, v in zip(yeni, vekil):
+        telif_uygula(v)
+        s["ozet"] = v["o"]
+        if "lz" in v:
+            s["lisans"] = v["lz"]
+        if v.get("kisa"):
+            s["kisa"] = 1
+    for k in eski_kayitlar.values():
+        telif_uygula(k)
+    print(f"Lisansı bulunan yayın: {lisans_sayisi}", flush=True)
 
     # Türkçe olmayanların başlık ve özetini çevir (sınırlı sayıda; kalanı sonraki çalışmada)
     ceviri_siniri = int(kullanici.get("ceviri_siniri", 60))
@@ -370,6 +466,11 @@ def main() -> int:
         }
         if s.get("eslesen"):
             eski_kayitlar[s["id"]]["m"] = s["eslesen"]
+        if "lisans" in s:
+            eski_kayitlar[s["id"]]["lz"] = s["lisans"]
+        if s.get("kisa"):
+            eski_kayitlar[s["id"]]["kisa"] = 1
+        telif_uygula(eski_kayitlar[s["id"]])   # çeviriler de sınıra insin
 
     # kaç sitede çıktı (ks): kopyaları atılan kayıtların sayacı birikir
     for kid, n in kopya_sayisi.items():
@@ -382,6 +483,11 @@ def main() -> int:
            or k.get("g", "")[:10] >= sinir]
     tum.sort(key=lambda k: (k.get("g", ""), k.get("t", "")), reverse=True)
     tum = tum[: int(kullanici.get("en_fazla", 2500))]
+    engel = [e.strip().lower() for e in (kullanici.get("engelli_kaynaklar") or []) if e.strip()]
+    if engel:
+        once = len(tum)
+        tum = [k for k in tum if not engelli_mi(k, engel)]
+        print(f"Kaldırma talebiyle engellenen: {once - len(tum)} kayıt", flush=True)
 
     kavramlar = [{"id": k.kimlik, "ad": k.kisa, "en": k.en[0], "grup": k.grup,
                   "q": terimler.openalex_sorgusu(k)} for k in terimler.TERIMLER]

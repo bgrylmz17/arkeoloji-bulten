@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.9.2";
+const SURUM = "1.9.3";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -153,7 +153,7 @@ function bulteniDinle(kayitlar, ozet) {
 const D = Object.assign({
   fav: [], okundu: {}, notlar: {}, konular: [], kaynakca: [], kayitlar: {},
   gorulen: "", tema: "oto", palet: "kum", yazi: 1, bildirim: false, kurulumIpucu: true,
-  uid: null, esitleme: 0, girisSoruldu: false, hepTurkce: false, oaAnahtar: "", sesHiz: 1, sesId: "",
+  uid: null, esitleme: 0, girisSoruldu: false, hepTurkce: false, desen: true, oaAnahtar: "", sesHiz: 1, sesId: "",
   ozelSozler: [], kvkkSurum: "", dil: DIL,
 }, guvenliOku());
 
@@ -266,6 +266,7 @@ function temaUygula() {
   kok.style.setProperty("--yazi-olcek", D.yazi);
   const koyu = D.tema === "koyu" || (D.tema === "oto" && matchMedia("(prefers-color-scheme: dark)").matches);
   document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute("content", koyu ? "#161916" : "#eef0e9"));
+  if (window.DESEN) DESEN.uygula(D.desen !== false);
 }
 
 /* ---------------------------------------------------------------- kayıt satırı */
@@ -298,15 +299,43 @@ function tabakalarHtml(kayitlar, secenek = {}) {
     if (!gruplar.has(g)) gruplar.set(g, []);
     gruplar.get(g).push(r);
   }
-  let i = 0, html = "";
+  let i = 0, html = "", reklamSay = 0;
+  const reklamli = !secenek.reklamsiz && reklamGoster();
   for (const [gun, liste] of gruplar) {
     const derinlik = Math.min(4, 1 + Math.floor(i / 2));
     html += `<section class="tabaka" data-derinlik="${derinlik}">
       <div class="tabaka-bas"><h2>${esc(gunEtiketi(gun))}</h2><small>${tx("{n} kayıt", { n: liste.length })}</small></div>
       <ul class="liste">${liste.map(r => satirHtml(r, secenek)).join("")}</ul></section>`;
     i++;
+    if (reklamli && reklamSay < REKLAM.EN_FAZLA && i >= REKLAM.ILK_SONRA && (i - REKLAM.ILK_SONRA) % REKLAM.ARALIK === 0) {
+      html += reklamYuvasiHtml(); reklamSay++;
+    }
   }
   return html;
+}
+
+/* ---------------------------------------------------------------- reklam (Google AdSense; ayar reklam.js)
+ * Yalnız REKLAM.ACIK ve yuva kimliği varken, KVKK onayından sonra. Kapalıyken Google'a hiçbir istek gitmez. */
+function reklamAcik() { return !!(window.REKLAM && REKLAM.ACIK && REKLAM.ISTEMCI && REKLAM.YUVA); }
+function reklamGoster() { return reklamAcik() && D.kvkkSurum === KVKK_SURUM; }
+function reklamYuvasiHtml() {
+  return `<aside class="reklam-yuva" aria-label="${tx("Reklam")}"><small>${tx("Reklam")}</small>
+    <ins class="adsbygoogle" style="display:block" data-ad-client="${esc(REKLAM.ISTEMCI)}" data-ad-slot="${esc(REKLAM.YUVA)}"
+      data-ad-format="auto" data-full-width-responsive="true"></ins></aside>`;
+}
+let reklamBetigi = null;
+function reklamlariDoldur() {
+  if (!reklamGoster()) return;
+  const bos = [...document.querySelectorAll("ins.adsbygoogle:not([data-adsbygoogle-status])")];
+  if (!bos.length) return;
+  if (!reklamBetigi) {
+    reklamBetigi = document.createElement("script");
+    reklamBetigi.async = true; reklamBetigi.crossOrigin = "anonymous";
+    reklamBetigi.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(REKLAM.ISTEMCI)}`;
+    reklamBetigi.onerror = () => document.querySelectorAll(".reklam-yuva").forEach(y => y.remove());   // reklam engelleyici
+    document.head.appendChild(reklamBetigi);
+  }
+  for (const _ of bos) { try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (_h) { /* yuva zaten dolu */ } }
 }
 
 function bosHtml(baslik, metin, dugme) {
@@ -706,6 +735,7 @@ function sayfaAyrinti(id) {
       ${goster.tr && cevBaslik(r) ? `<p class="ceviri-not">${tx("Özgün başlık:")} ${esc(r.b)}</p>` : ""}
       <dl class="form-tablo">${satirlar.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
       ${ozet ? `<div class="metin">${esc(ozet)}</div>` : `<p class="aciklama">${tx("Bu kayıt için özet yok.")}</p>`}
+      ${ozet && r.kisa ? `<p class="ceviri-not">${tx("Kısaltılmış özet; tamamı yayıncının sayfasında.")}</p>` : ""}
       ${goster.tr && cevOzet(r) ? `<p class="ceviri-not">${tx("Makine çevirisidir; alıntı yapmadan önce özgün metne bakın.")}</p>` : ""}
       ${(() => {
         const ad = r.k === "Makale" || r.k === "Tez" ? tx("Yayını aç") : tx("Haberi aç");
@@ -1110,8 +1140,9 @@ function sayfaAyarlar() {
       <div class="satir">Dil / Language${dilSeciciHtml()}</div>
       <label class="satir">${tx("Tema")}<select id="tema"><option value="oto">${tx("Telefona uy")}</option><option value="acik">${dilSec("Açık", "Light")}</option><option value="koyu">${tx("Koyu")}</option></select></label>
       <label class="satir">${tx("Toprak rengi")}<select id="palet"><option value="kum">${tx("Kum")}</option><option value="lacivert">${tx("Lacivert")}</option><option value="zeytin">${tx("Zeytin")}</option><option value="murdum">${tx("Mürdüm")}</option></select></label>
+      <label class="satir">${tx("Arka plan deseni")}<input type="checkbox" class="anahtar" id="desen-ac" ${D.desen !== false ? "checked" : ""}></label>
       <label class="satir">${tx("Yazı boyutu")}<select id="yazi"><option value="0.9">${tx("Küçük")}</option><option value="1">${tx("Normal")}</option><option value="1.12">${tx("Büyük")}</option><option value="1.25">${tx("Çok büyük")}</option></select></label>
-    </div></div>
+    </div>${window.DESEN ? `<p class="aciklama">${tx("Arkeolojik çizimlerden oluşan desen her gün değişir. Bugün: {ad}.", { ad: DIL === "en" ? DESEN.bugun().en : DESEN.bugun().ad })}</p>` : ""}</div>
     <div class="grup"><h3>${tx("Çeviri")}</h3><div class="kutu">
       <label class="satir">${tx("Yabancı sayfaları Türkçe aç")}<input type="checkbox" class="anahtar" id="hep-turkce" ${D.hepTurkce ? "checked" : ""}></label>
     </div><p class="aciklama">${tx("Açıkken İngilizce ve diğer dillerdeki haber ve makale sayfaları Google Çeviri ile Türkçe açılır. Kapalıyken yabancı kayıtlarda ayrıca “Türkçe aç” düğmesi görünür. Başlık ve özetler her durumda uygulama içinde Türkçe gösterilir.")}</p></div>
@@ -1147,6 +1178,7 @@ function sayfaAyarlar() {
   if (typeof hesapGrubuBagla === "function") hesapGrubuBagla();
   const sec = (id, deger, isle) => { const s = $("#" + id); s.value = String(deger); s.onchange = () => { isle(s.value); kaydet(); temaUygula(); }; };
   $("#oa-anahtar").onchange = e => { D.oaAnahtar = e.target.value.trim(); kaydet(); bildir(D.oaAnahtar ? tx("OpenAlex anahtarı kaydedildi") : tx("OpenAlex anahtarı kaldırıldı")); };
+  $("#desen-ac").onchange = e => { D.desen = e.target.checked; kaydet(); temaUygula(); };
   $("#hep-turkce").onchange = e => { D.hepTurkce = e.target.checked; kaydet(); bildir(D.hepTurkce ? tx("Yabancı sayfalar Türkçe açılacak") : tx("Sayfalar özgün dilinde açılacak")); };
   dilSeciciBagla($("#sayfa"));
   sec("tema", D.tema, v => D.tema = v);
@@ -1280,7 +1312,7 @@ async function sayfaPdfler() {
 }
 
 /* ---------------------------------------------------------------- kullanım koşulları ve KVKK */
-const KVKK_SURUM = "2026-11";   // metin değişince artırın: herkesten yeniden onay istenir
+const KVKK_SURUM = "2026-11b" + (window.REKLAM && REKLAM.ACIK ? "-r" : "");   // metin değişince artırın: herkesten yeniden onay istenir; reklam açılınca da değişir
 function sayfaYasal() { $("#sayfa").innerHTML = `<article class="ayrinti yasal">${yasalHtml()}</article>`; }
 /* İlk açılışta (ya da metin değişince) koşullar ve KVKK onaylanmadan uygulama kullanılamaz. */
 function kvkkKapisi() {
@@ -1306,24 +1338,28 @@ function kvkkKapisi() {
 function yasalHtml() {
   if (DIL === "en") return `
     <h2>Terms of Use</h2>
-    <p>Arkix presents archaeology headlines, abstracts and links collected from open academic databases (OpenAlex, Crossref, DergiPark) and publicly available news sources. All content remains the copyright of its original publishers; the app only provides links, references and personal research tools. Machine translations are an aid; check the original before quoting.</p>
+    <p>Arkix presents archaeology headlines, abstracts and links collected from open academic databases (OpenAlex, Crossref, DergiPark) and publicly available news sources. All content remains the copyright of its original publishers; the app only provides links, references and personal research tools. Machine translations are an aid; check the original before quoting. Abstracts of publications without an open licence (such as CC BY or CC0) are shown shortened; the full text is on the publisher's page.</p>
+    <p>If you are a rights holder and do not want your content to appear here, write to harrixapp@gmail.com; it will be removed within 48 hours and the source will no longer be collected.</p>
     <h2>Privacy Notice (Turkish Personal Data Protection Law, KVKK No. 6698)</h2>
     <p>Data controller: Harrix (harrixapp@gmail.com).</p>
     <ul>
       <li>If you use the app without signing in, your favorites, notes, topics, bibliography, PDF archive and settings are stored only on this device and are never sent to any server.</li>
       <li>If you choose to sign in, your email address (and your name, with Google sign-in) and your favorite, topic, note and bibliography lists are processed on Firebase (Google Cloud) solely to sync them between your devices.</li>
       <li>Only the searches you start are sent to OpenAlex and the translation services. Your OpenAlex key stays on this device.</li>
+      ${reklamAcik() ? `<li>The free web version shows Google AdSense ads. Google and its partners may use cookies and similar technologies to serve and measure ads; visitors from the EEA, UK and Switzerland are asked for their ad choices in Google's consent window. Details: <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">policies.google.com/technologies/ads</a>.</li>` : ""}
       <li>To exercise your rights, write to harrixapp@gmail.com. You can export your data in Settings › Export backup, and permanently delete your account and all cloud data in Settings › Delete account.</li>
     </ul>`;
   return `
     <h2>Kullanım koşulları</h2>
-    <p>Arkix (Arkix); açık akademik veritabanlarından (OpenAlex, Crossref, DergiPark) ve kamuya açık haber kaynaklarından derlenen arkeoloji başlıklarını, özetlerini ve bağlantılarını sunar. İçeriklerin telif hakları özgün yayıncılarına aittir; uygulama yalnızca kaynağa bağlantı, künye ve kişisel araştırma araçları sağlar. Makine çevirileri yardımcıdır; alıntı yapmadan önce özgün metne bakın.</p>
+    <p>Arkix (Arkix); açık akademik veritabanlarından (OpenAlex, Crossref, DergiPark) ve kamuya açık haber kaynaklarından derlenen arkeoloji başlıklarını, özetlerini ve bağlantılarını sunar. İçeriklerin telif hakları özgün yayıncılarına aittir; uygulama yalnızca kaynağa bağlantı, künye ve kişisel araştırma araçları sağlar. Makine çevirileri yardımcıdır; alıntı yapmadan önce özgün metne bakın. Serbest lisanslı (CC BY, CC0 vb.) olmayan yayınların özetleri kısaltılmış olarak gösterilir; tamamı yayıncının sayfasındadır.</p>
+    <p>Hak sahibiyseniz ve bir içeriğin burada yer almasını istemiyorsanız harrixapp@gmail.com adresine yazın; içerik en geç 48 saat içinde kaldırılır ve kaynak bir daha toplanmaz.</p>
     <h2>KVKK aydınlatma metni</h2>
     <p>6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında veri sorumlusu Harrix'tir (harrixapp@gmail.com).</p>
     <ul>
       <li>Giriş yapmadan kullandığınızda favorileriniz, notlarınız, konularınız, kaynakçanız, PDF arşiviniz ve ayarlarınız yalnızca bu cihazda saklanır; hiçbir sunucuya gönderilmez.</li>
       <li>İsteğe bağlı olarak giriş yaptığınızda e-posta adresiniz (Google ile girişte adınız) ve favori, konu, not ve kaynakça listeleriniz yalnızca cihazlarınız arasında eşitleme amacıyla Firebase (Google Cloud) altyapısında işlenir.</li>
       <li>OpenAlex ve çeviri servislerine yalnızca sizin başlattığınız aramalar iletilir. OpenAlex anahtarınız bu cihazda kalır.</li>
+      ${reklamAcik() ? `<li>Ücretsiz web sürümünde Google AdSense reklamları gösterilir. Google ve iş ortakları reklam sunmak ve ölçmek için çerez ve benzeri teknolojiler kullanabilir; Avrupa Ekonomik Alanı, Birleşik Krallık ve İsviçre'den erişimde reklam tercihleriniz Google'ın onay penceresinde sorulur. Ayrıntılar: <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">policies.google.com/technologies/ads</a>.</li>` : ""}
       <li>Kanunun 11. maddesindeki haklarınızı kullanmak için harrixapp@gmail.com adresine yazabilirsiniz. Verilerinizi Ayarlar › Yedeği dışa aktar ile alabilir, Ayarlar › Hesabı sil ile hesabınızı ve buluttaki bütün verilerinizi kalıcı olarak silebilirsiniz.</li>
     </ul>`;
 }
@@ -1414,6 +1450,7 @@ function rota(kaydirmayiKoru) {
   else if (ad === "k") sayfaAyrinti(arg);
   else { location.hash = "#bugun"; return; }
   kaydirmaBagla();
+  reklamlariDoldur();
   window.scrollTo(0, kaydirmayiKoru ? y : 0);
 }
 

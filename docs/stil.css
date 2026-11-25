@@ -340,3 +340,19 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .dil-secici button { border: 0; background: transparent; color: var(--murekkep); padding: 6px 12px; border-radius: 8px; font: inherit; font-size: .85rem; cursor: pointer; }
 .dil-secici button[aria-checked="true"] { background: var(--kagit-2); font-weight: 700; }
 .onay-dil { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+
+/* reklam yuvası (Google AdSense; reklam.js kapalıyken hiç çizilmez) */
+.reklam-yuva { margin: 14px 16px; padding: 8px 10px 10px; border: 1px solid var(--cizgi); border-radius: 12px; background: var(--kagit-2); min-height: 100px; }
+.reklam-yuva small { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--soluk); margin-bottom: 6px; }
+
+/* her gün değişen arkeolojik çizim deseni (desen.js); renk paletten gelir, desen maskedir */
+#zemin-desen {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-color: var(--t2); opacity: .17;
+  -webkit-mask-image: var(--desen); mask-image: var(--desen);
+  -webkit-mask-size: 360px 360px; mask-size: 360px 360px;
+  -webkit-mask-repeat: repeat; mask-repeat: repeat;
+}
+:root[data-tema="koyu"] #zemin-desen { background-color: var(--t1); opacity: .09; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="acik"]) #zemin-desen { background-color: var(--t1); opacity: .09; } }
+@media print { #zemin-desen { display: none; } }
