@@ -537,5 +537,19 @@ const EN = {
  "Ayrılma tamamlanamadı": "Unsubscribe could not be completed",
  "Bağlantı geçersiz olabilir. harrixapp@gmail.com adresine “ayrıl” yazmanız da yeterli.": "The link may be invalid. You can also just write “unsubscribe” to harrixapp@gmail.com.",
  "E-posta özeti": "Email summary",
- "E-posta özetinden ayrılıyorsunuz…": "Unsubscribing from the email summary…"
+ "E-posta özetinden ayrılıyorsunuz…": "Unsubscribing from the email summary…",
+ "Arkix günü anlatıyor": "Arkix tells the day",
+ "Cihazın sesiyle okunur": "Read with the device voice",
+ "Evet, gönder": "Yes, send it",
+ "Giriş yap ve aç": "Sign in and turn on",
+ "Haftalık özet e-postana gelsin mi?": "Get the weekly summary by email?",
+ "Haftalık özet ister misin?": "Want a weekly summary?",
+ "Hayır, teşekkürler": "No, thanks",
+ "Her pazartesi sabahı takip ettiklerinden yeni kayıtlar, haftanın öne çıkanları ve Arkix Özel yazıları {eposta} adresine gelir. İstediğin an ayrılabilirsin.": "Every Monday morning, new records from what you follow, the week's highlights and Arkix Special articles are sent to {eposta}. You can unsubscribe at any time.",
+ "Kaynak:": "Source:",
+ "Tamam; Ayarlar › Hesap'tan istediğin an açabilirsin.": "OK; you can turn it on any time in Settings › Account.",
+ "günü anlatsın": "tells the day",
+ "Ücretsiz bir hesap açarsan her pazartesi takip ettiklerinden yeni kayıtlar ve haftanın öne çıkanları e-postana gelir; favorilerin ve notların da her cihazda olur.": "With a free account you get new records from what you follow and the week's highlights every Monday by email, and your favourites and notes are on every device.",
+ "İlerleme": "Progress",
+ "Şimdi değil": "Not now"
 };

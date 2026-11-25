@@ -165,6 +165,7 @@ async function oturumAcildi(kullanici) {
   } catch (e) { H.durum = tx("Hesaptaki kayıtlar şimdi alınamadı; internet gelince eşitlenecek."); }
   dinle();
   acikProfilYaz();
+  if (typeof epostaSorusuKontrol === "function") setTimeout(epostaSorusuKontrol, 1500);
 }
 
 /* ---------------------------------------------------------------- giriş işlemleri */

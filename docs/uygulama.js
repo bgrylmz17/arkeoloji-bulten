@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.14.1";
+const SURUM = "1.15.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -366,6 +366,8 @@ function sayfaBugun() {
     ${sd.length ? `<section class="son-dakika" aria-label="${tx("Son dakika ve öne çıkanlar")}"><h2><span class="nabiz" aria-hidden="true"></span>${tx("Son dakika ve öne çıkanlar")}</h2>
       <div class="sd-serit">${sd.map(d => `<a class="sd-kart${d.onemli ? " onemli" : ""}" href="${esc(d.adres)}" ${d.dis ? 'target="_blank" rel="noopener"' : ""}>
         <b>${esc(d.baslik)}</b><small>${esc(d.alt)}</small></a>`).join("")}</div></section>` : ""}
+    ${VERI.guncelleme ? `<button class="anlat-kart" id="anlat-ac"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>
+      <span><b>Arkix</b> ${tx("günü anlatsın")}</span><i>→</i></button>` : ""}
     <p class="ozet">${!VERI.guncelleme ? tx("Bülten henüz ilk kez toplanmadı.") : yeni.length
       ? tx("Son bakışınızdan beri {b}{n} yeni kayıt{/b} geldi.", { n: yeni.length, b: "<b>", "/b": "</b>" })
       : tx("Son iki günde {n} kayıt toplandı.", { n: son.length })}${VERI.guncelleme ? " " + tx("Bülten {saat} güncellendi.", { saat: esc(saatYaz(VERI.guncelleme)) }) : ""}
@@ -374,6 +376,7 @@ function sayfaBugun() {
   const liste = (yeni.length ? yeni : son).slice(0, 80);
   $("#sayfa").innerHTML = ust + (liste.length ? tabakalarHtml(liste)
     : bosHtml(tx("Henüz kayıt yok"), tx("Bülten ilk kez toplanıyor olabilir; birkaç dakika sonra yeniden bakın.")));
+  const anlat = $("#anlat-ac"); if (anlat) anlat.onclick = gunuAnlat;
   const kahraman = document.querySelector(".gunluk-kahraman");
   if (kahraman) kahraman.addEventListener("click", e => {
     if (e.target.closest("a")) return;
@@ -409,6 +412,56 @@ function sayfaOzet() {
     else SES.oku(so.sesli, tx("Dünün özeti"));
   };
   if (VERI.guncelleme && D.ozetGorulen !== VERI.guncelleme) { D.ozetGorulen = VERI.guncelleme; kaydet(); ozetRozeti(); }
+}
+
+/* "Arkix günü anlatsın": dünün öne çıkanları, kısa özetleriyle; altta oynatıcı (doğal sesli mp3 varsa ilerleme ve hız) */
+function gunuAnlat() {
+  const so = sabahOzeti();
+  const mp3 = VERI.sesli_ozet;
+  const mp3Var = mp3 && mp3.dosya && DIL !== "en" && !so.son48 && mp3.gun === gunOnce(1);
+  const kisa = m => { m = String(m || "").replace(/\s+/g, " ").trim(); return m.length > 320 ? m.slice(0, 320).replace(/\s\S*$/, "") + "…" : m; };
+  const k = document.createElement("div");
+  k.className = "anlat-kapi"; k.setAttribute("role", "dialog"); k.setAttribute("aria-modal", "true"); k.setAttribute("aria-labelledby", "anlat-baslik");
+  k.innerHTML = `<div class="anlat-panel">
+    <div class="anlat-ust"><h2 id="anlat-baslik"><b>Arkix</b> ${tx("günü anlatsın")}</h2><button class="ikon-dugme" id="anlat-kapat" aria-label="${tx("Kapat")}"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
+    <p class="anlat-giris">${esc(so.selam)}. ${esc(so.paragraf)}</p>
+    ${so.oneCikanlar.map(r => `<article class="anlat-madde"><a href="#k/${encodeURIComponent(r.i)}"><h3>${esc(baslikGoster(r))}</h3></a>
+      ${(cevOzet(r) || r.o) ? `<p>${esc(kisa(yabanciMi(r) ? (cevOzet(r) || r.o) : r.o))}</p>` : ""}
+      <p class="anlat-kaynak">${tx("Kaynak:")} <span>${esc(r.w || r.s || "")}</span></p></article>`).join("") || `<p class="aciklama">${tx("Dünden bu yana yeni kayıt gelmedi.")}</p>`}
+    <div class="anlat-calar">
+      <button class="anlat-oynat" id="anlat-oynat" aria-label="${tx("Dinle")}"><svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg></button>
+      ${mp3Var ? `<span id="anlat-sure">00:00</span><input type="range" id="anlat-ilerle" min="0" max="100" value="0" step="0.1" aria-label="${tx("İlerleme")}"><span id="anlat-toplam">--:--</span>
+        <button class="anlat-hiz" id="anlat-hiz">1x</button><audio id="anlat-ses" preload="metadata" src="${esc(`${mp3.dosya}?v=${mp3.imza}`)}"></audio>`
+        : `<span class="anlat-not">${tx("Cihazın sesiyle okunur")}</span>`}
+    </div></div>`;
+  document.body.appendChild(k);
+  const kapat = () => { const a = k.querySelector("#anlat-ses"); if (a) a.pause(); else SES.durdur(); k.remove(); document.removeEventListener("keydown", tus); };
+  const tus = e => { if (e.key === "Escape") kapat(); };
+  document.addEventListener("keydown", tus);
+  k.querySelector("#anlat-kapat").onclick = kapat;
+  k.addEventListener("click", e => { if (e.target === k) kapat(); });
+  k.querySelectorAll(".anlat-madde a").forEach(a => a.addEventListener("click", kapat));
+  const oynat = k.querySelector("#anlat-oynat");
+  const simge = calar => { oynat.innerHTML = calar ? '<svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg>'; };
+  const a = k.querySelector("#anlat-ses");
+  if (a) {
+    const z = t => isFinite(t) ? `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(Math.floor(t % 60)).padStart(2, "0")}` : "--:--";
+    const ilerle = k.querySelector("#anlat-ilerle"), hiz = k.querySelector("#anlat-hiz");
+    a.addEventListener("loadedmetadata", () => { k.querySelector("#anlat-toplam").textContent = z(a.duration); });
+    a.addEventListener("timeupdate", () => { k.querySelector("#anlat-sure").textContent = z(a.currentTime); if (a.duration) ilerle.value = (a.currentTime / a.duration) * 100; });
+    a.addEventListener("play", () => simge(true)); a.addEventListener("pause", () => simge(false)); a.addEventListener("ended", () => simge(false));
+    ilerle.oninput = () => { if (a.duration) a.currentTime = (ilerle.value / 100) * a.duration; };
+    oynat.onclick = () => (a.paused ? a.play() : a.pause());
+    const hizlar = [1, 1.2, 1.5, 0.8];
+    hiz.onclick = () => { const i = (hizlar.indexOf(a.playbackRate) + 1) % hizlar.length; a.playbackRate = hizlar[i]; hiz.textContent = hizlar[i] + "x"; };
+  } else {
+    let caliyor = false;
+    oynat.onclick = () => {
+      if (caliyor) { SES.durdur(); caliyor = false; simge(false); return; }
+      const metin = [...so.sesli.slice(0, 2), ...so.oneCikanlar.map(r => `${baslikGoster(r)}. ${kisa(yabanciMi(r) ? (cevOzet(r) || "") : r.o)}`)];
+      SES.oku(metin, tx("Arkix günü anlatıyor")); caliyor = true; simge(true);
+    };
+  }
 }
 
 /* Arkix Özel: kendi yazılarımız (alt bardaki ★) */
@@ -1553,6 +1606,7 @@ document.addEventListener("visibilitychange", async () => {
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", temaUygula);
 
 /* ---------------------------------------------------------------- başlangıç */
+window.acilisBitti = new Promise(r => { window.acilisBittiCoz = r; });   // açılış ekranları (KVKK, tema, tanıtım, günlük) bitince
 (async function baslat() {
   statikCevir();
   temaUygula();
@@ -1578,6 +1632,8 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", temaUygula
     await tanitimGoster(); D.tanitimGoruldu = TANITIM_SURUM; kaydet();
   }
   if (window.GUNLUK) await GUNLUK.acilis({ baslik: tx("Günün Ören Yeri"), dugme: tx("Bugüne başla") }, D.gunlukGun, g => { D.gunlukGun = g; kaydet(); });
+  window.acilisBittiCoz();
+  if (typeof epostaSorusuKontrol === "function") setTimeout(epostaSorusuKontrol, 1200);
   if ("serviceWorker" in navigator) {
     try { await navigator.serviceWorker.register("sw.js"); if (D.bildirim) arkaPlanKaydi(); } catch (e) {}
   }

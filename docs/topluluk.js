@@ -226,6 +226,46 @@ function toplulukGrubuBagla() {
   if (i) i.onclick = () => geriBildirimLevhasi("istek");
 }
 
+/* ---------------------------------------------------------------- haftalık özet sorusu
+ * Giriş yapmış ve kararı olmayan (profil.eposta_izni yok) kullanıcıya bir kez sorulur; cevap (evet ya da hayır)
+ * tarihle kaydedilir. Girişsiz kullanıcı bir kez davet edilir (D.ozetDavet). Açılış ekranları bitince çalışır. */
+let epostaSorusuAcik = false;
+function ustKatmanVar() { return !!document.querySelector(".onay-kapi, .gunluk-kapi, .anlat-kapi") || !$("#levha").hidden; }
+async function epostaSorusuKontrol() {
+  if (epostaSorusuAcik || H.yok) return;
+  await (window.acilisBitti || Promise.resolve());
+  for (let i = 0; i < 30 && !H.hazir; i++) await new Promise(r => setTimeout(r, 200));
+  if (ustKatmanVar() || epostaSorusuAcik) return;
+  if (H.kullanici) {
+    if (profilAl().eposta_izni !== undefined) return;
+    epostaSorusuAcik = true;
+    levhaAc(`<div class="eposta-soru"><div class="eposta-soru-ikon">✉️</div><h3>${tx("Haftalık özet e-postana gelsin mi?")}</h3>
+      <p class="aciklama">${tx("Her pazartesi sabahı takip ettiklerinden yeni kayıtlar, haftanın öne çıkanları ve Arkix Özel yazıları {eposta} adresine gelir. İstediğin an ayrılabilirsin.", { eposta: esc(H.kullanici.email || "") })}</p>
+      <p style="margin:14px 0 0"><button class="buyuk-dugme" id="es-evet">${tx("Evet, gönder")}</button></p>
+      <p style="text-align:center;margin:8px 0 0"><button class="ikincil-dugme" id="es-hayir">${tx("Hayır, teşekkürler")}</button></p></div>`, lv => {
+      const karar = async izin => {
+        epostaSorusuAcik = false; levhaKapat();
+        try {
+          await profilKaydet({ eposta_izni: { izin, tarih: new Date().toISOString(), eposta: H.kullanici.email || "", metin: EPOSTA_IZIN_METNI } });
+          bildir(izin ? tx("Yenilikler e-postanıza gelecek") : tx("Tamam; Ayarlar › Hesap'tan istediğin an açabilirsin."));
+        } catch (e) { bildir(tx("Kaydedilemedi; internet bağlantınızı kontrol edin.")); }
+      };
+      lv.querySelector("#es-evet").onclick = () => karar(true);
+      lv.querySelector("#es-hayir").onclick = () => karar(false);
+    });
+  } else if (!D.ozetDavet) {
+    D.ozetDavet = true; kaydet();
+    epostaSorusuAcik = true;
+    levhaAc(`<div class="eposta-soru"><div class="eposta-soru-ikon">✉️</div><h3>${tx("Haftalık özet ister misin?")}</h3>
+      <p class="aciklama">${tx("Ücretsiz bir hesap açarsan her pazartesi takip ettiklerinden yeni kayıtlar ve haftanın öne çıkanları e-postana gelir; favorilerin ve notların da her cihazda olur.")}</p>
+      <p style="margin:14px 0 0"><a class="buyuk-dugme" href="#giris" id="es-giris">${tx("Giriş yap ve aç")}</a></p>
+      <p style="text-align:center;margin:8px 0 0"><button class="ikincil-dugme" id="es-sonra">${tx("Şimdi değil")}</button></p></div>`, lv => {
+      lv.querySelector("#es-giris").onclick = () => { epostaSorusuAcik = false; levhaKapat(); };
+      lv.querySelector("#es-sonra").onclick = () => { epostaSorusuAcik = false; levhaKapat(); };
+    });
+  }
+}
+
 /* ---------------------------------------------------------------- e-posta özetinden ayrılma (#ayril/<uid>/<imza>) */
 async function sayfaAyril(arg) {
   const [uid, token] = (arg || "").split("/");
