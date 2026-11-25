@@ -1,4 +1,4 @@
-/* Harrix Arkeoloji Bülteni — arayüz dili (Türkçe / English).
+/* Arkix — arayüz dili (Türkçe / English).
  * Türkçe metnin kendisi anahtardır: tx("Ayarlar") → İngilizcede EN["Ayarlar"]; karşılığı yoksa Türkçe görünür.
  * Değişken: tx("{n} kayıt", { n: 5 }). Veri değerleri ("Haber", "Makale"…) Türkçe kalır, yalnız ekranda çevrilir.
  * İngilizce karşılıklar dil-en.js içindedir (EN). */

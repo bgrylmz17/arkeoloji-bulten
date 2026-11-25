@@ -1,6 +1,6 @@
 {
-  "name": "Harrix Arkeoloji Bülteni",
-  "short_name": "Bülten",
+  "name": "Arkix: Arkeoloji Bülteni",
+  "short_name": "Arkix",
   "description": "Arkeoloji makaleleri, tezler, kazı haberleri ve raporları; her sabah dünün özeti, son dakika duyuruları ve Harrix Kitaplık.",
   "lang": "tr",
   "dir": "ltr",
@@ -9,7 +9,7 @@
   "id": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#eef0e9",
+  "background_color": "#2a211a",
   "theme_color": "#eef0e9",
   "categories": [
     "news",

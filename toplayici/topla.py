@@ -1,4 +1,4 @@
-"""Harrix Arkeoloji Bülteni — bulut toplayıcı.
+"""Arkix — bulut toplayıcı.
 
 GitHub Actions bunu günde birkaç kez çalıştırır. Masaüstü uygulamanın toplama kodunu
 (harrix_bulten paketi) kullanır, sonuçları telefon uygulamasının okuyacağı JSON dosyalarına yazar:
@@ -216,7 +216,7 @@ def ozet_metni(tum: list[dict], dun: str) -> str:
            + [k for k in havuz if k.get("k") == "Tez"][:1])[:5]
     gun = dt.date.fromisoformat(dun)
     aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
-    satirlar = [f"Harrix Arkeoloji Bülteni. {gun.day} {aylar[gun.month - 1]}, dünün özeti.",
+    satirlar = [f"Arkix. {gun.day} {aylar[gun.month - 1]}, dünün özeti.",
                 f"Dün arkeoloji gündeminde {liste} öne çıktı."]
     if one:
         satirlar.append("Öne çıkanlar.")

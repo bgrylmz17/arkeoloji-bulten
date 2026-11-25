@@ -1,11 +1,11 @@
-/* Harrix Arkeoloji Bülteni — telefon uygulaması (PWA)
+/* Arkix — telefon uygulaması (PWA)
  * Veri: veri/bulten.json (GitHub Actions günde 4 kez günceller).
  * Kişisel olanlar (favoriler, konular, notlar, kaynakça, okundu bilgisi) yalnızca bu cihazda,
  * tarayıcının yerel deposunda tutulur; hiçbir sunucuya gitmez.
  */
 "use strict";
 
-const SURUM = "1.8.0";
+const SURUM = "1.9.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -393,7 +393,7 @@ function sabahOzeti() {
     ? tx(son48 ? "Son 48 saatte arkeoloji gündeminde {liste} öne çıktı." : "Dün arkeoloji gündeminde {liste} öne çıktı.",
       { liste: parca.join(", ").replace(/, ([^,]*)$/, tx(" ve ") + "$1") })
     : tx("Dünden bu yana yeni kayıt gelmedi.");
-  const sesli = [tx("{selam}. Harrix Arkeoloji Bülteni, dünün özeti.", { selam }), paragraf,
+  const sesli = [tx("{selam}. Arkix, dünün özeti.", { selam }), paragraf,
     ...oneCikanlar.map((r, i) => `${i + 1}. ${turAdi(r.k)}: ${String(baslikGoster(r)).replace(/\.$/, "")}.`)];
   return { selam, etiket, son48, havuz, paragraf, oneCikanlar, sesli };
 }
@@ -1131,7 +1131,7 @@ function sayfaAyarlar() {
       <label class="satir" style="cursor:pointer">${tx("Yedeği içe aktar")}<input type="file" id="yedek-yukle" accept="application/json,.json" hidden></label>
     </div><p class="aciklama">${tx("Favoriler, konular, notlar ve kaynakça yalnızca bu telefonda tutulur. Telefon değiştirirken yedeği dışa aktarıp yenisine yükleyin.")}</p></div>
     <div class="grup"><h3>${tx("Hakkında")}</h3><div class="kutu">
-      <div class="satir">${tx("Harrix Arkeoloji Bülteni")}<span class="sag">${SURUM}</span></div>
+      <div class="satir">${tx("Arkix")}<span class="sag">${SURUM}</span></div>
       <a class="satir" style="color:inherit" href="mailto:harrixapp@gmail.com?subject=${encodeURIComponent("Harrix Bülten")}">${tx("Destek ve iletişim")}<span class="sag">harrixapp@gmail.com</span></a>
       <a class="satir" style="color:inherit" href="https://www.instagram.com/harrixapp/" target="_blank" rel="noopener">Instagram<span class="sag">@harrixapp</span></a>
       <a class="satir" style="color:inherit" href="#yasal">${tx("Kullanım koşulları ve KVKK")}</a>
@@ -1146,7 +1146,7 @@ function sayfaAyarlar() {
   sec("yazi", D.yazi, v => D.yazi = Number(v));
   if ($("#ses-hiz")) {
     sec("ses-hiz", D.sesHiz || 1, v => D.sesHiz = Number(v));
-    $("#ses-dene").onclick = () => SES.oku([tx("Merhaba. Harrix Arkeoloji Bülteni sesli okuma böyle duyulur. Milattan önce 9600 yılına tarihlenen yapılar.")], tx("Ses denemesi"));
+    $("#ses-dene").onclick = () => SES.oku([tx("Merhaba. Arkix sesli okuma böyle duyulur. Milattan önce 9600 yılına tarihlenen yapılar.")], tx("Ses denemesi"));
     if ($("#ses-sec")) { $("#ses-sec").value = D.sesId || ""; $("#ses-sec").onchange = e => { D.sesId = e.target.value; kaydet(); rota(true); }; }
   }
   $("#yenile").onclick = async () => { bildir(tx("Yenileniyor…")); if (await veriYukle(true)) bildir(tx("Bülten {saat} tarihli", { saat: saatYaz(VERI.guncelleme) })); };
@@ -1282,7 +1282,7 @@ function kvkkKapisi() {
     k.className = "onay-kapi"; k.setAttribute("role", "dialog"); k.setAttribute("aria-modal", "true"); k.setAttribute("aria-labelledby", "onay-baslik");
     k.innerHTML = `<div class="onay-kutu">
       <div class="onay-dil">${dilSeciciHtml()}</div>
-      <h2 id="onay-baslik">${tx("Harrix Arkeoloji Bülteni'ne hoş geldiniz")}</h2>
+      <h2 id="onay-baslik">${tx("Arkix'e hoş geldiniz")}</h2>
       <p>${tx("Devam etmeden önce kullanım koşullarını ve KVKK aydınlatma metnini okuyup onaylayın. Giriş yapmadan kullandığınızda kişisel verileriniz yalnız bu cihazda kalır.")}</p>
       <details><summary>${tx("Metni oku")}</summary><div class="yasal">${yasalHtml()}</div></details>
       <label class="onay-satir"><input type="checkbox" id="onay-kutu"> ${tx("Kullanım koşullarını ve KVKK aydınlatma metnini okudum, kabul ediyorum.")}</label>
@@ -1298,7 +1298,7 @@ function kvkkKapisi() {
 function yasalHtml() {
   if (DIL === "en") return `
     <h2>Terms of Use</h2>
-    <p>The Harrix Archaeology Bulletin presents archaeology headlines, abstracts and links collected from open academic databases (OpenAlex, Crossref, DergiPark) and publicly available news sources. All content remains the copyright of its original publishers; the app only provides links, references and personal research tools. Machine translations are an aid; check the original before quoting.</p>
+    <p>Arkix presents archaeology headlines, abstracts and links collected from open academic databases (OpenAlex, Crossref, DergiPark) and publicly available news sources. All content remains the copyright of its original publishers; the app only provides links, references and personal research tools. Machine translations are an aid; check the original before quoting.</p>
     <h2>Privacy Notice (Turkish Personal Data Protection Law, KVKK No. 6698)</h2>
     <p>Data controller: Harrix (harrixapp@gmail.com).</p>
     <ul>
@@ -1309,7 +1309,7 @@ function yasalHtml() {
     </ul>`;
   return `
     <h2>Kullanım koşulları</h2>
-    <p>Harrix Arkeoloji Bülteni; açık akademik veritabanlarından (OpenAlex, Crossref, DergiPark) ve kamuya açık haber kaynaklarından derlenen arkeoloji başlıklarını, özetlerini ve bağlantılarını sunar. İçeriklerin telif hakları özgün yayıncılarına aittir; uygulama yalnızca kaynağa bağlantı, künye ve kişisel araştırma araçları sağlar. Makine çevirileri yardımcıdır; alıntı yapmadan önce özgün metne bakın.</p>
+    <p>Arkix (Arkix); açık akademik veritabanlarından (OpenAlex, Crossref, DergiPark) ve kamuya açık haber kaynaklarından derlenen arkeoloji başlıklarını, özetlerini ve bağlantılarını sunar. İçeriklerin telif hakları özgün yayıncılarına aittir; uygulama yalnızca kaynağa bağlantı, künye ve kişisel araştırma araçları sağlar. Makine çevirileri yardımcıdır; alıntı yapmadan önce özgün metne bakın.</p>
     <h2>KVKK aydınlatma metni</h2>
     <p>6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında veri sorumlusu Harrix'tir (harrixapp@gmail.com).</p>
     <ul>

@@ -1,4 +1,4 @@
-/* Harrix Arkeoloji Bülteni — hesap ve eşitleme (Firebase)
+/* Arkix — hesap ve eşitleme (Firebase)
  * Giriş isteğe bağlıdır. Giriş yapınca favoriler, konular, notlar ve kaynakça hesaba yazılır;
  * aynı hesapla açılan her cihazda görünür. Giriş yapmayanların kayıtları yalnızca o cihazda kalır.
  * Firestore yapısı:
