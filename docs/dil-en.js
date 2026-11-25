@@ -526,5 +526,10 @@ const EN = {
  "Ören yeri çizimi": "Site drawing",
  "Özet": "Summary",
  "Özete git": "Go to summary",
- "Menü": "Menu"
+ "Menü": "Menu",
+ "Henüz Arkix Özel yazısı yok": "No Arkix Special articles yet",
+ "Sahadan notlar, duyurular ve kendi haberlerimiz burada yayımlanacak.": "Notes from the field, announcements and our own stories will be published here.",
+ "Son dakika ve öne çıkanlar": "Breaking and highlights",
+ "Özet henüz hazır değil": "The summary is not ready yet",
+ "Özel": "Special"
 };

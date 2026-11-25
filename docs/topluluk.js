@@ -68,7 +68,8 @@ function yorumTarih(t) {
 }
 function yorumHtml(y) {
   const ben = H.kullanici && y.uid === H.kullanici.uid;
-  const av = y.avatar ? `<img class="avatar" src="${avatarAdresi(y.avatar)}" alt="" width="36" height="36">`
+  const av = y.foto ? `<img class="avatar" src="${esc(y.foto)}" alt="" width="36" height="36">`
+    : y.avatar ? `<img class="avatar" src="${avatarAdresi(y.avatar)}" alt="" width="36" height="36">`
     : `<span class="avatar avatar-bas" style="width:36px;height:36px;font-size:15px">${esc((y.ad || "?")[0].toLocaleUpperCase("tr"))}</span>`;
   return `<li class="yorum${y.gizli ? " gizli" : ""}" data-yorum="${esc(y.id)}">${av}
     <div class="yorum-ic"><p class="yorum-ust"><b>${esc(y.ad || tx("Okur"))}</b>${y.uzman ? `<span class="uzman-rozet">${tx("Uzman")}</span>` : ""}<small>${esc(yorumTarih(y.tarih))}</small></p>
@@ -80,7 +81,16 @@ async function yorumlariGetir(kayitId) {
   const { fs } = await firebaseYukle();
   const q = fs.query(fs.collection(H.db, "yorumlar"), fs.where("kayit", "==", kayitId), fs.where("gizli", "==", false));
   const anlik = await fs.getDocs(q);
-  return anlik.docs.map(d => ({ id: d.id, ...d.data() }))
+  const liste = anlik.docs.map(d => ({ id: d.id, ...d.data() }));
+  // yorum yazıldıktan sonra resmini ya da adını değiştirenler güncel haliyle görünsün
+  const profiller = await Promise.all([...new Set(liste.map(y => y.uid))].map(uid =>
+    fs.getDoc(fs.doc(H.db, "profiller", uid)).then(d => [uid, d.exists() ? d.data() : null]).catch(() => [uid, null])));
+  const harita = new Map(profiller);
+  for (const y of liste) {
+    const p = harita.get(y.uid);
+    if (p) { if (p.ad) y.ad = p.ad; y.avatar = p.avatar || ""; y.foto = p.foto || ""; }
+  }
+  return liste
     .sort((a, b) => ((a.tarih && a.tarih.toMillis ? a.tarih.toMillis() : Date.now()) - (b.tarih && b.tarih.toMillis ? b.tarih.toMillis() : Date.now())));
 }
 
@@ -123,6 +133,7 @@ async function yorumlarCiz(r) {
       await fs.addDoc(fs.collection(H.db, "yorumlar"), { kayit: r.i, uid: H.kullanici.uid, ad: gorunenAd(), avatar: profilAl().avatar || "",
         uzman, metin: metin.slice(0, YORUM_SINIR), tarih: fs.serverTimestamp(), gizli: false });
       bildir(tx("Yorumunuz yayımlandı"));
+      if (typeof acikProfilYaz === "function") acikProfilYaz();
       yorumlarCiz(r);
     } catch (err) { dugme.disabled = false; bildir(tx("Yorum gönderilemedi. Biraz sonra yeniden deneyin.")); }
   };

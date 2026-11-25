@@ -164,6 +164,7 @@ async function oturumAcildi(kullanici) {
     }
   } catch (e) { H.durum = tx("Hesaptaki kayıtlar şimdi alınamadı; internet gelince eşitlenecek."); }
   dinle();
+  acikProfilYaz();
 }
 
 /* ---------------------------------------------------------------- giriş işlemleri */
@@ -264,6 +265,17 @@ async function profilKaydet(degisen) {
   kaydet();
   const { fs } = H.fb;
   await fs.setDoc(fs.doc(H.db, "kullanicilar", H.kullanici.uid), { profil: D.profil }, { mergeFields: ["profil"] });
+  await acikProfilYaz();
+}
+/* Yorumlarda görünen ad ve güncel resim herkese açık profiller/{uid} belgesinde (e-posta, izinler orada yok) */
+async function acikProfilYaz() {
+  if (!H.kullanici) return;
+  const p = profilAl(), { fs } = H.fb;
+  const ad = (p.ad || H.kullanici.displayName || "").trim().slice(0, 40);
+  try {
+    await fs.setDoc(fs.doc(H.db, "profiller", H.kullanici.uid),
+      { ad, avatar: (p.avatar || "").slice(0, 40), foto: (p.foto || "").slice(0, 60000), guncelleme: Date.now() });
+  } catch (e) { /* kurallar henüz yayımlanmadıysa yorumlar eski resimle görünür */ }
 }
 function profilFotosu() {
   const p = profilAl();

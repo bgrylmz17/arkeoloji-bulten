@@ -22,6 +22,16 @@ service cloud.firestore {
       }
     }
 
+    // Herkese açık profil (yorumlarda görünen ad ve güncel resim): herkes okur, yalnız sahibi yazar
+    match /profiller/{uid} {
+      allow read: if true;
+      allow write: if ben(uid)
+        && request.resource.data.keys().hasOnly(['ad', 'avatar', 'foto', 'guncelleme'])
+        && request.resource.data.ad is string && request.resource.data.ad.size() <= 40
+        && request.resource.data.avatar is string && request.resource.data.avatar.size() <= 40
+        && request.resource.data.foto is string && request.resource.data.foto.size() <= 60000;
+    }
+
     // Yorumlar: gizli olmayanları herkes okur; giriş yapmış ve engellenmemiş kullanıcı yazar;
     // yazarı ya da yönetici siler; yalnız yönetici gizler/gösterir.
     match /yorumlar/{id} {
