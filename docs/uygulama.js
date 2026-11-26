@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.36.0";
+const SURUM = "1.37.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -511,28 +511,67 @@ function duyuruSuzgecBagla(arg) {
 }
 function duyuruKartHtml(d) {
   const bugun = new Date().toISOString().slice(0, 10), ic = d.k ? `#k/${encodeURIComponent(d.k)}` : d.u, gelecek = !!d.et && (d.t || "") >= bugun;
-  return `<div class="du-kapsa"><a class="du-kart" href="${escUrl(ic)}"${d.k ? "" : ' target="_blank" rel="noopener"'}>
+  return `<div class="du-kapsa"><a class="du-kart" data-du-i="${esc(d.i)}" href="${escUrl(ic)}"${d.k ? "" : ' target="_blank" rel="noopener"'}>
     <span class="du-tarih${gelecek ? " gelecek" : ""}"><b>${esc((d.t || "").slice(8, 10))}</b><small>${esc(new Date((d.t || bugun) + "T00:00:00").toLocaleDateString(DIL === "en" ? "en-GB" : "tr-TR", { month: "short", year: "2-digit" }))}</small></span>
     <span class="du-ic"><b>${d.onemli ? "⭐ " : ""}${esc(d.b)}</b><small>${d.tr ? "🇹🇷 " : ""}${esc(d.s || "")}${d.l === "en" && DIL !== "en" ? " · EN" : ""}${gelecek ? ` · ${tx("yaklaşan")}` : ""}${d.et ? "" : ` · ${tx("duyuru tarihi")}`}</small>${d.o ? `<small class="du-ozet">${esc(d.o)}</small>` : ""}</span></a>
-    <span class="du-eylem">${d.du === "etkinlik" && d.et && gelecek ? `<button class="du-takip" data-etk="${esc(d.i)}" aria-pressed="${etkinlikTakipte(d.i)}">${etkinlikTakipte(d.i) ? "✓ " + tx("Takipte") : "🔔 " + tx("Hatırlat")}</button>` : ""}
+    <span class="du-eylem">${d.du === "etkinlik" && (gelecek || !d.et && duyuruGuncel(d) || etkinlikTakipte(d.i)) ? `<button class="du-takip" data-etk="${esc(d.i)}" aria-pressed="${etkinlikTakipte(d.i)}">${etkinlikTakipte(d.i) ? "✓ " + tx("Takipte") : "🔔 " + tx("Hatırlat")}</button>` : ""}
     ${d.ig ? `<a class="du-ig" href="${escUrl(d.ig)}" target="_blank" rel="noopener">📷 Instagram</a>` : ""}</span></div>`;
 }
 /* Etkinlik takibi: D.takip'e { tur: "etkinlik", deger: kimlik, ad, t, u, s } olarak yazılır (hesapla eşitlenir).
  * Bir hafta, bir gün kala ve o gün bildirim (uygulama içi; girişliyse telefona: bildirim_gonder.py). */
 const etkinlikTakipte = i => (D.takip || []).some(x => x.tur === "etkinlik" && x.deger === i);
-function etkinlikTakipDegistir(d) {
+function etkinlikTakipDegistir(d, tarih) {
   D.takip = D.takip || [];
-  if (etkinlikTakipte(d.i)) { D.takip = D.takip.filter(x => !(x.tur === "etkinlik" && x.deger === d.i)); bildir(tx("Hatırlatma kaldırıldı")); }
-  else { D.takip.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), tur: "etkinlik", deger: d.i, ad: d.b.slice(0, 160), t: d.t, u: d.u, s: d.s || "" });
-    bildir(tx("Bir hafta ve bir gün kala hatırlatılacak")); }
+  if (etkinlikTakipte(d.i) && !tarih) { D.takip = D.takip.filter(x => !(x.tur === "etkinlik" && x.deger === d.i)); bildir(tx("Hatırlatma kaldırıldı")); }
+  else {
+    D.takip = D.takip.filter(x => !(x.tur === "etkinlik" && x.deger === d.i));
+    D.takip.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), tur: "etkinlik", deger: d.i, ad: d.b.slice(0, 160), t: tarih || d.t, u: d.u, s: d.s || "" });
+    bildir(tx("Bir hafta ve bir gün kala hatırlatılacak"));
+  }
   kaydet();
 }
+/* Hatırlatma kur: tarih duyuruda yoksa kullanıcı girer (sola kaydırınca ya da tarihsiz duyuruda "Hatırlat"la açılır) */
+function hatirlatLevhasi(d, sonra) {
+  const bugun = new Date().toISOString().slice(0, 10), mevcut = (D.takip || []).find(x => x.tur === "etkinlik" && x.deger === d.i);
+  levhaAc(`<h3>🔔 ${tx("Hatırlatma kur")}</h3><p><b>${esc(d.b)}</b></p>
+    <p class="aciklama">${d.et ? tx("Etkinlik günü duyurudan alındı; istersen değiştir.") : tx("Bu duyuruda etkinlik günü yazmıyor; günü sen gir. Bir hafta, bir gün kala ve o gün hatırlatılır.")}</p>
+    <div class="kazi-form"><label>${tx("Etkinlik günü")}<input type="date" id="htr-gun" min="${bugun}" value="${esc((mevcut && mevcut.t) || (d.et ? d.t : ""))}"></label></div>
+    <p style="margin:14px 0 0"><button class="buyuk-dugme" id="htr-kaydet">${tx("Hatırlat")}</button></p>
+    ${mevcut ? `<p style="text-align:center"><button class="ikincil-dugme" id="htr-sil">${tx("Hatırlatmayı kaldır")}</button></p>` : ""}`, lv => {
+    lv.querySelector("#htr-kaydet").onclick = () => {
+      const g = lv.querySelector("#htr-gun").value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(g)) { bildir(tx("Etkinlik gününü seç")); return; }
+      etkinlikTakipDegistir(d, g); levhaKapat(); if (sonra) sonra();
+    };
+    const s = lv.querySelector("#htr-sil");
+    if (s) s.onclick = () => { etkinlikTakipDegistir(d); levhaKapat(); if (sonra) sonra(); };
+  });
+}
 function duyuruTakipBagla() {
+  const yenile = () => { if (location.hash.startsWith("#ozel")) rota(true); };
   $$(".du-takip").forEach(b => b.onclick = e => {
     e.preventDefault(); e.stopPropagation();
     const d = (VERI.etkinlikler || []).find(x => x.i === b.dataset.etk); if (!d) return;
-    etkinlikTakipDegistir(d);
-    const on = etkinlikTakipte(d.i); b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "✓ " + tx("Takipte") : "🔔 " + tx("Hatırlat");
+    if (d.et && !etkinlikTakipte(d.i)) { etkinlikTakipDegistir(d); yenile(); }   // günü belli: tek dokunuş
+    else hatirlatLevhasi(d, yenile);
+  });
+  // sola kaydırınca hatırlatma kur (bütün etkinlik kartları)
+  $$(".du-kart[data-du-i]").forEach(el => {
+    const d = (VERI.etkinlikler || []).find(x => x.i === el.dataset.duI);
+    if (!d || d.du !== "etkinlik" || el.dataset.kaydir) return; el.dataset.kaydir = 1;
+    let x0 = 0, y0 = 0, dx = 0, yatay = null;
+    el.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; yatay = null; }, { passive: true });
+    el.addEventListener("touchmove", e => {
+      const ddx = e.touches[0].clientX - x0, ddy = e.touches[0].clientY - y0;
+      if (yatay === null && (Math.abs(ddx) > 8 || Math.abs(ddy) > 8)) yatay = Math.abs(ddx) > Math.abs(ddy) && ddx < 0;
+      if (!yatay) return;
+      dx = Math.max(-120, Math.min(0, ddx)); el.style.transition = "none"; el.style.transform = `translateX(${dx}px)`;
+    }, { passive: true });
+    el.addEventListener("touchend", () => {
+      el.style.transition = ""; el.style.transform = "";
+      if (yatay && dx < -80) { titres(14); hatirlatLevhasi(d, yenile); }
+    });
+    el.addEventListener("click", e => { if (yatay && Math.abs(dx) > 6) e.preventDefault(); });
   });
 }
 function sayfaOzel(arg) {
@@ -558,7 +597,7 @@ function sayfaOzel(arg) {
     $("#sayfa").innerHTML = sekme + duyuruSuzgecHtml() + `
       <p style="margin:6px 16px 0"><button class="ikincil-dugme" id="etk-gonder">＋ ${tx("Etkinlik duyur")}</button></p>
       <div id="etk-topluluk"></div>
-      <p class="aciklama ar-not" style="margin-top:10px">${tx("Sempozyum, kongre, konferans, çalıştay ve bildiri çağrıları; haber siteleri ve kurumlardan otomatik toplanır, günde dört kez güncellenir. Türkiye'dekiler önde.")}</p>
+      <p class="aciklama ar-not" style="margin-top:10px">${tx("Sempozyum, kongre, konferans, çalıştay ve bildiri çağrıları; haber siteleri ve kurumlardan otomatik toplanır, günde dört kez güncellenir. Türkiye'dekiler önde.")} ${tx("Hatırlatma kurmak için etkinliği sola kaydır.")}</p>
       ${yaklasan.length ? `<h3 class="ist-baslik">${tx("Yaklaşan")}</h3><div class="du-liste">${yaklasan.map(duyuruKartHtml).join("")}</div>` : ""}
       ${son.length ? `<h3 class="ist-baslik">${tx("Son duyurular")}</h3><div class="du-liste">${son.map(duyuruKartHtml).join("")}</div>` : ""}
       <h3 class="ist-baslik">📚 ${tx("Bildiri kitapları")}</h3>

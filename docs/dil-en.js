@@ -1030,5 +1030,12 @@ const EN = {
  "bugün": "today",
  "geçti": "past",
  "yarın": "tomorrow",
- "Öteki profillerin": "Your other profiles"
+ "Öteki profillerin": "Your other profiles",
+ "Bu duyuruda etkinlik günü yazmıyor; günü sen gir. Bir hafta, bir gün kala ve o gün hatırlatılır.": "This announcement doesn't give the event date; enter it yourself. You'll be reminded a week and a day before, and on the day.",
+ "Etkinlik günü": "Event date",
+ "Etkinlik günü duyurudan alındı; istersen değiştir.": "The event date comes from the announcement; change it if you like.",
+ "Etkinlik gününü seç": "Choose the event date",
+ "Hatırlatma kur": "Set a reminder",
+ "Hatırlatma kurmak için etkinliği sola kaydır.": "Swipe an event left to set a reminder.",
+ "Hatırlatmayı kaldır": "Remove reminder"
 };
