@@ -610,8 +610,9 @@ function kzSon(hepsi) {
   KZ.puan += bonus;
   const kd = kaziDurumu();
   kd.toplam += KZ.puan; kd.kosular.push({ alan: KZ.alan.id, puan: KZ.puan }); kaydet();
-  skorGonder("kazi", kd.toplam, `${kd.kosular.length} kazı`);
-  if (typeof rozetVer === "function") { rozetVer("ilk_kazi"); if (haftaninAlani().id === KZ.alan.id) rozetVer("haftanin"); rozetKontrol(); }
+  // skor ve rozet hatası sonuç penceresini engellemesin (yoksa KZ.bitti true kalır, "Kazıyı bitir" bir daha tepki vermez)
+  try { skorGonder("kazi", kd.toplam, `${kd.kosular.length} kazı`); } catch (e) {}
+  try { if (typeof rozetVer === "function") { rozetVer("ilk_kazi"); if (haftaninAlani().id === KZ.alan.id) rozetVer("haftanin"); if (typeof rozetKontrol === "function") rozetKontrol(); } } catch (e) {}
   const ozeller = KZ.bulunan.filter(b => !sikMi(b));
   levhaAc(`<div class="kz-buluntu"><h3>${hepsi ? tx("Açma tamamlandı!") : tx("Kazı bitti")}</h3>
     <p>${esc(KZ.alan.ad)} · ${tx("{n} değerli buluntu", { n: ozeller.length })} · ${tx("{n} sık buluntu", { n: KZ.bulunan.length - ozeller.length })}</p>
@@ -621,4 +622,5 @@ function kzSon(hepsi) {
     <p style="margin-top:14px"><button class="buyuk-dugme" id="kz-geri">${tx("Ören yerlerine dön")}</button></p></div>`, lv => {
     lv.querySelector("#kz-geri").onclick = () => { levhaKapat(); location.hash = "#oyun/kazi"; };
   });
+  if ($("#kz-bitir")) $("#kz-bitir").outerHTML = `<a class="ikincil-dugme" href="#oyun/kazi">${tx("Ören yerlerine dön")}</a>`;
 }
