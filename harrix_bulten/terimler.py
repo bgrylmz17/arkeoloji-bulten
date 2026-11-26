@@ -16,7 +16,7 @@ from .metin import katla
 @dataclass
 class Kavram:
     kimlik: str
-    grup: str            # Dönem / Kültür-Endüstri / Teknoloji / Yöntem / Bölge
+    grup: str            # Dönem / Kültür-Endüstri / Teknoloji / Yöntem / Bölge / Bilim dalı
     tr: list[str]        # ilk eleman Türkçe ana ad
     en: list[str]        # ilk eleman İngilizce ana ad
     varsayilan: bool = False
@@ -104,6 +104,39 @@ TERIMLER: list[Kavram] = [
     K("levant", "Bölge", ["Levant", "Doğu Akdeniz"], ["Levant", "Eastern Mediterranean"]),
     K("kafkasya", "Bölge", ["Kafkasya"], ["Caucasus"]),
     K("zagros", "Bölge", ["Zagros"], ["Zagros"]),
+
+    # ------------------------------------------------------------ Bilim dalları (arkeolojiyle birlikte çalışan disiplinler)
+    K("arkeobotani", "Bilim dalı", ["Arkeobotani", "Arkeobotanik", "Paleoetnobotanik", "Paleobotanik"],
+      ["Archaeobotany", "Archaeobotanical", "Palaeoethnobotany", "Paleoethnobotany"]),
+    K("zooarkeoloji", "Bilim dalı", ["Zooarkeoloji", "Arkeozooloji", "Zooarkeolojik"], ["Zooarchaeology", "Archaeozoology", "Zooarchaeological"]),
+    K("biyoarkeoloji", "Bilim dalı", ["Biyoarkeoloji", "Fiziki antropoloji", "Paleoantropoloji", "İskelet analizi"],
+      ["Bioarchaeology", "Osteoarchaeology", "Physical anthropology", "Palaeoanthropology", "Paleoanthropology"]),
+    K("arkeogenetik", "Bilim dalı", ["Arkeogenetik", "Antik DNA", "Paleogenetik", "Paleogenomik"],
+      ["Archaeogenetics", "Ancient DNA", "Palaeogenomics", "Paleogenomics", "Palaeogenetics"]),
+    K("arkeometri", "Bilim dalı", ["Arkeometri", "Arkeometrik"], ["Archaeometry", "Archaeometric"]),
+    K("jeoarkeoloji", "Bilim dalı", ["Jeoarkeoloji", "Mikromorfoloji"], ["Geoarchaeology", "Micromorphology"]),
+    K("arkeometalurji", "Bilim dalı", ["Arkeometalurji", "Antik metalurji", "Eski metalurji"], ["Archaeometallurgy", "Ancient metallurgy"]),
+    K("izotop", "Bilim dalı", ["İzotop analizi", "Kararlı izotop", "Stabil izotop", "Stronsiyum izotop"],
+      ["Isotope analysis", "Stable isotope", "Strontium isotope"]),
+    K("palinoloji", "Bilim dalı", ["Palinoloji", "Polen analizi"], ["Palynology", "Pollen analysis"]),
+    K("dendrokronoloji", "Bilim dalı", ["Dendrokronoloji", "Ağaç halkası"], ["Dendrochronology", "Tree-ring dating"]),
+    K("kalinti_analizi", "Bilim dalı", ["Organik kalıntı analizi", "Kalıntı analizi", "Lipit analizi"],
+      ["Organic residue analysis", "Residue analysis", "Lipid residue"]),
+    K("seramik_analizi", "Bilim dalı", ["Seramik analizi", "Seramik petrografisi", "Çanak çömlek analizi"],
+      ["Ceramic analysis", "Ceramic petrography", "Pottery analysis"]),
+    K("paleocevre", "Bilim dalı", ["Paleoiklim", "Paleoklimatoloji", "Paleoçevre", "Paleoekoloji"],
+      ["Palaeoclimate", "Paleoclimate", "Palaeoenvironment", "Paleoenvironment", "Palaeoecology"]),
+    K("tafonomi", "Bilim dalı", ["Tafonomi"], ["Taphonomy"]),
+    K("sualti", "Bilim dalı", ["Sualtı arkeolojisi", "Batık kazısı"], ["Underwater archaeology", "Maritime archaeology", "Nautical archaeology"]),
+    K("epigrafi", "Bilim dalı", ["Epigrafi", "Epigrafik"], ["Epigraphy", "Epigraphic"]),
+    K("numismatik", "Bilim dalı", ["Nümismatik", "Sikke definesi"], ["Numismatics", "Numismatic", "Coin hoard"]),
+    K("etnoarkeoloji", "Bilim dalı", ["Etnoarkeoloji"], ["Ethnoarchaeology"]),
+    K("deneysel", "Bilim dalı", ["Deneysel arkeoloji"], ["Experimental archaeology"]),
+    K("arkeoastronomi", "Bilim dalı", ["Arkeoastronomi"], ["Archaeoastronomy"]),
+    K("konservasyon", "Bilim dalı", ["Konservasyon", "Restorasyon", "Arkeolojik koruma"], ["Conservation", "Archaeological conservation"]),
+    K("kulturel_miras", "Bilim dalı", ["Kültürel miras", "Kültür mirası", "Miras yönetimi"], ["Cultural heritage", "Heritage management"]),
+    K("muzecilik", "Bilim dalı", ["Müzecilik", "Müzeoloji"], ["Museology", "Museum studies"]),
+    K("dijital_arkeoloji", "Bilim dalı", ["Dijital arkeoloji", "Hesaplamalı arkeoloji"], ["Digital archaeology", "Computational archaeology"]),
 ]
 
 KAVRAM = {k.kimlik: k for k in TERIMLER}

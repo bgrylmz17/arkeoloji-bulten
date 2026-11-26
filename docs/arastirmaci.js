@@ -64,6 +64,9 @@ async function sayfaArastirmaci() {
   $("#sayfa").innerHTML = `<div class="arastirmaci">
     <div class="ar-ust"><div><h2>${esc(y.display_name)}</h2><p class="aciklama">${esc(kurum)}${a.orcid ? ` · ORCID ${esc(a.orcid)}` : ""}</p></div>
       <button class="ikincil-dugme" id="ar-degis">${tx("Değiştir")}</button></div>
+    <div class="ar-dis">${disProfiller(a).map(([ad, url, kayitli]) => `<a class="ikincil-dugme" href="${escUrl(url)}" target="_blank" rel="noopener">${esc(ad)}${kayitli ? " ✓" : ""}</a>`).join("")}
+      <button class="ikincil-dugme ar-ekle" id="ar-dis-duzenle">＋ ${tx("Profil adreslerimi gir")}</button></div>
+    <p class="aciklama ar-not">${tx("Bu sitelerin verisi uygulamaya çekilmez (Google Scholar'da otomatik çekme yasak, Web of Science ve Scopus kurumsal abonelik ister); düğmeler seni oradaki profiline götürür.")}</p>
     ${yeni ? `<p class="turnuva-bant">🎉 ${tx("Son baktığından beri {n} yeni atıf", { n: sayiYaz(yeni) })}</p>` : ""}
     <div class="ist-izgara">${kart(sayiYaz(y.cited_by_count), tx("Atıf"))}${kart(ss.h_index ?? "—", tx("h-indeks"))}${kart(ss.i10_index ?? "—", tx("i10-indeks"))}${kart(sayiYaz(y.works_count), tx("Yayın"))}</div>
     <p class="aciklama ar-not">${tx("Sayılar OpenAlex'ten. Atıf sayıları kaynağa göre değişir; Google Scholar çoğu kez daha yüksek gösterir. Okuma ve indirme sayıları yalnız yayıncının sayfasında görünür.")}</p>
@@ -80,10 +83,7 @@ async function sayfaArastirmaci() {
       <small>${esc(String(w.publication_year || ""))}${w.primary_location && w.primary_location.source ? " · " + esc(w.primary_location.source.display_name) : ""} · <strong>${sayiYaz(w.cited_by_count)} ${tx("atıf")}</strong></small>
       <span class="ar-baglanti">${w.doi ? `<a href="${escUrl(w.doi)}" target="_blank" rel="noopener">${tx("Yayıncı sayfası (okuma/indirme)")}</a>` : ""}
         ${w.open_access && w.open_access.oa_url ? `<a href="${escUrl(w.open_access.oa_url)}" target="_blank" rel="noopener">${tx("Açık erişim")}</a>` : ""}</span></li>`).join("")}</ul>
-    <h3 class="ist-baslik">${tx("Öteki profillerim")}</h3>
-    <p class="aciklama ar-not">${tx("Bu sitelerin verisi uygulamaya çekilmez (Google Scholar'da otomatik çekme yasak, Web of Science ve Scopus kurumsal abonelik ister); düğmeler seni oradaki profiline götürür.")}</p>
-    <div class="ar-dis">${disProfiller(a).map(([ad, url, kayitli]) => `<a class="ikincil-dugme" href="${escUrl(url)}" target="_blank" rel="noopener">${esc(ad)}${kayitli ? " ✓" : ""}</a>`).join("")}</div>
-    <p style="text-align:center"><button class="metin-dugme" id="ar-dis-duzenle">${tx("Profil adreslerimi gir")}</button></p></div>`;
+    </div>`;
   $("#ar-degis").onclick = () => arastirmaciKur(true);
   $("#ar-dis-duzenle").onclick = () => disProfilLevhasi(a);
 }
@@ -91,9 +91,11 @@ async function sayfaArastirmaci() {
 function disProfilLevhasi(a) {
   levhaAc(`<h3>${tx("Profil adreslerim")}</h3>
     <p class="aciklama">${tx("Girersen düğmeler doğrudan senin profiline gider. Boş bırakırsan o sitede arama sayfası açılır.")}</p>
-    <label class="kazi-form">Google Scholar<input id="ar-scholar" placeholder="https://scholar.google.com/citations?user=…" value="${esc(a.scholar || "")}"></label>
-    <label class="kazi-form">Web of Science ResearcherID<input id="ar-wos" placeholder="ABC-1234-2020" value="${esc(a.wos || "")}"></label>
-    <label class="kazi-form">Scopus Author ID<input id="ar-scopus" placeholder="57190000000" value="${esc(a.scopus || "")}" inputmode="numeric"></label>
+    <div class="kazi-form">
+      <label>Google Scholar<input id="ar-scholar" type="url" placeholder="https://scholar.google.com/citations?user=…" value="${esc(a.scholar || "")}" autocomplete="off"></label>
+      <label>Web of Science ResearcherID<input id="ar-wos" placeholder="ABC-1234-2020" value="${esc(a.wos || "")}" autocomplete="off" autocapitalize="characters"></label>
+      <label>Scopus Author ID<input id="ar-scopus" placeholder="57190000000" value="${esc(a.scopus || "")}" inputmode="numeric" autocomplete="off"></label>
+    </div>
     <p style="margin:14px 0 0"><button class="buyuk-dugme" id="ar-dis-kaydet">${tx("Kaydet")}</button></p>`, lv => {
     lv.querySelector("#ar-dis-kaydet").onclick = () => {
       const scholar = lv.querySelector("#ar-scholar").value.trim(), wos = lv.querySelector("#ar-wos").value.trim().toUpperCase(), scopus = lv.querySelector("#ar-scopus").value.trim();

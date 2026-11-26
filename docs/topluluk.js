@@ -116,9 +116,9 @@ async function unvanLevhasi() {
       ${UNVANLAR.map(u => `<label class="satir"><span>${esc(unvanAd(u.id))}${u.akademik && UNVAN.onayli === u.id ? ` <small>✓ ${tx("doğrulandı")}</small>` : u.akademik ? ` <small>${tx("doğrulama gerekir")}</small>` : ""}</span>
         <input type="radio" name="unvan" value="${u.id}" ${secili === u.id ? "checked" : ""}></label>`).join("")}
     </div>
-    <div id="unvan-kanit" hidden>
-      <label class="kazi-form">${tx("Kurum")}<input id="unvan-kurum" maxlength="120" placeholder="${tx("Ör. Ankara Üniversitesi DTCF Arkeoloji Bölümü")}" value="${esc((UNVAN.talep || {}).kurum || "")}"></label>
-      <label class="kazi-form">${tx("Doğrulama için bağlantı ya da kurumsal e-posta")}<input id="unvan-kanit-girdi" maxlength="300" placeholder="${tx("Ör. akademik.ankara.edu.tr/… ya da ad@ankara.edu.tr")}" value="${esc((UNVAN.talep || {}).kanit || "")}"></label>
+    <div id="unvan-kanit" class="kazi-form" hidden>
+      <label>${tx("Kurum")}<input id="unvan-kurum" maxlength="120" placeholder="${tx("Ör. Ankara Üniversitesi DTCF Arkeoloji Bölümü")}" value="${esc((UNVAN.talep || {}).kurum || "")}"></label>
+      <label>${tx("Doğrulama için bağlantı ya da kurumsal e-posta")}<input id="unvan-kanit-girdi" maxlength="300" placeholder="${tx("Ör. akademik.ankara.edu.tr/… ya da ad@ankara.edu.tr")}" value="${esc((UNVAN.talep || {}).kanit || "")}"></label>
     </div>
     <p style="margin:14px 0 0"><button class="buyuk-dugme" id="unvan-kaydet">${tx("Kaydet")}</button></p>`, lv => {
     const kanit = lv.querySelector("#unvan-kanit");

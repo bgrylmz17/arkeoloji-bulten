@@ -985,3 +985,13 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .ar-liste a { color: inherit; } .ar-baglanti { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; } .ar-baglanti a { color: var(--okr); font-weight: 600; }
 .ar-sec { display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .ar-dis { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 16px; }
+/* Duyurular */
+.du-liste { display: grid; gap: 8px; margin: 8px 16px 14px; }
+.du-kart { display: flex; gap: 12px; padding: 10px 12px; border: 1px solid var(--cizgi); border-radius: 12px; background: var(--kagit-2); color: inherit; text-decoration: none; }
+.du-tarih { flex: none; width: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px; background: var(--okr-zemin); padding: 4px 0; }
+.du-tarih b { font-size: 1.2rem; line-height: 1.1; } .du-tarih small { font-size: 10.5px; color: var(--soluk); }
+.du-tarih.gelecek { background: var(--okr); } .du-tarih.gelecek b, .du-tarih.gelecek small { color: var(--kagit-2); }
+.du-ic { display: flex; flex-direction: column; gap: 2px; min-width: 0; } .du-ic small { color: var(--soluk); font-size: 12.5px; }
+.du-ozet { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ozel-sekme a { text-align: center; }
+.ar-ekle { border-style: dashed; }

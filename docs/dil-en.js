@@ -970,5 +970,16 @@ const EN = {
  "h-indeks": "h-index",
  "i10-indeks": "i10-index",
  "yayın": "works",
- "Öteki profillerim": "My other profiles"
+ "Öteki profillerim": "My other profiles",
+ "Duyurular": "Announcements",
+ "Dünyadan kazı ve alan okulu ilanları": "Excavations and field schools worldwide",
+ "Etkinlikler": "Events",
+ "Henüz etkinlik duyurusu yok": "No event announcements yet",
+ "Kazı ve alan okulu ilanları otomatik toplanır; başvuru ayrıntıları ilanın kendi sayfasındadır.": "Excavation and field-school listings are collected automatically; application details are on each listing's own page.",
+ "Sempozyum, kongre, konferans, çalıştay ve bildiri çağrıları; kaynaklardan otomatik toplanır, günde dört kez güncellenir.": "Symposia, congresses, conferences, workshops and calls for papers; collected automatically from sources and updated four times a day.",
+ "Son duyurular": "Recent announcements",
+ "Toplayıcı bir sonraki çalışmada kaynakları tarayacak.": "The collector will scan the sources on its next run.",
+ "Yaklaşan": "Upcoming",
+ "yaklaşan": "upcoming",
+ "Bilim dalı": "Discipline"
 };

@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.32.0";
+const SURUM = "1.33.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -488,12 +488,33 @@ function gunuAnlat() {
 }
 
 /* Arkix Özel: kendi yazılarımız (alt bardaki ★) */
+/* Duyurular (eski "Özel"): Etkinlikler (sempozyum, kongre, konferans; toplayıcı otomatik toplar: bulten.json › etkinlikler),
+ * Kazı duyuruları (topluluk + dünyadan kazı/alan okulu ilanları), Arkix Özel. */
+function duyuruKartHtml(d) {
+  const bugun = new Date().toISOString().slice(0, 10), ic = d.k ? `#k/${encodeURIComponent(d.k)}` : d.u, gelecek = (d.t || "") >= bugun;
+  return `<a class="du-kart" href="${escUrl(ic)}"${d.k ? "" : ' target="_blank" rel="noopener"'}>
+    <span class="du-tarih${gelecek ? " gelecek" : ""}"><b>${esc((d.t || "").slice(8, 10))}</b><small>${esc(new Date((d.t || bugun) + "T00:00:00").toLocaleDateString(DIL === "en" ? "en-GB" : "tr-TR", { month: "short", year: "2-digit" }))}</small></span>
+    <span class="du-ic"><b>${esc(d.b)}</b><small>${esc(d.s || "")}${d.l === "en" && DIL !== "en" ? " · EN" : ""}${gelecek ? ` · ${tx("yaklaşan")}` : ""}</small>${d.o ? `<small class="du-ozet">${esc(d.o)}</small>` : ""}</span></a>`;
+}
 function sayfaOzel(arg) {
-  const kazi = arg === "kazi";
-  const sekme = `<div class="bolumlu ozel-sekme" role="group"><a href="#ozel" aria-pressed="${!kazi}">Arkix Özel</a><a href="#ozel/kazi" aria-pressed="${kazi}">${tx("Kazı duyuruları")}</a></div>`;
-  if (kazi) {
-    $("#sayfa").innerHTML = sekme + `<div id="kazi-kap"></div>`;
+  const bolum = arg === "kazi" ? "kazi" : arg === "arkix" ? "arkix" : "etkinlik";
+  const sekme = `<div class="bolumlu ozel-sekme" role="group"><a href="#ozel" aria-pressed="${bolum === "etkinlik"}">${tx("Etkinlikler")}</a><a href="#ozel/kazi" aria-pressed="${bolum === "kazi"}">${tx("Kazı duyuruları")}</a><a href="#ozel/arkix" aria-pressed="${bolum === "arkix"}">Arkix Özel</a></div>`;
+  const hepsi = VERI.etkinlikler || [], bugun = new Date().toISOString().slice(0, 10);
+  if (bolum === "kazi") {
+    const oto = hepsi.filter(d => d.du === "kazi");
+    $("#sayfa").innerHTML = sekme + `<div id="kazi-kap"></div>${oto.length ? `<h3 class="ist-baslik">${tx("Dünyadan kazı ve alan okulu ilanları")}</h3>
+      <p class="aciklama ar-not">${tx("Kazı ve alan okulu ilanları otomatik toplanır; başvuru ayrıntıları ilanın kendi sayfasındadır.")}</p><div class="du-liste">${oto.map(duyuruKartHtml).join("")}</div>` : ""}`;
     if (typeof kaziBolumuCiz === "function") kaziBolumuCiz($("#kazi-kap"));
+    return;
+  }
+  if (bolum === "etkinlik") {
+    const etk = hepsi.filter(d => d.du === "etkinlik");
+    const yaklasan = etk.filter(d => (d.t || "") >= bugun).sort((x, y) => (x.t || "").localeCompare(y.t || ""));
+    const gecmis = etk.filter(d => (d.t || "") < bugun).slice(0, 60);
+    $("#sayfa").innerHTML = sekme + `<p class="aciklama ar-not" style="margin-top:12px">${tx("Sempozyum, kongre, konferans, çalıştay ve bildiri çağrıları; kaynaklardan otomatik toplanır, günde dört kez güncellenir.")}</p>
+      ${yaklasan.length ? `<h3 class="ist-baslik">${tx("Yaklaşan")}</h3><div class="du-liste">${yaklasan.map(duyuruKartHtml).join("")}</div>` : ""}
+      ${gecmis.length ? `<h3 class="ist-baslik">${tx("Son duyurular")}</h3><div class="du-liste">${gecmis.map(duyuruKartHtml).join("")}</div>` : ""}
+      ${etk.length ? "" : bosHtml(tx("Henüz etkinlik duyurusu yok"), tx("Toplayıcı bir sonraki çalışmada kaynakları tarayacak."))}`;
     return;
   }
   const yazilar = VERI.kayitlar.filter(r => r.oz).sort((x, y) => (y.t || "").localeCompare(x.t || ""));
@@ -1594,7 +1615,7 @@ function dilSeciciBagla(kok) {
 /* index.html'deki sabit yazılar (sekmeler, düğme etiketleri) */
 function statikCevir() {
   document.documentElement.lang = DIL;
-  const ad = { bugun: "Bugün", akis: "Ara", ozel: "Özel", ozet: "Bildirimler", kitaplik: "Kitaplık" };
+  const ad = { bugun: "Bugün", akis: "Ara", ozel: "Duyurular", ozet: "Bildirimler", kitaplik: "Kitaplık" };
   document.querySelectorAll("#sekmeler [data-sekme]").forEach(a => { const sp = a.querySelector("span"); if (sp) sp.textContent = tx(ad[a.dataset.sekme]); });
   const etiket = { "#geri": "Geri", "#menu-ac": "Menü", "#bildir-ac": "Bildir", "#sekmeler": "Bölümler" };
   for (const [sec, m] of Object.entries(etiket)) { const el = $(sec); if (el) el.setAttribute("aria-label", tx(m)); }
@@ -1628,7 +1649,7 @@ function kaydirmaBagla() {
 /* ---------------------------------------------------------------- yönlendirme */
 const UST = { bugun: tx("Bugün"), ozet: tx("Bildirimler"), ozel: "Arkix Özel", akis: tx("Ara"), kitaplik: tx("Harrix Kitaplık"), ayarlar: tx("Ayarlar"), giris: tx("Giriş"),
   favoriler: tx("Favoriler"), notlar: tx("Notlu kayıtlar"), kaynakca: tx("Kaynakçam"), durum: tx("Kaynakların durumu"), ara: tx("Ara"), konu: tx("Konu"), k: "",
-  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli"), takip: tx("Takip ettiklerim"), profilim: tx("Araştırmacı profilim"), ayril: tx("E-posta özeti"), oyunlar: tx("Oyunlar"), oyun: tx("Oyunlar") };
+  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli"), ozel: tx("Duyurular"), takip: tx("Takip ettiklerim"), profilim: tx("Araştırmacı profilim"), ayril: tx("E-posta özeti"), oyunlar: tx("Oyunlar"), oyun: tx("Oyunlar") };
 const ALT_SAYFA = { giris: null, favoriler: "kitaplik", notlar: "kitaplik", kaynakca: "kitaplik", konu: "kitaplik", durum: null, k: null, ara: "akis",
   sozler: "kitaplik", pdfler: "kitaplik", yasal: null, yonetim: null, takip: null, ayarlar: null, ayril: null, oyunlar: null, oyun: null };
 let sonSekme = "bugun";

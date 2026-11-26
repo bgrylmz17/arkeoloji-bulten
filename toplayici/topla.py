@@ -30,7 +30,7 @@ KOK = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(KOK))
 
 from harrix_bulten import ceviri, haber_kaynaklari, harrix_hesap, kaynakca, kaynaklar, sozler, tarayici, terimler  # noqa: E402
-from harrix_bulten.metin import TekrarDenetci, arkeoloji_kesin  # noqa: E402
+from harrix_bulten.metin import TekrarDenetci, _ascii, arkeoloji_kesin, donem_etiketleri  # noqa: E402
 from harrix_bulten.veritabani import Depo  # noqa: E402
 
 VERI = KOK / "docs" / "veri"
@@ -563,6 +563,83 @@ def satira_cevir(r) -> dict:
     return {k: r[k] for k in r.keys()}
 
 
+# ---------------------------------------------------------------- Duyurular: etkinlik (sempozyum, kongre, konferans, çalıştay,
+# bildiri çağrısı) ve kazı çağrıları (gönüllü, öğrenci, alan okulu). Kaynaklar elle doğrulandı (RSS); "suz": yalnız örüntüye uyanlar.
+# Yalnız başlık, 240 karakterlik açıklama ve bağlantı saklanır (telif). bulten.json › "etkinlikler"; web docs/uygulama.js › sayfaOzel.
+DUYURU_KAYNAKLARI = [
+    {"ad": "Arkeofili", "url": "https://arkeofili.com/category/etkinlik/feed/", "dil": "tr", "tur": "suz"},
+    {"ad": "BIAA", "url": "https://biaa.ac.uk/events/feed/", "dil": "en", "tur": "etkinlik"},
+    {"ad": "BIAA", "url": "https://biaa.ac.uk/feed/", "dil": "en", "tur": "suz"},
+    {"ad": "AIA", "url": "https://www.archaeological.org/events/feed/", "dil": "en", "tur": "etkinlik"},
+    {"ad": "AIA Fieldwork", "url": "https://www.archaeological.org/fieldwork/feed/", "dil": "en", "tur": "kazi"},
+]
+ETKINLIK_DESENI = re.compile(
+    r"\b(sempozyum\w*|kongre\w*|konferans\w*|kolokyum\w*|calistay\w*|bildiri (?:cagrisi|gonderim\w*|ozet\w*)|yaz okulu\w*|panel(?:i|inde|de)?"
+    r"|symposium|symposia|congress|conference|colloquium|workshop|call for (?:papers|abstracts|proposals)|summer school|annual meeting|lecture series)\b")
+KAZI_CAGRI_DESENI = re.compile(
+    r"(kazi\w*.{0,50}\b(?:gonullu\w*|ogrenci alim\w*|katilimci\w*|basvuru\w*)|\bgonullu\w*.{0,50}kazi\w*|field school|excavation volunteers?"
+    r"|volunteers? (?:wanted|needed)|dig volunteers?|kazi ekib\w*.{0,30}(?:ariyor|alim\w*))")
+
+
+TUR_DESENI = re.compile(r"\b(itinerary|travelers|travellers|safari|cruise|day trip|tour package)\b", re.I)   # AIA'nın ücretli gezi turları etkinlik değil
+
+
+def duyuru_turu(baslik: str, metin: str = "") -> str:
+    b = _ascii(baslik)   # küçük harf, Türkçe harfler ASCII'ye (çalıştay -> calistay)
+    if KAZI_CAGRI_DESENI.search(b + " " + _ascii(metin)):
+        return "kazi"
+    return "etkinlik" if ETKINLIK_DESENI.search(b) else ""
+
+
+def rss_ogeleri(url: str) -> list[dict]:
+    import email.utils
+    import urllib.request
+    import xml.etree.ElementTree as ET
+    istek = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Arkix toplayici; +https://arkix.harrixapp.com)"})
+    with urllib.request.urlopen(istek, timeout=25) as y:
+        kok = ET.fromstring(y.read())
+    l = []
+    for oge in kok.iter("item"):
+        tarih = ""
+        try:
+            tarih = email.utils.parsedate_to_datetime(oge.findtext("pubDate") or "").date().isoformat()
+        except (TypeError, ValueError):
+            pass
+        aciklama = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", oge.findtext("description") or ""))).strip()
+        l.append({"b": html.unescape((oge.findtext("title") or "").strip()), "u": (oge.findtext("link") or "").strip(), "t": tarih, "o": aciklama})
+    return l
+
+
+def duyurulari_topla(eski: list[dict], kayitlar: list[dict], calisma: str) -> list[dict]:
+    """Etkinlik ve kazı duyuruları: RSS kaynakları + bülten kayıtlarında örüntüye uyanlar. Bir yıldan eski olanlar düşer."""
+    sinir = (dt.date.today() - dt.timedelta(days=365)).isoformat()
+    toplam = {d["i"]: d for d in eski if (d.get("t") or "") >= sinir}
+    for kaynak in DUYURU_KAYNAKLARI:
+        try:
+            ogeler = rss_ogeleri(kaynak["url"])
+        except Exception as h:   # bir kaynak çökerse ötekiler sürer
+            print(f"Duyuru kaynağı alınamadı: {kaynak['url']} ({h})", flush=True)
+            continue
+        for o in ogeler:
+            tur = kaynak["tur"] if kaynak["tur"] != "suz" else duyuru_turu(o["b"], o["o"])
+            u = guvenli_url(o["u"])
+            if not tur or not u or not o["b"] or (o["t"] and o["t"] < sinir) or TUR_DESENI.search(o["b"] + " " + o["o"][:300]):
+                continue
+            kimlik = "du:" + hashlib.sha1(u.encode()).hexdigest()[:16]
+            toplam[kimlik] = {"i": kimlik, "du": tur, "s": kaynak["ad"], "b": o["b"][:200], "o": o["o"][:240], "u": u,
+                              "t": o["t"] or calisma[:10], "l": kaynak["dil"], "g": toplam.get(kimlik, {}).get("g") or calisma}
+    for k in kayitlar:   # bülten kayıtlarından (haber, rapor) duyuru olanlar
+        if k.get("k") in ("Haber", "Rapor") and not k.get("oz"):
+            tur = duyuru_turu((k.get("b") or "") + " " + (k.get("bt") or ""), k.get("o") or "")
+            if tur:
+                toplam["k:" + k["i"]] = {"i": "k:" + k["i"], "du": tur, "s": k.get("s", ""), "b": (k.get("bt") or k.get("b") or "")[:200],
+                                         "o": (k.get("ot") or k.get("o") or "")[:240], "u": f"https://arkix.harrixapp.com/#k/{k['i']}", "k": k["i"],
+                                         "t": (k.get("t") or calisma)[:10], "l": k.get("l", ""), "g": k.get("g") or calisma}
+    l = sorted(toplam.values(), key=lambda d: (d.get("t") or "", d.get("g") or ""), reverse=True)[:300]
+    print(f"Duyurular: {sum(d['du'] == 'etkinlik' for d in l)} etkinlik, {sum(d['du'] == 'kazi' for d in l)} kazı çağrısı", flush=True)
+    return l
+
+
 def main() -> int:
     kullanici = oku(AYAR_DOSYASI, {})
     durum = oku(VERI / "durum.json", {})
@@ -726,6 +803,9 @@ def main() -> int:
         print(f"Yöneticinin kaldırdığı: {once - len(tum)} kayıt", flush=True)
     # Arkix Özel yazılar saklama süresine ve kayıt sınırına takılmaz
     tum = sorted(ozeller + tum, key=lambda k: (k.get("g", ""), k.get("t", "")), reverse=True)
+    for k in tum:   # sözlüğe sonradan eklenen kavramlar (ör. bilim dalları) eski kayıtlara da işlensin
+        if not k.get("oz"):
+            k["e"] = list(dict.fromkeys((k.get("e") or []) + donem_etiketleri(k.get("b") or "", (k.get("o") or "") + " " + (k.get("ot") or ""))))
     for k in tum:
         if yorum_sayilari.get(k["i"]):
             k["ys"] = yorum_sayilari[k["i"]]
@@ -747,6 +827,7 @@ def main() -> int:
         "surum": 1, "guncelleme": calisma, "yeni_sayisi": len(yeni),
         "kazi": harrix_hesap.ozet_metni(kazi) if kazi else "",
         "kavramlar": kavramlar, "kayitlar": tum,
+        "etkinlikler": duyurulari_topla(eski.get("etkinlikler", []), tum, calisma),
         **({"sesli_ozet": ozet_ses} if ozet_ses else {}),
         **({"son_yorumlar": son_yorumlar} if son_yorumlar else {}),
         **duyurular_ve_banner(kullanici, calisma),
