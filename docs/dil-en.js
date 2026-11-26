@@ -853,5 +853,15 @@ const EN = {
  "İki parçaya dokun, yer değiştirsinler. Bütün parçalar yerine oturunca buluntu kurtulur.": "Tap two pieces to swap them. When every piece is in place, the find is saved.",
  "Bu buluntu ne?": "What is this find?",
  "Değerli bir buluntu çıkınca ne olduğunu tahmin et: doğru bilirsen +%25 puan.": "When a valuable find appears, guess what it is: get it right for +25% points.",
- "Doğru tanımlarsan +%25 puan.": "Identify it correctly for +25% points."
+ "Doğru tanımlarsan +%25 puan.": "Identify it correctly for +25% points.",
+ "Bir alanın defterini tamamla, o alanın kıyafeti açılsın.": "Complete a site's notebook to unlock that site's outfit.",
+ "Geçen haftanın şampiyonu": "Last week's champion",
+ "Haftalık turnuva": "Weekly tournament",
+ "Kıyafet": "Outfit",
+ "Standart": "Standard",
+ "Turnuva": "Tournament",
+ "Yeni kıyafet açıldı: {alan}. Arkeolog seçiminden giyebilirsin.": "New outfit unlocked: {alan}. Wear it from the archaeologist picker.",
+ "bu gece bitiyor": "ends tonight",
+ "{alan} defterini tamamla": "Complete the {alan} notebook",
+ "{n} gün kaldı": "{n} days left"
 };

@@ -4,6 +4,7 @@
  * İngilizce karşılıklar dil-en.js içindedir (EN). */
 "use strict";
 let DIL = (() => {
+  try { const q = new URLSearchParams(location.search).get("dil"); if (q === "tr" || q === "en") return q; } catch (e) {}   // native uygulama (gömülü) dili verir
   try { const d = (JSON.parse(localStorage.getItem("harrix-bulten")) || {}).dil; if (d === "tr" || d === "en") return d; } catch (e) {}
   return /^tr/i.test(navigator.language || "") ? "tr" : "en";
 })();

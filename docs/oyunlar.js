@@ -58,19 +58,32 @@ async function skorTablosuCiz(kap, oyun, kapsam = "gun") {
   const ben = H.kullanici && H.kullanici.uid;
   const benSira = satirlar.findIndex(s => s.uid === ben);
   const goster = satirlar.slice(0, 20);
-  const satir = (s, i) => `<li class="${s.uid === ben ? "ben" : ""}"><b class="sira">${i + 1}</b>
+  const satir = (s, i) => `<li class="${s.uid === ben ? "ben" : ""}"><b class="sira">${["🥇", "🥈", "🥉"][i] || i + 1}</b>
       ${s.avatar && typeof avatarAdresi === "function" ? `<img class="avatar" src="${esc(avatarAdresi(s.avatar))}" alt="" width="32" height="32">`
         : `<span class="avatar avatar-bas" style="width:32px;height:32px">${esc((s.ad || "?")[0].toLocaleUpperCase("tr"))}</span>`}
       <span class="ad">${esc(s.ad || tx("Arkeolog"))}</span><span class="puan">${s.puan}</span></li>`;
-  kap.innerHTML = satirlar.length
+  let turnuva = "";
+  if (oyun === "meydan" && kapsam === "hafta") {   // Günün Açması haftalık turnuvası: pazar gece yarısı biter
+    const kalan = 7 - (new Date().getDay() || 7);
+    let sampiyon = "";
+    try {
+      const { fs } = await firebaseYukle();
+      const a = await fs.getDocs(fs.query(fs.collection(H.db, "skorlar"), fs.where("oyun_hafta", "==", `meydan_${oyunHaftasi(new Date(Date.now() - 7 * 864e5))}`), fs.limit(500)));
+      const t = {}; a.docs.forEach(d => { const v = d.data(); t[v.uid] = { ad: v.ad, puan: ((t[v.uid] || {}).puan || 0) + (v.puan || 0) }; });
+      const en = Object.values(t).sort((x, y) => y.puan - x.puan)[0];
+      if (en) sampiyon = `<p class="aciklama">👑 ${tx("Geçen haftanın şampiyonu")}: <b>${esc(en.ad || tx("Arkeolog"))}</b> · ${en.puan}</p>`;
+    } catch (e) {}
+    turnuva = `<p class="turnuva-bant">🏆 ${tx("Haftalık turnuva")} · ${kalan ? tx("{n} gün kaldı", { n: kalan }) : tx("bu gece bitiyor")}</p>${sampiyon}`;
+  }
+  kap.innerHTML = turnuva + (satirlar.length
     ? `<ol class="skor-liste">${goster.map(satir).join("")}${benSira >= 20 ? `<li class="ayrac">…</li>${satir(satirlar[benSira], benSira)}` : ""}</ol>`
-    : `<p class="aciklama">${tx("Henüz skor yok. İlk sen ol!")}</p>`;
+    : `<p class="aciklama">${tx("Henüz skor yok. İlk sen ol!")}</p>`);
   if (!H.kullanici) kap.insertAdjacentHTML("beforeend", `<p class="aciklama"><a href="#giris">${tx("Giriş yap")}</a> · ${tx("skorların tabloya yazılsın")}</p>`);
   else if (typeof oyunYoneticisi === "function" && oyunYoneticisi()) kap.insertAdjacentHTML("beforeend", `<p class="aciklama">${tx("Yönetici skorları tabloya yazılmaz.")}</p>`);
 }
 function skorBolumuHtml(oyun) {
   return `<section class="oyun-skor" data-oyun="${oyun}"><div class="oyun-skor-ust"><h3>${tx("Skor tablosu")}</h3>
-    <div class="bolumlu kucuk" role="group"><button data-kapsam="gun" aria-pressed="true">${tx("Bugün")}</button><button data-kapsam="hafta" aria-pressed="false">${tx("Bu hafta")}</button></div></div>
+    <div class="bolumlu kucuk" role="group"><button data-kapsam="gun" aria-pressed="true">${tx("Bugün")}</button><button data-kapsam="hafta" aria-pressed="false">${oyun === "meydan" ? "🏆 " + tx("Turnuva") : tx("Bu hafta")}</button></div></div>
     <div class="skor-kap"></div></section>`;
 }
 function skorBolumuBagla(kok) {

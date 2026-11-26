@@ -173,12 +173,12 @@ Object.assign(SPRITE, {
     "....hhhh....", "...hhhhhh...", "....ssss....", "....sksk....", "....ssss....", ".....ss.....", "...cccccc...", "..cccccccc..", "..sccccccs..", "..s.cccc.sg.", "....pppp..g.", "....pppp..g.", "....p..p..g.", "....p..p.ggg", "...bb..bb.y.", "............"] },
 });
 
-function spriteCiz(ctx, ad, x, y, olcek = 1, golge = false) {
+function spriteCiz(ctx, ad, x, y, olcek = 1, golge = false, renk = null) {
   const s = SPRITE[ad]; if (!s) return;
   const gen = Math.max(...s.h.map(x => x.length));
   s.h.forEach((satir, j) => [...satir.padEnd(gen, ".")].forEach((c, i) => {
     if (c === ".") return;
-    ctx.fillStyle = golge ? "rgba(60,45,35,.55)" : (s.r[c] || "#000");
+    ctx.fillStyle = golge ? "rgba(60,45,35,.55)" : ((renk && renk[c]) || s.r[c] || "#000");
     ctx.fillRect(x + i * olcek, y + j * olcek, olcek, olcek);
   }));
 }
@@ -527,13 +527,31 @@ function kzCarpan(alan) {
   return c;
 }
 const KZ_NADIR_OLASILIK = 0.07;   // değerli buluntunun "olağanüstü korunmuş" çıkma olasılığı (puan ×3, altın çerçeve)
+/* Defter ödülü: bir alanın bütün değerli buluntuları defterdeyse o alanın renklerinde kıyafet açılır (şapka/saç h, r; giysi c) */
+const kiyafetAcik = a => a.buluntular.every(b => (D.buluntuDefteri || {})[b.id]);
+const kiyafetRengi = a => ({ h: a.gok[1], r: a.gok[1], c: a.toprak[1] });
+function kiyafetRenk() { const a = KZ_ALANLAR.find(x => x.id === D.kzKiyafet); return a && kiyafetAcik(a) ? kiyafetRengi(a) : null; }
+function kiyafetKontrol(alan) {
+  if (!alan || !kiyafetAcik(alan)) return;
+  D.kiyafetAcildi = D.kiyafetAcildi || {};
+  if (D.kiyafetAcildi[alan.id]) return;
+  D.kiyafetAcildi[alan.id] = oyunGunu(); kaydet();
+  setTimeout(() => bildir(`👕 ${tx("Yeni kıyafet açıldı: {alan}. Arkeolog seçiminden giyebilirsin.", { alan: kzAlanAd(alan) })}`), 1500);
+}
 function arkeologSecimi(sonra) {
+  const renk = kiyafetRenk();
   levhaAc(`<h3>${tx("Arkeoloğunu seç")}</h3><p class="aciklama">${tx("Her arkeoloğun kazıda bir üstünlüğü var. İstediğin zaman değiştirebilirsin.")}</p>
     <div class="ark-izgara">${ARKEOLOGLAR.map(a => `<button class="ark-kart${D.kzArkeolog === a.id ? " secili" : ""}" data-ark="${a.id}">
-      <canvas width="48" height="64"></canvas><b>${esc(arkAd(a))}</b><small>${esc(arkOzellik(a))}</small></button>`).join("")}</div>`, lv => {
+      <canvas width="48" height="64"></canvas><b>${esc(arkAd(a))}</b><small>${esc(arkOzellik(a))}</small></button>`).join("")}</div>
+    <h4 class="kiyafet-baslik">👕 ${tx("Kıyafet")} <small>${tx("Bir alanın defterini tamamla, o alanın kıyafeti açılsın.")}</small></h4>
+    <div class="kiyafet-izgara"><button class="kiyafet${!renk ? " secili" : ""}" data-kiyafet=""><i style="background:#c9a25a"></i><i style="background:#5c7d5a"></i><span>${tx("Standart")}</span></button>
+      ${KZ_ALANLAR.map(a => { const acik = kiyafetAcik(a), r = kiyafetRengi(a);
+        return `<button class="kiyafet${D.kzKiyafet === a.id && acik ? " secili" : ""}" data-kiyafet="${a.id}" ${acik ? "" : `disabled title="${esc(tx("{alan} defterini tamamla", { alan: kzAlanAd(a) }))}"`}>
+          <i style="background:${r.h}"></i><i style="background:${r.c}"></i><span>${acik ? "" : "🔒 "}${esc(kzAlanAd(a))}</span></button>`; }).join("")}</div>`, lv => {
+    lv.querySelectorAll("[data-kiyafet]").forEach(b => b.onclick = () => { D.kzKiyafet = b.dataset.kiyafet; kaydet(); oyunSesi("tus"); arkeologSecimi(sonra); });
     lv.querySelectorAll("[data-ark]").forEach(b => {
       const a = ARKEOLOGLAR.find(x => x.id === b.dataset.ark);
-      spriteCiz(b.querySelector("canvas").getContext("2d"), a.sprite, 0, 0, 4);
+      spriteCiz(b.querySelector("canvas").getContext("2d"), a.sprite, 0, 0, 4, false, renk);
       b.onclick = () => { D.kzArkeolog = a.id; kaydet(); levhaKapat(); bildir(tx("{ad} kazıya hazır", { ad: arkAd(a) })); if (sonra) sonra(); else if (location.hash === "#oyun/kazi") sayfaKaziOyun(""); };
     });
   });
@@ -727,7 +745,7 @@ function sayfaKaziOyun(arg) {
   $$("[data-bolge]").forEach(b => b.onclick = () => { D.kzBolge = b.dataset.bolge; kaydet(); sayfaKaziOyun(""); });
   $("#kz-nasil").onclick = () => typeof nasilGoster === "function" && nasilGoster("kazi");
   if (typeof yoneticiSifirlaBagla === "function") yoneticiSifirlaBagla();
-  spriteCiz($("#kz-ark canvas").getContext("2d"), ark ? ark.sprite : "ark_saha", 0, 0, 2, !ark);
+  spriteCiz($("#kz-ark canvas").getContext("2d"), ark ? ark.sprite : "ark_saha", 0, 0, 2, !ark, kiyafetRenk());
   $("#kz-ark").onclick = () => arkeologSecimi();
   $$(".kz-alanlar .kz-alan").forEach(b => {
     const a = KZ_ALANLAR.find(x => x.id === b.dataset.alan);
@@ -766,7 +784,7 @@ function kzBasla(alan, meydan = false) {
   if (havaId === "yagmur") { const s = Math.floor(rng() * (KZ_SATIR - 1)); camur.add(s); camur.add(s + 1); }
   const ark = arkeolog();
   KZ = { alan, hucreler, vurus: KZ_VURUS + (!meydan && ark && ark.id === "saha" ? 6 : 0), puan: 0, bulunan: [], ozelSayi: alan.buluntular.length, bitti: false, vurgu: -1,
-    carpan: meydan ? 1 : kzCarpan(alan), menzil: !meydan && ark && ark.id === "jeofizik" ? 3 : 2, ark, meydan, rng, alet: D.kzAlet && KZ_ALETLER[D.kzAlet] ? D.kzAlet : "mala", kirik: 0, kova: 0, toz: [], hava: havaId, camur, restore: 0 };
+    carpan: meydan ? 1 : kzCarpan(alan), menzil: !meydan && ark && ark.id === "jeofizik" ? 3 : 2, ark, meydan, rng, alet: D.kzAlet && KZ_ALETLER[D.kzAlet] ? D.kzAlet : "mala", kirik: 0, kova: 0, toz: [], hava: havaId, camur, restore: 0, kiyafet: kiyafetRenk() };
   if (havaId === "ruzgar" || havaId === "kum") KZ.menzil = Math.max(1, KZ.menzil - 1);
   if (havaId !== "gunes") setTimeout(() => bildir(`${KZ_HAVA[havaId].simge} ${havaAd(KZ_HAVA[havaId])}: ${havaAciklama(KZ_HAVA[havaId])}`), 600);
   kzMuzikBaslat(alan.id);
@@ -857,7 +875,7 @@ function kzCiz() {
 function kzArkCiz(ctx) {
   const a = KZ.arkKonum; if (!a || !KZ.ark) return;
   const zip = a.yuruyor ? (Math.floor(performance.now() / 70) % 2) : 0;
-  spriteCiz(ctx, KZ.ark.sprite, Math.round(a.x), Math.round(a.y) - zip, 1);
+  spriteCiz(ctx, KZ.ark.sprite, Math.round(a.x), Math.round(a.y) - zip, 1, false, KZ.kiyafet);
   const kx = Math.round(a.x) + 10, ky = Math.round(a.y) + 8, kalk = a.salla > 0, an = Math.floor(performance.now() / 80) % 2;
   if (KZ.alet === "firca") {   // fırça: eğilip sağa sola fırçalar
     const dx = kalk ? (an ? 2 : -1) : 0;
@@ -976,7 +994,7 @@ function kzKaz(i) {
   if (yeni) {
     const ozel = !sikMi(h.buluntu);
     const ilk = ozel && !h.kirik && !(D.buluntuDefteri || {})[h.buluntu.id];
-    if (ozel && !h.kirik) { D.buluntuDefteri = D.buluntuDefteri || {}; D.buluntuDefteri[h.buluntu.id] = D.buluntuDefteri[h.buluntu.id] || oyunGunu(); kaydet(); }
+    if (ozel && !h.kirik) { D.buluntuDefteri = D.buluntuDefteri || {}; D.buluntuDefteri[h.buluntu.id] = D.buluntuDefteri[h.buluntu.id] || oyunGunu(); kaydet(); kiyafetKontrol(KZ.alan); }
     const devam = () => kzBuluntuLevhasi(yeni, KZ.alan, ilk, () => { kzNotAl(); if (ozelBitti || KZ.vurus <= 0) kzSon(ozelBitti); }, !ozel);
     if (ozel && !h.kirik) { kzParilti(i); setTimeout(() => kzTanimla(yeni, devam), 350); } else devam();
     return;
@@ -1068,7 +1086,7 @@ function kzRestorasyon(b, alan, sonra) {
           if (sira.every((v, k) => v === k)) {
             const ek = Math.round(b.tam * KZ_RESTORE_ORAN);
             if (KZ) { KZ.puan += ek; KZ.restore++; const h = KZ.hucreler[b.hucre]; if (h) h.restore = true; kzCiz(); }
-            D.buluntuDefteri = D.buluntuDefteri || {}; if (!D.buluntuDefteri[b.id]) D.buluntuDefteri[b.id] = oyunGunu(); kaydet();
+            D.buluntuDefteri = D.buluntuDefteri || {}; if (!D.buluntuDefteri[b.id]) D.buluntuDefteri[b.id] = oyunGunu(); kaydet(); kiyafetKontrol(alan);
             oyunSesi("buluntu");
             kap.insertAdjacentHTML("afterend", `<p class="kz-yeni">✨ ${tx("Restore edildi! +{p} puan, deftere yazıldı.", { p: ek })}</p>`);
             lv.querySelector("#kz-rs-vazgec").textContent = sonra ? tx("Kazmaya devam") : tx("Kapat");

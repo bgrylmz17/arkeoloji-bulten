@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.25.0";
+const SURUM = "1.26.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -161,6 +161,18 @@ if (!("zemin" in guvenliOku()) && D.desen === false) D.zemin = "sade";
 if ((D.zeminSurum || 0) < 3) { if (D.zemin !== "sade") D.zemin = "siluet"; D.zeminSurum = 3; }
 // eski paletler ören yeri temalarına
 if (typeof ESKI_PALET !== "undefined" && ESKI_PALET[D.palet]) D.palet = ESKI_PALET[D.palet];
+
+/* Gömülü mod (?gomulu=1): native Arkix uygulaması oyunları WebView'da açar. Alt sekmeler, menü ve açılış pencereleri
+ * (KVKK, tanıtım, tema, kurulum, günlük, e-posta sorusu) gizlenir; tema/palet/dil uygulamadan gelir; giriş uygulamadan aktarılır. */
+const GOMULU = (() => { try { return new URLSearchParams(location.search).has("gomulu"); } catch (e) { return false; } })();
+if (GOMULU) {
+  document.documentElement.classList.add("gomulu");
+  const q = new URLSearchParams(location.search);
+  if (q.get("palet") && /^[a-z]+$/.test(q.get("palet"))) D.palet = q.get("palet");
+  if (["oto", "acik", "koyu"].includes(q.get("tema"))) D.tema = q.get("tema");
+  D.dil = DIL; D.temaSecildi = true; D.girisSoruldu = true; D.kurulumSoruldu = true; D.ozetDavet = true;
+  if (!location.hash) history.replaceState(null, "", "#oyunlar");
+}
 
 function guvenliOku() {
   try { return JSON.parse(localStorage.getItem(DEPO_ANAHTARI)) || {}; } catch (e) { return {}; }
@@ -1665,7 +1677,7 @@ window.acilisBitti = new Promise(r => { window.acilisBittiCoz = r; });   // aç�
   statikCevir();
   temaUygula();
   const acilis = $("#acilis");
-  const sure = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 950;
+  const sure = GOMULU || matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 950;
   const bekle = new Promise(r => setTimeout(r, sure));
   await Promise.all([veriYukle(true), sozleriYukle(), bekle, window.GUNLUK ? GUNLUK.yukle() : null]);
   temaUygula();   // günün görseli veri gelince
@@ -1677,18 +1689,18 @@ window.acilisBitti = new Promise(r => { window.acilisBittiCoz = r; });   // aç�
   rota();
   acilis.classList.add("bitti");
   setTimeout(() => acilis.remove(), 600);
-  await kvkkKapisi();
-  if (!D.temaSecildi && typeof temaSecici === "function") {
+  if (!GOMULU) await kvkkKapisi();   // gömülüde onay native uygulamada alındı
+  if (!GOMULU && !D.temaSecildi && typeof temaSecici === "function") {
     D.palet = await temaSecici(D.palet || "gobeklitepe", id => { D.palet = id; temaUygula(); });
     D.temaSecildi = true; kaydet(); temaUygula(); rota(true);
   }
-  if (typeof tanitimGoster === "function" && (D.tanitimGoruldu || 0) < TANITIM_SURUM) {
+  if (!GOMULU && typeof tanitimGoster === "function" && (D.tanitimGoruldu || 0) < TANITIM_SURUM) {
     await tanitimGoster(); D.tanitimGoruldu = TANITIM_SURUM; kaydet();
   }
-  await kurulumPenceresi();
-  if (window.GUNLUK) await GUNLUK.acilis({ baslik: tx("Günün Ören Yeri"), dugme: tx("Bugüne başla") }, D.gunlukGun, g => { D.gunlukGun = g; kaydet(); });
+  if (!GOMULU) await kurulumPenceresi();
+  if (window.GUNLUK && !GOMULU) await GUNLUK.acilis({ baslik: tx("Günün Ören Yeri"), dugme: tx("Bugüne başla") }, D.gunlukGun, g => { D.gunlukGun = g; kaydet(); });
   window.acilisBittiCoz();
-  if (typeof epostaSorusuKontrol === "function") setTimeout(epostaSorusuKontrol, 1200);
+  if (!GOMULU && typeof epostaSorusuKontrol === "function") setTimeout(epostaSorusuKontrol, 1200);
   if ("serviceWorker" in navigator) {
     try { await navigator.serviceWorker.register("sw.js"); if (D.bildirim) arkaPlanKaydi(); } catch (e) {}
   }
