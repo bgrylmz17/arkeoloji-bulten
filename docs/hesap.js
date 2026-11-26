@@ -82,6 +82,52 @@ function birlestir(yerel, bulut) {
 const kitaplikAl = () => ({ fav: D.fav, notlar: D.notlar, konular: D.konular, kaynakca: D.kaynakca, takip: D.takip || [] });
 const belgeAdi = id => encodeURIComponent(id).replace(/\./g, "%2E");
 
+/* ---------------------------------------------------------------- oyun ilerlemesi: kullanicilar/{uid}.oyun
+ * Her cihazda birleştirilir (kayıp olmaz): defter/rozet/kıyafet birleşir (en erken tarih), günlük durumlar (kazı izni,
+ * Günün Açması, kelime, sıralama) aynı günse en ilerideki, farklı günse yenisi; kelime serisi en günceli. Tercihler (arkeolog,
+ * kıyafet, alet, ses) cihazda kalır, cihazda yoksa hesaptan gelir. Native uygulama oyunları bu sayfayla açtığı için o da eşitlenir. */
+const OYUN_TERCIH = ["kzArkeolog", "kzKiyafet", "kzAlet", "kzBolge", "kzMuzik", "oyunSes"];
+const oyunAl = () => ({
+  buluntuDefteri: D.buluntuDefteri || {}, altinDefter: D.altinDefter || {}, rozetler: D.rozetler || {}, kiyafetAcildi: D.kiyafetAcildi || {},
+  nasilGoruldu: D.nasilGoruldu || {}, kaziOyun: D.kaziOyun || null, kzMeydan: D.kzMeydan || null, kelime: D.kelime || null,
+  kelimeSeri: D.kelimeSeri || null, sirala: D.sirala || null,
+  tercih: Object.fromEntries(OYUN_TERCIH.filter(k => D[k] !== undefined).map(k => [k, D[k]])),
+});
+function oyunBirlestir(y, b) {
+  b = b || {};
+  const erken = (a, c) => { const s = { ...(c || {}) }; for (const [k, v] of Object.entries(a || {})) if (!s[k] || (typeof v === "string" && typeof s[k] === "string" && v < s[k])) s[k] = v; return s; };
+  const gunluk = (a, c, ilerleme) => !a || !a.gun ? c || a || null : !c || !c.gun ? a : a.gun !== c.gun ? (a.gun > c.gun ? a : c) : (ilerleme(a) >= ilerleme(c) ? a : c);
+  const seriA = y.kelimeSeri, seriB = b.kelimeSeri;
+  let seri = !seriA ? seriB || null : !seriB ? seriA : ((seriA.son || "") >= (seriB.son || "") ? { ...seriA } : { ...seriB });
+  if (seri) seri.enIyi = Math.max((seriA || {}).enIyi || 0, (seriB || {}).enIyi || 0, seri.seri || 0);
+  return {
+    buluntuDefteri: erken(y.buluntuDefteri, b.buluntuDefteri), altinDefter: erken(y.altinDefter, b.altinDefter),
+    rozetler: erken(y.rozetler, b.rozetler), kiyafetAcildi: erken(y.kiyafetAcildi, b.kiyafetAcildi), nasilGoruldu: { ...(b.nasilGoruldu || {}), ...(y.nasilGoruldu || {}) },
+    kaziOyun: gunluk(y.kaziOyun, b.kaziOyun, x => (10 - (x.hak ?? 10)) * 100 + (x.kosular || []).length),
+    kzMeydan: gunluk(y.kzMeydan, b.kzMeydan, x => (x.bitti ? 1e6 : 0) + (x.puan || 0)),
+    kelime: gunluk(y.kelime, b.kelime, x => (x.bitti ? 100 : 0) + (x.tahminler || []).length),
+    sirala: gunluk(y.sirala, b.sirala, x => (x.bitti ? 100 : 0) + (x.denemeler || []).length),
+    kelimeSeri: seri,
+    tercih: { ...(b.tercih || {}), ...(y.tercih || {}) },
+  };
+}
+function oyunUygula(o) {
+  for (const k of ["buluntuDefteri", "altinDefter", "rozetler", "kiyafetAcildi", "nasilGoruldu", "kaziOyun", "kzMeydan", "kelime", "kelimeSeri", "sirala"])
+    if (o[k] != null) D[k] = o[k];
+  for (const k of OYUN_TERCIH) if (D[k] === undefined && o.tercih && o.tercih[k] !== undefined) D[k] = o.tercih[k];
+}
+/* Buluttan gelen oyun verisini birleştirir; cihazda daha ileri bir şey varsa hesaba geri yazar */
+/* Alan sırasından bağımsız karşılaştırma (iki cihaz aynı veriyi birbirine sonsuza dek yazmasın) */
+const kararli = o => JSON.stringify(o, (k, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([x], [y]) => x < y ? -1 : 1)) : v);
+function oyunBuluttan(bulut) {
+  if (!bulut) { hesapDegisti(); return; }
+  const once = kararli(oyunAl());
+  oyunUygula(oyunBirlestir(oyunAl(), bulut));
+  const sonra = kararli(oyunAl());
+  if (sonra !== once) { try { localStorage.setItem(DEPO_ANAHTARI, JSON.stringify(D)); } catch (e) {} if (location.hash === "#oyunlar" || location.hash === "#oyun/kazi") rota(true); }
+  if (sonra !== kararli(oyunBirlestir({}, bulut))) hesapDegisti();
+}
+
 /* ---------------------------------------------------------------- buluta yaz */
 function hesapDegisti() {
   if (!H.kullanici || H.uygulaniyor) return;
@@ -96,8 +142,8 @@ async function buluttaKaydet() {
     const parti = fs.writeBatch(H.db);
     const simdi = Date.now();
     // mergeFields: belgedeki öteki alanlar (profil) korunur
-    parti.set(fs.doc(H.db, "kullanicilar", uid), { kitaplik: kitaplikAl(), guncelleme: simdi, cihaz: CIHAZ },
-              { mergeFields: ["kitaplik", "guncelleme", "cihaz"] });
+    parti.set(fs.doc(H.db, "kullanicilar", uid), { kitaplik: kitaplikAl(), oyun: JSON.parse(JSON.stringify(oyunAl())), guncelleme: simdi, cihaz: CIHAZ },
+              { mergeFields: ["kitaplik", "oyun", "guncelleme", "cihaz"] });
     let n = 0;
     for (const [id, r] of Object.entries(D.kayitlar)) {
       if (!H.bulutKayitlar.has(id) && n < 400) { parti.set(fs.doc(H.db, "kullanicilar", uid, "kayitlar", belgeAdi(id)), { r }); H.bulutKayitlar.add(id); n++; }
@@ -135,6 +181,7 @@ function dinle() {
     if (!belge.exists() || belge.metadata.hasPendingWrites) return;
     const v = belge.data();
     profilBuluttan(v.profil);
+    if (!H.oyunIlk || v.cihaz !== CIHAZ) { H.oyunIlk = true; oyunBuluttan(v.oyun); }   // oyun ilerlemesi her zaman birleştirilir
     if (v.cihaz === CIHAZ || !(v.guncelleme > (D.esitleme || 0))) return;
     H.uygulaniyor = true;
     Object.assign(D, { fav: v.kitaplik.fav || [], notlar: v.kitaplik.notlar || {}, konular: v.kitaplik.konular || [],
@@ -150,6 +197,7 @@ async function oturumAcildi(kullanici) {
   const { fs } = H.fb;
   H.kullanici = kullanici;
   H.bulutKayitlar = new Set();
+  H.oyunIlk = false;
   try {
     if (D.uid !== kullanici.uid) {
       // bu cihazda bu hesapla ilk giriş: cihazdakilerle hesaptakileri birleştir
