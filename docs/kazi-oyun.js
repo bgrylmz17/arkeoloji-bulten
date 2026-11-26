@@ -497,9 +497,13 @@ const kzAd = b => DIL === "en" && b.ad_en ? b.ad_en : b.ad;
 const kzBilgi = b => DIL === "en" && b.bilgi_en ? b.bilgi_en : b.bilgi;
 
 /* ---------------------------------------------------------------- günlük izin, arkeolog */
+/* Herkese bir kez günlük izin yenileme (yeni sürüm duyurusu): o gün izinler 5'e döner, bugünkü puan korunur.
+ * Eşitlemede damgalı kayıt öncelik alır (hesap.js › oyunBirlestir). */
+const KZ_SIFIR = { gun: "2026-11-26", kimlik: "1.29" };
 function kaziDurumu() {
   const g = oyunGunu();
   if (!D.kaziOyun || D.kaziOyun.gun !== g) D.kaziOyun = { gun: g, hak: KZ_HAK, toplam: 0, kosular: [], surum5: true };
+  if (D.kaziOyun.gun === KZ_SIFIR.gun && D.kaziOyun.sifir !== KZ_SIFIR.kimlik) { D.kaziOyun.hak = KZ_HAK; D.kaziOyun.sifir = KZ_SIFIR.kimlik; kaydet(); }
   if (!D.kaziOyun.surum5) { D.kaziOyun.hak += KZ_HAK - 3; D.kaziOyun.surum5 = true; }   // izin 3'ten 5'e çıktı (bugün başlamış eski kayıtlar)
   D.kaziOyun.hak = Math.max(0, Math.min(KZ_HAK, D.kaziOyun.hak));
   if (typeof oyunYoneticisi === "function" && oyunYoneticisi()) D.kaziOyun.hak = KZ_HAK;   // yönetici: sınırsız izin

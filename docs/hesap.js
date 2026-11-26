@@ -103,7 +103,9 @@ function oyunBirlestir(y, b) {
   return {
     buluntuDefteri: erken(y.buluntuDefteri, b.buluntuDefteri), altinDefter: erken(y.altinDefter, b.altinDefter),
     rozetler: erken(y.rozetler, b.rozetler), kiyafetAcildi: erken(y.kiyafetAcildi, b.kiyafetAcildi), nasilGoruldu: { ...(b.nasilGoruldu || {}), ...(y.nasilGoruldu || {}) },
-    kaziOyun: gunluk(y.kaziOyun, b.kaziOyun, x => (10 - (x.hak ?? 10)) * 100 + (x.kosular || []).length),
+    kaziOyun: (y.kaziOyun && b.kaziOyun && y.kaziOyun.gun === b.kaziOyun.gun && (y.kaziOyun.sifir || "") !== (b.kaziOyun.sifir || ""))
+      ? ((y.kaziOyun.sifir || "") > (b.kaziOyun.sifir || "") ? y.kaziOyun : b.kaziOyun)   // izin yenilemesi (KZ_SIFIR) olan kayıt önce gelir
+      : gunluk(y.kaziOyun, b.kaziOyun, x => (10 - (x.hak ?? 10)) * 100 + (x.kosular || []).length),
     kzMeydan: gunluk(y.kzMeydan, b.kzMeydan, x => (x.bitti ? 1e6 : 0) + (x.puan || 0)),
     kelime: gunluk(y.kelime, b.kelime, x => (x.bitti ? 100 : 0) + (x.tahminler || []).length),
     sirala: gunluk(y.sirala, b.sirala, x => (x.bitti ? 100 : 0) + (x.denemeler || []).length),
