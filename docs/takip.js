@@ -35,6 +35,51 @@ function takipEkle(tur, deger, ad) {
   bildir(tx("Takibe alındı: {ad}", { ad: ad || deger }));
   return true;
 }
+/* Haftalık özetin konuları: başlık (kavram grubu) › alt başlık (kavram). Seçilenler takibe "kavram" olarak yazılır;
+ * haftalık e-posta (toplayici/haftalik.py) bunlara göre "takip ettiklerinizden" bölümünü kurar. Native: components/KonuSecici.tsx */
+function konuSecici(sonra) {
+  const kavramlar = (VERI.kavramlar || []).filter(k => k.grup !== "Kazım");
+  if (!kavramlar.length) { if (sonra) sonra(); return; }
+  const gruplar = [...new Set(kavramlar.map(k => k.grup))];
+  const secili = new Set(takipListesi().filter(t => t.tur === "kavram").map(t => t.deger));
+  const bitir = () => { D.konuSoruldu = true; kaydet(); levhaKapat(); if (sonra) sonra(); };
+  levhaAc(`<div class="konu-secici"><h3>📬 ${tx("Haftalık özetin konuları")}</h3>
+    <p class="aciklama">${tx("İlgilendiğin konuları seç; her pazartesi bu konulardan yeni kayıtlar e-postana gelir. Başlığa dokunursan altındakilerin hepsi seçilir. İstediğin an değiştirebilirsin.")}</p>
+    ${gruplar.map(g => `<section class="konu-bolum"><button class="konu-grup" data-grup="${esc(g)}"><span>${esc(tx(g))}</span><small></small></button>
+      <div class="konu-cipler">${kavramlar.filter(k => k.grup === g).map(k => `<button class="cip" data-k="${esc(k.id)}" aria-pressed="${secili.has(k.id)}">${esc(kavramAdi(k))}</button>`).join("")}</div></section>`).join("")}
+    <p class="konu-sayac" id="konu-sayac"></p>
+    <p style="margin:12px 0 0"><button class="buyuk-dugme" id="konu-kaydet">${tx("Kaydet")}</button></p>
+    <p style="text-align:center;margin:6px 0 0"><button class="ikincil-dugme" id="konu-sonra">${tx("Şimdilik genel özet yeter")}</button></p></div>`, lv => {
+    const guncelle = () => {
+      lv.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", String(secili.has(b.dataset.k))));
+      lv.querySelectorAll(".konu-bolum").forEach(s => {
+        const ids = [...s.querySelectorAll("[data-k]")].map(b => b.dataset.k), n = ids.filter(id => secili.has(id)).length;
+        s.querySelector(".konu-grup small").textContent = n ? (n === ids.length ? tx("hepsi") : `${n}/${ids.length}`) : "";
+        s.querySelector(".konu-grup").setAttribute("aria-pressed", String(n === ids.length));
+      });
+      lv.querySelector("#konu-sayac").textContent = secili.size ? tx("{n} konu seçildi", { n: secili.size }) : tx("Konu seçmezsen haftanın öne çıkanları gelir.");
+    };
+    lv.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { secili.has(b.dataset.k) ? secili.delete(b.dataset.k) : secili.add(b.dataset.k); guncelle(); });
+    lv.querySelectorAll(".konu-grup").forEach(b => b.onclick = () => {
+      const ids = [...b.closest(".konu-bolum").querySelectorAll("[data-k]")].map(x => x.dataset.k), hepsi = ids.every(id => secili.has(id));
+      ids.forEach(id => hepsi ? secili.delete(id) : secili.add(id)); guncelle();
+    });
+    lv.querySelector("#konu-kaydet").onclick = () => {
+      const liste = takipListesi().filter(t => t.tur !== "kavram" || secili.has(t.deger));
+      for (const id of secili) if (!liste.some(t => t.tur === "kavram" && t.deger === id)) {
+        const k = kavramlar.find(x => x.id === id);
+        liste.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), tur: "kavram", deger: id, ad: k ? kavramAdi(k) : id });
+      }
+      if (!D.takipGorulen) D.takipGorulen = VERI.guncelleme || "";
+      D.takip = liste;
+      bildir(secili.size ? tx("{n} konu kaydedildi; haftalık özet bunlara göre gelecek", { n: secili.size }) : tx("Haftalık özette genel öne çıkanlar gelecek"));
+      bitir();
+    };
+    lv.querySelector("#konu-sonra").onclick = bitir;
+    guncelle();
+  });
+}
+const konuSayisi = () => takipListesi().filter(t => t.tur === "kavram").length;
 function takipCikar(id) { D.takip = takipListesi().filter(t => t.id !== id); kaydet(); }
 
 function sayfaTakip() {

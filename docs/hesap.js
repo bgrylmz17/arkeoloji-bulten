@@ -377,6 +377,7 @@ function hesapGrubuHtml() {
     <button class="satir" id="gorunen-ad">${tx("Görünen ad")}<span class="sag">${esc(typeof gorunenAd === "function" ? gorunenAd() || tx("Belirlenmedi") : "")}</span></button>
     ${typeof unvanLevhasi === "function" ? `<button class="satir" id="unvan-sec">${tx("Ünvan")}<span class="sag">${esc(unvanDurumMetni())}</span></button>` : ""}
     <label class="satir">${tx("Yenilikler e-postayla gelsin")}<input type="checkbox" class="anahtar" id="eposta-izni" ${izin ? "checked" : ""}></label>
+    ${typeof konuSecici === "function" ? `<button class="satir" id="ozet-konulari">${tx("Haftalık özetin konuları")}<span class="sag">${konuSayisi() ? tx("{n} konu", { n: konuSayisi() }) : tx("Genel")}</span></button>` : ""}
     <div class="satir">${tx("Eşitleme")}<span class="sag">${esc(H.durum || (H.sonEsitleme ? tx("Eşitlendi, {saat}", { saat: saatYaz(H.sonEsitleme) }) : tx("Açık")))}</span></div>
     <button class="satir" id="cikis">${tx("Çıkış yap")}</button>
     <button class="satir" id="hesap-sil" style="color:var(--rapor)">${tx("Hesabı sil")}</button>
@@ -394,12 +395,15 @@ function hesapGrubuBagla() {
   if (ad && typeof adLevhasi === "function") ad.onclick = () => adLevhasi();
   const un = document.getElementById("unvan-sec");
   if (un) un.onclick = unvanLevhasi;
+  const ok = document.getElementById("ozet-konulari");
+  if (ok) ok.onclick = () => konuSecici(() => rota(true));
   const izin = document.getElementById("eposta-izni");
   if (izin) izin.onchange = async e => {
     const acik = e.target.checked;
     try {
       await profilKaydet({ eposta_izni: { izin: acik, tarih: new Date().toISOString(), eposta: H.kullanici.email || "", metin: EPOSTA_IZIN_METNI } });
       bildir(acik ? tx("Yenilikler e-postanıza gelecek") : tx("E-posta izniniz geri alındı"));
+      if (acik && typeof konuSecici === "function") setTimeout(() => konuSecici(() => rota(true)), 400);
     } catch (err) { e.target.checked = !acik; bildir(tx("Kaydedilemedi; internet bağlantınızı kontrol edin.")); }
   };
 }

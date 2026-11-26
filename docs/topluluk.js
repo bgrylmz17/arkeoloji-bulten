@@ -345,7 +345,11 @@ async function epostaSorusuKontrol() {
   for (let i = 0; i < 30 && !H.hazir; i++) await new Promise(r => setTimeout(r, 200));
   if (ustKatmanVar() || epostaSorusuAcik) return;
   if (H.kullanici) {
-    if (profilAl().eposta_izni !== undefined) return;
+    if (profilAl().eposta_izni !== undefined) {
+      // özete izin vermiş ama konu seçmemiş: bir kez konularını sor
+      if (profilAl().eposta_izni.izin && !D.konuSoruldu && typeof konuSecici === "function" && !konuSayisi()) konuSecici();
+      return;
+    }
     epostaSorusuAcik = true;
     levhaAc(`<div class="eposta-soru"><div class="eposta-soru-ikon">✉️</div><h3>${tx("Haftalık özet e-postana gelsin mi?")}</h3>
       <p class="aciklama">${tx("Her pazartesi sabahı takip ettiklerinden yeni kayıtlar, haftanın öne çıkanları ve Arkix Özel yazıları {eposta} adresine gelir. İstediğin an ayrılabilirsin.", { eposta: esc(H.kullanici.email || "") })}</p>
@@ -356,6 +360,7 @@ async function epostaSorusuKontrol() {
         try {
           await profilKaydet({ eposta_izni: { izin, tarih: new Date().toISOString(), eposta: H.kullanici.email || "", metin: EPOSTA_IZIN_METNI } });
           bildir(izin ? tx("Yenilikler e-postanıza gelecek") : tx("Tamam; Ayarlar › Hesap'tan istediğin an açabilirsin."));
+          if (izin && typeof konuSecici === "function") setTimeout(() => konuSecici(), 600);
         } catch (e) { bildir(tx("Kaydedilemedi; internet bağlantınızı kontrol edin.")); }
       };
       lv.querySelector("#es-evet").onclick = () => karar(true);

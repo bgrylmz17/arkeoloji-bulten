@@ -920,5 +920,19 @@ const EN = {
  "Göbeklitepe’de yeni dikilitaş": "New pillar at Göbeklitepe",
  "Haber · 2 saat önce": "News · 2 hours ago",
  "Önizleme": "Preview",
- "Tamam": "OK"
+ "Tamam": "OK",
+ "Genel": "General",
+ "Haftalık özetin konuları": "Topics for your weekly digest",
+ "Haftalık özette genel öne çıkanlar gelecek": "Your weekly digest will bring the general highlights",
+ "Konu seçmezsen haftanın öne çıkanları gelir.": "If you pick no topics, you'll get the week's highlights.",
+ "hepsi": "all",
+ "{n} konu": "{n} topics",
+ "{n} konu kaydedildi; haftalık özet bunlara göre gelecek": "{n} topics saved; your weekly digest will follow them",
+ "{n} konu seçildi": "{n} topics selected",
+ "İlgilendiğin konuları seç; her pazartesi bu konulardan yeni kayıtlar e-postana gelir. Başlığa dokunursan altındakilerin hepsi seçilir. İstediğin an değiştirebilirsin.": "Pick the topics you care about; every Monday new records on them come to your inbox. Tap a heading to select everything under it. You can change this any time.",
+ "Şimdilik genel özet yeter": "The general digest is fine for now",
+ "Kültür-Endüstri": "Culture & industry",
+ "Teknoloji": "Technology",
+ "Yöntem": "Method",
+ "Bölge": "Region"
 };
