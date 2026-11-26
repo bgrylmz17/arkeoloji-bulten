@@ -238,6 +238,7 @@ const KZ_ELEK = [
     bilgi_en: "Small bronze coins for everyday shopping are easy to miss in the soil; most turn up only in the sieve." },
 ];
 const KZ_ELEK_KOVA = 3, KZ_ELEK_OLASILIK = 0.6;
+const KZ_SAGLAM_VURUS = 3;   // değerli buluntuyu kırmadan çıkarana ödül
 /* Hava: her kazı başında (Günün Açması'nda herkese aynı). Yağmur: çamurlu 2 sırada kazma 1 vuruş fazla. Rüzgâr/kum fırtınası: ipucu menzili 1 kısa. */
 const KZ_HAVA = {
   gunes:  { simge: "☀️", ad: "Güneşli", ad_en: "Sunny", aciklama: "", aciklama_en: "" },
@@ -799,10 +800,13 @@ function kzOyunCiz() {
       <span><button class="kz-muzik" id="kz-muzik" aria-label="${tx("Müzik")}" title="${tx("Müzik")}">${kzMuzikAcik() ? "♪" : "♪̸"}</button>${oyunSesDugmesi()}</span></div>
     <div class="kz-aletler" role="group" aria-label="${tx("Alet")}">${Object.entries(KZ_ALETLER).map(([id, a]) => `<button data-alet="${id}" aria-pressed="${KZ.alet === id}">
       <canvas width="24" height="24"></canvas><span><b>${esc(aletAd(a))}</b><small>${esc(DIL === "en" ? a.kisa_en : a.kisa)}</small></span></button>`).join("")}</div>
+    <button class="kz-elek" id="kz-elek" title="${tx("3 kova toprak = 1 eleme, 1 vuruş")}">
+      <span class="kz-elek-ad">🪣 ${tx("Elek")}</span><span class="kz-kova"><i></i><i></i><i></i></span>
+      <span class="kz-elek-durum"><b>0</b> ${tx("eleme hazır")}</span><small>${tx("3 kova = 1 eleme · 1 vuruş")}</small></button>
     <div class="kz-cerceve"><canvas id="kz-tuval" width="${KZ_SUTUN * KZ_HUCRE}" height="${KZ_SAHNE + KZ_SATIR * KZ_HUCRE}" aria-label="${tx("Kazı alanı")}"></canvas></div>
-    <p class="aciklama kz-ipucu">${tx("Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücre kızıl ya da amber parlıyorsa yakında değerli bir buluntu var.")} ${tx("Seramik, cam, tablet ve fresk kırılgandır: kazmayla çıkarırsan kırılabilir, fırça hiç kırmaz.")}</p>
+    <p class="aciklama kz-ipucu">${tx("Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücre kızıl ya da amber parlıyorsa yakında değerli bir buluntu var.")} ${tx("Seramik, cam, tablet ve fresk kırılgandır: kazmayla çıkarırsan kırılabilir, fırça hiç kırmaz.")} ${tx("Değerli buluntuyu sağlam çıkarırsan +3 vuruş.")}</p>
     <p class="kz-bulunanlar" id="kz-bulunanlar"></p>
-    <p class="kz-alt-dugmeler"><button class="ikincil-dugme" id="kz-elek" title="${tx("3 kova toprak = 1 eleme, 1 vuruş")}">🪣 ${tx("Ele")} (<b>0</b>)</button>
+    <p class="kz-alt-dugmeler"><button class="ikincil-dugme" id="kz-nasil-oyun">❔ ${tx("Nasıl oynanır?")}</button>
       <button class="ikincil-dugme" id="kz-bitir">${tx("Kazıyı bitir")}</button></p></div>`;
   const cv = $("#kz-tuval");
   cv.onclick = e => {
@@ -818,6 +822,7 @@ function kzOyunCiz() {
   };
   $("#kz-bitir").onclick = () => kzSon(false);
   $("#kz-elek").onclick = kzEle; kzElekDugmesi();
+  $("#kz-nasil-oyun").onclick = () => typeof nasilGoster === "function" && nasilGoster("kazi");
   $$(".kz-aletler [data-alet]").forEach(b => {
     spriteCiz(b.querySelector("canvas").getContext("2d"), KZ_ALETLER[b.dataset.alet].sprite, 0, 0, 2);
     b.onclick = () => { KZ.alet = D.kzAlet = b.dataset.alet; kaydet(); oyunSesi("tus"); $$(".kz-aletler [data-alet]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); };
@@ -919,9 +924,11 @@ function kzTozIlerlet() { for (const p of KZ.toz) { p.x += p.vx; p.y += p.vy; p.
 /* Elek: 3 kova toprak = 1 eleme, 1 vuruş; %60 küçük buluntu */
 function kzElekDugmesi() {
   const b = $("#kz-elek"); if (!b || !KZ) return;
-  const n = Math.floor(KZ.kova / KZ_ELEK_KOVA);
+  const n = Math.floor(KZ.kova / KZ_ELEK_KOVA), dolu = n >= 1 ? KZ_ELEK_KOVA : KZ.kova % KZ_ELEK_KOVA;
   b.disabled = KZ.bitti || n < 1 || KZ.vurus < 1;
+  b.classList.toggle("hazir", !b.disabled);
   b.querySelector("b").textContent = n;
+  b.querySelectorAll(".kz-kova i").forEach((x, k) => x.classList.toggle("dolu", k < dolu));
 }
 function kzEle() {
   if (!KZ || KZ.bitti || KZ.kova < KZ_ELEK_KOVA || KZ.vurus < 1) return;
@@ -985,7 +992,9 @@ function kzKaz(i) {
     let p = Math.round((sikMi(yeni) ? yeni.puan : yeni.puan * KZ.carpan * (h.nadir ? 3 : 1)) * kzUzmanCarpan(yeni));
     const tam = p;
     if (h.kirik) p = Math.round(p * KZ_KIRIK_ORAN);
-    KZ.puan += p; yeni = { ...yeni, kazanilan: p, nadir: !!h.nadir, kirik: h.kirik, tam, hucre: i };
+    const ekVurus = !sikMi(yeni) && !h.kirik ? KZ_SAGLAM_VURUS : 0;
+    KZ.vurus += ekVurus;
+    KZ.puan += p; yeni = { ...yeni, kazanilan: p, nadir: !!h.nadir, kirik: h.kirik, tam, hucre: i, ekVurus };
     if (h.nadir) { D.altinDefter = D.altinDefter || {}; D.altinDefter[h.buluntu.id] = oyunGunu(); kaydet(); if (typeof rozetVer === "function") rozetVer("nadir"); }
     setTimeout(() => oyunSesi(h.kirik ? "kirik" : sikMi(h.buluntu) ? "sik" : "buluntu"), 120);
   }
@@ -1004,6 +1013,7 @@ function kzKaz(i) {
 function kzBuluntuLevhasi(b, alan, ilk, sonra, sik) {
   const ozel = sik === undefined ? !KZ_SIK.some(x => x.id === b.id) : !sik;
   levhaAc(`<div class="kz-buluntu${b.nadir ? " nadir" : ""}${b.kirik ? " kirik" : ""}">${b.nadir ? `<p class="kz-yeni">✨ ${tx("Olağanüstü korunmuş! Puan ×3")}</p>` : ""}
+    ${b.ekVurus ? `<p class="kz-yeni kz-ekvurus">⛏ ${tx("Sağlam çıkardın: +{n} vuruş!", { n: b.ekVurus })}</p>` : ""}
     ${b.kirik ? `<p class="kz-yeni">💔 ${tx("Kırıldı! Parçaları topladın: puanın %30'u, deftere yazılmaz. Kırılgan buluntularda mala ya da fırça kullan.")}</p>` : ""}${ilk ? `<p class="kz-yeni">${tx("Deftere yeni buluntu!")}</p>` : ""}
     <canvas width="144" height="144" id="kz-buyuk"></canvas>
     <h3>${esc(kzAd(b))}</h3>
