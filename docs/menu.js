@@ -4,13 +4,13 @@ function cekmeceAc() {
   const girdi = typeof H !== "undefined" && H.kullanici;
   const ad = girdi ? hesapAdi() : tx("Giriş yap ya da hesap oluştur");
   const takipYeni = typeof takipYeniSayisi === "function" ? takipYeniSayisi() : 0;
+  const yonetici = typeof yoneticiMi === "function" && yoneticiMi();
   const satir = (href, metin, sag = "", ek = "") => `<a class="cekmece-satir" href="${href}"${ek}><span>${metin}</span>${sag !== "" ? `<small>${sag}</small>` : ""}<i>›</i></a>`;
   c.innerHTML = `
     <a class="cekmece-profil" href="${girdi ? "#ayarlar" : "#giris"}">${girdi && typeof avatarHtml === "function" ? avatarHtml(48) : `<span class="avatar avatar-bas" style="width:48px;height:48px">A</span>`}
       <span><b>${esc(ad)}</b><small>${girdi ? esc(H.kullanici.email || "") : tx("Kayıtların her cihazda")}</small></span></a>
     <nav class="cekmece-liste">
-      ${satir("#oyunlar", tx("Oyunlar"), tx("Yeni"))}
-      ${satir("#ozel/kazi", tx("Kazı duyuruları"))}
+      <p class="cekmece-grup">${tx("Profilim")}</p>
       ${satir("#profilim", tx("Araştırmacı profilim"), typeof arastirmaciAl === "function" && arastirmaciAl() ? "🎓" : "")}
       ${satir("#takip", tx("Takip ettiklerim"), takipYeni ? tx("{n} yeni", { n: takipYeni }) : String((D.takip || []).length))}
       ${satir("#favoriler", tx("Favoriler"), D.fav.length)}
@@ -18,13 +18,17 @@ function cekmeceAc() {
       ${satir("#kitaplik", tx("Konular"), D.konular.length)}
       ${satir("#kaynakca", tx("Kaynakçam (APA 7)"), D.kaynakca.length)}
       ${satir("#pdfler", tx("PDF arşivim"))}
-      ${satir("#sozler", tx("Arkeoloji sözleri"))}
-      <hr>
+      <p class="cekmece-grup">${tx("Keşfet")}</p>
+      ${satir("#ozel", tx("Etkinlikler"))}
+      ${satir("#ozel/kazi", tx("Kazı duyuruları"))}
+      ${satir("#oyunlar", tx("Oyunlar"))}
+      ${yonetici ? `<p class="cekmece-grup">${tx("Yönetim")}</p>
+      ${satir("#yonetim", tx("Yönetim paneli"))}
       ${satir("#durum", tx("Kaynakların durumu"))}
-      <button class="cekmece-satir" id="cekmece-bildir"><span>${tx("Hata bildir ya da öneride bulun")}</span><i>›</i></button>
-      ${typeof yoneticiMi === "function" && yoneticiMi() ? satir("#yonetim", `<b>${tx("Yönetim paneli")}</b>`) : ""}
-      <hr>
+      ${satir("#sozler", tx("Arkeoloji sözleri"))}` : ""}
+      <p class="cekmece-grup">${tx("Uygulama")}</p>
       ${satir("#ayarlar", tx("Ayarlar"))}
+      <button class="cekmece-satir" id="cekmece-bildir"><span>${tx("Hata bildir ya da öneride bulun")}</span><i>›</i></button>
       ${satir("#yasal", tx("Kullanım koşulları ve KVKK"))}
     </nav>
     <p class="cekmece-alt">Arkix ${SURUM} · <a href="https://www.instagram.com/harrixapp/" target="_blank" rel="noopener">@harrixapp</a></p>`;

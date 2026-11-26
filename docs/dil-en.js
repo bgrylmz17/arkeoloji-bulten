@@ -981,5 +981,22 @@ const EN = {
  "Toplayıcı bir sonraki çalışmada kaynakları tarayacak.": "The collector will scan the sources on its next run.",
  "Yaklaşan": "Upcoming",
  "yaklaşan": "upcoming",
- "Bilim dalı": "Discipline"
+ "Bilim dalı": "Discipline",
+ "Bütün bilim dalları": "All disciplines",
+ "Profilim": "My profile",
+ "Keşfet": "Explore",
+ "Yönetim": "Admin",
+ "Uygulama": "App",
+ "Arşiv": "Archive",
+ "Bu süzgeçle etkinlik yok": "No events with this filter",
+ "Bölgeyi değiştirmeyi dene.": "Try another region.",
+ "Etkinlik duyur": "Announce an event",
+ "Geçmişleri de göster (arşiv)": "Show past ones too (archive)",
+ "Geçmişleri de göstermeyi ya da bölgeyi değiştirmeyi dene.": "Try showing past ones or another region.",
+ "Kazı ve alan okulu ilanları": "Excavation and field-school listings",
+ "Sempozyum, kongre, konferans, çalıştay ve bildiri çağrıları; haber siteleri ve kurumlardan otomatik toplanır, günde dört kez güncellenir. Türkiye'dekiler önde.": "Symposia, congresses, conferences, workshops and calls for papers, collected automatically from news sites and institutions four times a day. Events in Türkiye come first.",
+ "Topluluktan": "From the community",
+ "Türkiye": "Türkiye",
+ "duyuru tarihi": "announcement date",
+ "kazi@universite.edu.tr ya da Instagram/web bağlantısı": "dig@university.edu or an Instagram/web link"
 };

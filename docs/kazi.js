@@ -85,7 +85,7 @@ function kaziAyrinti(d) {
       ${d.basvuru_son ? `<div class="satir">${tx("Son başvuru")}<span class="sag">${esc(kdTarih(d.basvuru_son))}</span></div>` : ""}
     </div>
     <p class="kazi-metin">${esc(d.metin || "")}</p>
-    ${iletisim ? `<p>${bag ? `<a class="buyuk-dugme" style="display:block;text-align:center;text-decoration:none" href="${esc(bag)}" ${bag.startsWith("http") ? 'target="_blank" rel="noopener"' : ""}>${tx("İletişime geç")}</a>` : ""}
+    ${iletisim ? `<p>${bag ? `<a class="buyuk-dugme" style="display:block;text-align:center;text-decoration:none" href="${escUrl(bag)}" ${bag.startsWith("http") ? 'target="_blank" rel="noopener"' : ""}>${/instagram\.com\//i.test(bag) ? "📷 Instagram" : tx("İletişime geç")}</a>` : ""}
       <small class="aciklama">${esc(iletisim)}</small></p>` : ""}
     <p style="text-align:center;margin:10px 0 0"><button class="ikincil-dugme" id="kazi-paylas">${tx("Paylaş")}</button>
       <button class="ikincil-dugme" id="kazi-bildir">${tx("Bildir")}</button></p>`, lv => {
@@ -94,7 +94,7 @@ function kaziAyrinti(d) {
   });
 }
 
-async function kaziFormu() {
+async function kaziFormu(varsayilanTur) {
   if (!H.kullanici) { levhaKapat(); location.hash = "#giris"; bildir(tx("Duyuru göndermek için giriş yapın")); return; }
   // yalnız onaylı Prof. Dr., Doç. Dr., Dr. Öğr. Üyesi ve Dr. (kurallar: duyuruYetkili)
   try { await unvanYukle(true); } catch (e) {}
@@ -115,9 +115,10 @@ async function kaziFormu() {
       <div class="kazi-form-iki"><label>${tx("Başlangıç")}<input type="date" name="baslangic"></label><label>${tx("Bitiş")}<input type="date" name="bitis"></label></div>
       <label>${tx("Son başvuru (varsa)")}<input type="date" name="basvuru_son"></label>
       <label>${tx("Açıklama")}<textarea name="metin" rows="6" maxlength="2000" required placeholder="${tx("Kimler başvurabilir, süre, konaklama, ulaşım, istenen belgeler…")}"></textarea></label>
-      <label>${tx("İletişim (e-posta ya da bağlantı)")}<input name="iletisim" maxlength="200" placeholder="kazi@universite.edu.tr"></label>
+      <label>${tx("İletişim (e-posta ya da bağlantı)")}<input name="iletisim" maxlength="200" placeholder="${tx("kazi@universite.edu.tr ya da Instagram/web bağlantısı")}"></label>
       <p style="margin:12px 0 0"><button class="buyuk-dugme" type="submit">${tx("İncelemeye gönder")}</button></p>
     </form>`, lv => {
+    if (typeof varsayilanTur === "string" && KAZI_TURLERI[varsayilanTur]) lv.querySelector('#kazi-form select[name="tur"]').value = varsayilanTur;
     lv.querySelector("#kazi-form").onsubmit = async e => {
       e.preventDefault();
       const f = Object.fromEntries(new FormData(e.target).entries());

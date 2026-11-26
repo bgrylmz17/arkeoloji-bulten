@@ -573,6 +573,56 @@ DUYURU_KAYNAKLARI = [
     {"ad": "AIA", "url": "https://www.archaeological.org/events/feed/", "dil": "en", "tur": "etkinlik"},
     {"ad": "AIA Fieldwork", "url": "https://www.archaeological.org/fieldwork/feed/", "dil": "en", "tur": "kazi"},
 ]
+# Google Haberler aramaları (Türkçe): yerli sempozyum, kongre, çalıştay ve kazı çağrıları. Başlıkta etkinlik/kazı çağrısı ve
+# arkeolojiyle ilgili bir sözcük olmalı (ARKEO_DESENI); haber sitesinin adı başlığın sonundan alınır.
+GOOGLE_DUYURU_SORGULARI = [
+    "arkeoloji sempozyumu", "kazı sempozyumu", "arkeoloji kongresi", "arkeoloji çalıştayı", "arkeoloji konferansı", "arkeoloji paneli",
+    "mağara sempozyumu", "prehistorya sempozyumu", "arkeometri sempozyumu", "kültürel miras sempozyumu", "müzecilik kongresi",
+    "arkeoloji bildiri çağrısı", "kazı gönüllü öğrenci", "kazı sempozyumu düzenlenecek",
+]
+for _q in GOOGLE_DUYURU_SORGULARI:
+    DUYURU_KAYNAKLARI.append({"ad": "Google Haberler", "url": "https://news.google.com/rss/search?q=" + urllib.parse.quote(_q + " when:90d")
+                              + "&hl=tr&gl=TR&ceid=TR:tr", "dil": "tr", "tur": "suz", "google": True})
+ARKEO_DESENI = re.compile(r"arkeolo|\bkazi|hoyuk|antik|magara|muze|kulturel miras|kultur miras|prehistor|paleolit|neolit|arkeometri|epigraf"
+                          r"|tarih oncesi|oren yeri|tumulus|archaeolog|excavat|heritage|prehistor")
+IL_ADLARI = ("adana adiyaman afyon agri aksaray amasya ankara antalya ardahan artvin aydin balikesir bartin batman bayburt bilecik bingol bitlis "
+             "bolu burdur bursa canakkale cankiri corum denizli diyarbakir duzce edirne elazig erzincan erzurum eskisehir gaziantep antep giresun "
+             "gumushane hakkari hatay igdir isparta istanbul izmir kahramanmaras karabuk karaman kars kastamonu kayseri kilis kirikkale kirklareli "
+             "kirsehir kocaeli konya kutahya malatya manisa mardin mersin mugla mus nevsehir nigde ordu osmaniye rize sakarya samsun sanliurfa urfa "
+             "siirt sinop sirnak sivas tekirdag tokat trabzon tunceli usak van yalova yozgat zonguldak").split()
+TR_DESENI = re.compile(r"\b(turkiye|turkey|turkiye'|anadolu|anatolia|anatolian|" + "|".join(IL_ADLARI) + r")")
+AYLAR_TR = ["ocak", "subat", "mart", "nisan", "mayis", "haziran", "temmuz", "agustos", "eylul", "ekim", "kasim", "aralik"]
+AYLAR_EN = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
+TARIH_TR = re.compile(r"\b(\d{1,2})\s*(?:[-–]\s*\d{1,2}\s*)?(" + "|".join(AYLAR_TR) + r")\w*(?:\s+(\d{4}))?")
+TARIH_EN = re.compile(r"\b(\d{1,2})\s*(?:[-–]\s*\d{1,2}\s*)?(" + "|".join(AYLAR_EN) + r")(?:\s+(\d{4}))?|\b(" + "|".join(AYLAR_EN)
+                      + r")\s+(\d{1,2})(?:\s*[-–]\s*\d{1,2})?(?:,?\s+(\d{4}))?")
+INSTA_DESENI = re.compile(r"https?://(?:www\.)?instagram\.com/[A-Za-z0-9_.]+/?(?:p/[A-Za-z0-9_-]+/?)?")
+
+
+def etkinlik_tarihi(metin: str, yayin: str) -> str:
+    """Metindeki ilk gün-ay (yıl) ifadesi: "9-11 Aralık", "21–24 April 2027", "December 9". Yıl yoksa yayın tarihine göre en yakın ileri tarih."""
+    m, a = _ascii(metin), None
+    t = TARIH_TR.search(m)
+    if t:
+        gun, ay, yil = int(t.group(1)), AYLAR_TR.index(t.group(2)) + 1, t.group(3)
+    else:
+        e = TARIH_EN.search(m)
+        if not e:
+            return ""
+        if e.group(1):
+            gun, ay, yil = int(e.group(1)), AYLAR_EN.index(e.group(2)) + 1, e.group(3)
+        else:
+            gun, ay, yil = int(e.group(5)), AYLAR_EN.index(e.group(4)) + 1, e.group(6)
+    try:
+        y0 = dt.date.fromisoformat(yayin[:10])
+        a = dt.date(int(yil), ay, gun) if yil else dt.date(y0.year, ay, gun)
+        if not yil and a < y0 - dt.timedelta(days=60):
+            a = dt.date(y0.year + 1, ay, gun)
+        if abs((a - y0).days) > 500:
+            return ""
+    except (ValueError, TypeError):
+        return ""
+    return a.isoformat()
 ETKINLIK_DESENI = re.compile(
     r"\b(sempozyum\w*|kongre\w*|konferans\w*|kolokyum\w*|calistay\w*|bildiri (?:cagrisi|gonderim\w*|ozet\w*)|yaz okulu\w*|panel(?:i|inde|de)?"
     r"|symposium|symposia|congress|conference|colloquium|workshop|call for (?:papers|abstracts|proposals)|summer school|annual meeting|lecture series)\b")
@@ -614,27 +664,52 @@ def duyurulari_topla(eski: list[dict], kayitlar: list[dict], calisma: str) -> li
     """Etkinlik ve kazı duyuruları: RSS kaynakları + bülten kayıtlarında örüntüye uyanlar. Bir yıldan eski olanlar düşer."""
     sinir = (dt.date.today() - dt.timedelta(days=365)).isoformat()
     toplam = {d["i"]: d for d in eski if (d.get("t") or "") >= sinir}
+    kelimeler = lambda b: {w.strip("'’\".,:;!?()") for w in _ascii(b).split() if len(w) > 3}
+    gorulen_baslik = [kelimeler(d["b"]) for d in toplam.values()]
+    benzer = lambda k: any(len(k & g) / max(1, len(k | g)) >= 0.45 for g in gorulen_baslik)   # aynı etkinlik başka gazetede
     for kaynak in DUYURU_KAYNAKLARI:
         try:
             ogeler = rss_ogeleri(kaynak["url"])
         except Exception as h:   # bir kaynak çökerse ötekiler sürer
-            print(f"Duyuru kaynağı alınamadı: {kaynak['url']} ({h})", flush=True)
+            print(f"Duyuru kaynağı alınamadı: {kaynak['url'][:90]} ({h})", flush=True)
             continue
         for o in ogeler:
+            site = kaynak["ad"]
+            if kaynak.get("google") and " - " in o["b"]:   # "Başlık - Haber sitesi"
+                o["b"], site = o["b"].rsplit(" - ", 1)
+                o["o"] = ""   # Google'ın açıklaması yalnız başlık tekrarı
             tur = kaynak["tur"] if kaynak["tur"] != "suz" else duyuru_turu(o["b"], o["o"])
             u = guvenli_url(o["u"])
             if not tur or not u or not o["b"] or (o["t"] and o["t"] < sinir) or TUR_DESENI.search(o["b"] + " " + o["o"][:300]):
                 continue
+            if kaynak.get("google") and not ARKEO_DESENI.search(_ascii(o["b"])):
+                continue
+            anahtar = kelimeler(o["b"])
             kimlik = "du:" + hashlib.sha1(u.encode()).hexdigest()[:16]
-            toplam[kimlik] = {"i": kimlik, "du": tur, "s": kaynak["ad"], "b": o["b"][:200], "o": o["o"][:240], "u": u,
-                              "t": o["t"] or calisma[:10], "l": kaynak["dil"], "g": toplam.get(kimlik, {}).get("g") or calisma}
+            if kimlik not in toplam and benzer(anahtar):
+                continue
+            gorulen_baslik.append(anahtar)
+            yayin = o["t"] or calisma[:10]
+            et = etkinlik_tarihi(o["b"] + " " + o["o"], yayin)
+            metin = _ascii(o["b"] + " " + o["o"])
+            ig = INSTA_DESENI.search(o["o"] + " " + o["u"])
+            toplam[kimlik] = {"i": kimlik, "du": tur, "s": site[:60], "b": o["b"][:200], "o": o["o"][:240], "u": u,
+                              "t": et or yayin, "yt": yayin, **({"et": 1} if et else {}),
+                              **({"tr": 1} if kaynak["dil"] == "tr" or TR_DESENI.search(metin) else {}),
+                              **({"ig": ig.group(0)} if ig else {}),
+                              "l": kaynak["dil"], "g": toplam.get(kimlik, {}).get("g") or calisma}
     for k in kayitlar:   # bülten kayıtlarından (haber, rapor) duyuru olanlar
         if k.get("k") in ("Haber", "Rapor") and not k.get("oz"):
             tur = duyuru_turu((k.get("b") or "") + " " + (k.get("bt") or ""), k.get("o") or "")
             if tur:
+                yayin = (k.get("t") or calisma)[:10]
+                et = etkinlik_tarihi((k.get("b") or "") + " " + (k.get("o") or ""), yayin)
+                metin = _ascii((k.get("b") or "") + " " + (k.get("bt") or "") + " " + (k.get("o") or ""))
                 toplam["k:" + k["i"]] = {"i": "k:" + k["i"], "du": tur, "s": k.get("s", ""), "b": (k.get("bt") or k.get("b") or "")[:200],
                                          "o": (k.get("ot") or k.get("o") or "")[:240], "u": f"https://arkix.harrixapp.com/#k/{k['i']}", "k": k["i"],
-                                         "t": (k.get("t") or calisma)[:10], "l": k.get("l", ""), "g": k.get("g") or calisma}
+                                         "t": et or yayin, "yt": yayin, **({"et": 1} if et else {}),
+                                         **({"tr": 1} if k.get("l") == "tr" or TR_DESENI.search(metin) else {}),
+                                         "l": k.get("l", ""), "g": k.get("g") or calisma}
     l = sorted(toplam.values(), key=lambda d: (d.get("t") or "", d.get("g") or ""), reverse=True)[:300]
     print(f"Duyurular: {sum(d['du'] == 'etkinlik' for d in l)} etkinlik, {sum(d['du'] == 'kazi' for d in l)} kazı çağrısı", flush=True)
     return l
