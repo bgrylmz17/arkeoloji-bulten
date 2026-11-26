@@ -842,5 +842,13 @@ const EN = {
  "3 kova toprak = 1 eleme, 1 vuruş": "3 buckets of soil = 1 sieving, 1 strike",
  "Ele": "Sieve",
  "Elekten bir şey çıkmadı": "Nothing in the sieve",
- "Kazdığın toprak kovaya gider. 🪣 Ele düğmesi 3 kova toprağı 1 vuruşla eler; çoğu kez boncuk, kömür, mikrolit ya da küçük sikke çıkar.": "The soil you dig goes into buckets. 🪣 Sieve uses 1 strike to sift 3 buckets; it often turns up beads, charcoal, microliths or small coins."
+ "Kazdığın toprak kovaya gider. 🪣 Ele düğmesi 3 kova toprağı 1 vuruşla eler; çoğu kez boncuk, kömür, mikrolit ya da küçük sikke çıkar.": "The soil you dig goes into buckets. 🪣 Sieve uses 1 strike to sift 3 buckets; it often turns up beads, charcoal, microliths or small coins.",
+ "Hava değişir: yağmurda çamurlu sıralar 1 vuruş fazla ister, rüzgârda ipuçları kısalır.": "Weather changes: in rain the muddy rows cost 1 extra strike, in wind the hints get shorter.",
+ "Kırılan buluntuyu restorasyonla kurtarabilirsin: parçaları yerine diz, puan %70'e çıksın.": "You can save a broken find by restoring it: put the pieces back in place to raise its score to 70%.",
+ "Parçaları birleştir (restorasyon)": "Put the pieces together (restoration)",
+ "Restorasyon": "Restoration",
+ "Restore edildi! +{p} puan, deftere yazıldı.": "Restored! +{p} points, added to the notebook.",
+ "Yeterli vuruş kalmadı": "Not enough strikes left",
+ "{n} hamle": "{n} moves",
+ "İki parçaya dokun, yer değiştirsinler. Bütün parçalar yerine oturunca buluntu kurtulur.": "Tap two pieces to swap them. When every piece is in place, the find is saved."
 };
