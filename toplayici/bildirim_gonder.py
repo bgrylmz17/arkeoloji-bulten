@@ -7,6 +7,8 @@ Kategoriler ve sıklık (az ve öz):
   ozel      yeni Arkix Özel yazısı (her biri)
   sondakika "flash" işaretli yeni haber; çalışma başına en çok 1, günde en çok 2
   kazi      yeni onaylanan kazı duyurusu (en çok 2 / çalışma)
+  onemli    Kazı, Araştırma ve Arkeometri Sempozyumu (UKAAS) duyurusu ya da bildiri kitapları: kategoriden bağımsız HERKESE,
+            yayın tarihi son 14 gün, çalışma başına en çok 1 (bulten.json › etkinlikler, onemli: 1)
   takip     takip ettiklerinden son 24 saatte yeni kayıt sayısı; günde bir, 06 UTC sonrası (uid gerekir)
 Durum: sistem/push_durum { son, kazi, sd_gun, sd_sayi, takip_gun }. İlk çalışmada yalnız durum yazılır (eski içerik yağmuru olmasın).
 Geçersiz jetonun aboneliği silinir. KURU=1: göndermez, yazar.
@@ -98,6 +100,12 @@ def main() -> int:
         yer = " · ".join(x for x in (k.get("kazi"), k.get("il")) if x)
         olaylar.append(("kazi", "Kazı duyurusu" + (f" · {yer}" if yer else ""), k.get("baslik", ""),
                         "Excavation notice" + (f" · {yer}" if yer else ""), k.get("baslik", ""), "./#ozel/kazi", f"kazi-{k['_id']}"))
+    sinir14 = (simdi.date() - dt.timedelta(days=14)).isoformat()
+    onemliler = [d for d in veri.get("etkinlikler", []) if d.get("onemli") and (d.get("g") or "") > son and (d.get("yt") or d.get("t") or "") >= sinir14]
+    for d in onemliler[:1]:
+        yayin = d.get("du") == "yayin"
+        olaylar.append(("onemli", "📚 Yayımlandı" if yayin else "📣 Önemli duyuru", d["b"], "📚 Published" if yayin else "📣 Important", d["b"],
+                        "./#ozel", f"onemli-{d['i']}"))
     takip_zamani = durum.get("takip_gun") != bugun and simdi.hour >= 6
 
     abonelikler = E.sorgu("bildirim_abonelik")
@@ -131,7 +139,7 @@ def main() -> int:
         kat = set(a.get("kategoriler") or [])
         en = a.get("dil") == "en"
         for (k, tb, tm, eb, em, url, tag) in olaylar:
-            if k in kat:
+            if k in kat or k == "onemli":   # önemli duyurular herkese
                 gonder(a, eb if en else tb, em if en else tm, url, tag)
         if takip_zamani and "takip" in kat and a.get("uid"):
             uid = a["uid"]

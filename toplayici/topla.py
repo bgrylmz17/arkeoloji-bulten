@@ -580,6 +580,11 @@ GOOGLE_DUYURU_SORGULARI = [
     "mağara sempozyumu", "prehistorya sempozyumu", "arkeometri sempozyumu", "kültürel miras sempozyumu", "müzecilik kongresi",
     "arkeoloji bildiri çağrısı", "kazı gönüllü öğrenci", "kazı sempozyumu düzenlenecek",
 ]
+# Üniversiteler: RSS'i olanlar (20 üniversite denendi, Kasım 2026). Yalnız arkeolojiyle ilgili etkinlikler alınır.
+DUYURU_KAYNAKLARI += [
+    {"ad": "ODTÜ", "url": "https://www.metu.edu.tr/tr/rss.xml", "dil": "tr", "tur": "suz", "arkeo_sart": True},
+    {"ad": "Atatürk Üniversitesi", "url": "https://www.atauni.edu.tr/feed/", "dil": "tr", "tur": "suz", "arkeo_sart": True},
+]
 for _q in GOOGLE_DUYURU_SORGULARI:
     DUYURU_KAYNAKLARI.append({"ad": "Google Haberler", "url": "https://news.google.com/rss/search?q=" + urllib.parse.quote(_q + " when:90d")
                               + "&hl=tr&gl=TR&ceid=TR:tr", "dil": "tr", "tur": "suz", "google": True})
@@ -597,6 +602,48 @@ TARIH_TR = re.compile(r"\b(\d{1,2})\s*(?:[-–]\s*\d{1,2}\s*)?(" + "|".join(AYLA
 TARIH_EN = re.compile(r"\b(\d{1,2})\s*(?:[-–]\s*\d{1,2}\s*)?(" + "|".join(AYLAR_EN) + r")(?:\s+(\d{4}))?|\b(" + "|".join(AYLAR_EN)
                       + r")\s+(\d{1,2})(?:\s*[-–]\s*\d{1,2})?(?:,?\s+(\d{4}))?")
 INSTA_DESENI = re.compile(r"https?://(?:www\.)?instagram\.com/[A-Za-z0-9_.]+/?(?:p/[A-Za-z0-9_-]+/?)?")
+
+
+# Her yıl yapılan Uluslararası Kazı, Araştırma ve Arkeometri Sempozyumu (UKAAS; Kazı/Araştırma/Arkeometri Sonuçları Toplantısı):
+# duyuruları ve bildiri kitapları "önemli" (onemli: 1) işaretlenir; bildirim_gonder.py yeni önemli duyuruyu herkese gönderir.
+ONEMLI_DESENI = re.compile(r"kazi,? arastirma ve arkeometri sempozyum|kazi sonuclari toplantisi|arastirma sonuclari toplantisi|arkeometri sonuclari toplantisi|\bukaas\b")
+YAYIN_DESENI = re.compile(r"bildiri kitap|bildiri metin\w* yayi|kitaplari yayi|yayimlandi|yayinlandi|e-kitap")
+UKAAS_DUYURU = "https://ukaas.ktb.gov.tr/TR-389978/haberlerduyurular.html"
+
+
+def html_baglantilari(url: str) -> list[tuple[str, str]]:
+    """Sayfadaki bağlantılar: (mutlak adres, görünen metin)."""
+    import urllib.request
+    istek = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Arkix toplayici; +https://arkix.harrixapp.com)"})
+    with urllib.request.urlopen(istek, timeout=25) as y:
+        t = y.read().decode("utf-8", "ignore")
+    l = []
+    for h, a in re.findall(r'<a[^>]+href="([^"#]+)"[^>]*>(.*?)</a>', t, re.S):
+        a = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", a))).strip()
+        if a:
+            l.append((urllib.parse.urljoin(url, html.unescape(h)), a))
+    return l
+
+
+def sayfa_duyurulari(url: str, ad: str, calisma: str, arkeo_sart: bool = False) -> list[dict]:
+    """Duyuru sayfasındaki etkinlik/kazı/yayın bağlantıları (RSS'i olmayan kurum ve üniversiteler için genel okuyucu).
+    Metnin sonundaki gg.aa.yyyy yayın tarihi sayılır; yoksa ilk görüldüğü gün."""
+    l, gorulen = [], set()
+    for u, a in html_baglantilari(url):
+        m = re.search(r"(\d{2})\.(\d{2})\.(\d{4})\s*$", a)
+        baslik = re.sub(r"\s*\d{2}\.\d{2}\.\d{4}\s*$", "", a).strip()
+        b = _ascii(baslik)
+        if (not m and len(baslik) < 35) or u in gorulen or (arkeo_sart and not ARKEO_DESENI.search(b)):   # menü bağlantıları kısa ve tarihsiz
+            continue
+        tur = "yayin" if YAYIN_DESENI.search(b) and (ONEMLI_DESENI.search(b) or ARKEO_DESENI.search(b)) else duyuru_turu(baslik)
+        if not tur and ONEMLI_DESENI.search(b):
+            tur = "etkinlik"
+        if not tur:
+            continue
+        gorulen.add(u)
+        yayin = f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else calisma[:10]
+        l.append({"b": baslik, "u": u, "t": yayin, "o": "", "tur": tur, "s": ad})
+    return l
 
 
 def etkinlik_tarihi(metin: str, yayin: str) -> str:
@@ -660,13 +707,30 @@ def rss_ogeleri(url: str) -> list[dict]:
     return l
 
 
-def duyurulari_topla(eski: list[dict], kayitlar: list[dict], calisma: str) -> list[dict]:
+def duyurulari_topla(eski: list[dict], kayitlar: list[dict], calisma: str, sayfalar: list[dict] | None = None) -> list[dict]:
     """Etkinlik ve kazı duyuruları: RSS kaynakları + bülten kayıtlarında örüntüye uyanlar. Bir yıldan eski olanlar düşer."""
     sinir = (dt.date.today() - dt.timedelta(days=365)).isoformat()
-    toplam = {d["i"]: d for d in eski if (d.get("t") or "") >= sinir}
+    sinir_yayin = (dt.date.today() - dt.timedelta(days=3 * 365)).isoformat()   # bildiri kitapları 3 yıl kalır
+    toplam = {d["i"]: d for d in eski if (d.get("t") or "") >= (sinir_yayin if d.get("du") == "yayin" else sinir)}
     kelimeler = lambda b: {w.strip("'’\".,:;!?()") for w in _ascii(b).split() if len(w) > 3}
     gorulen_baslik = [kelimeler(d["b"]) for d in toplam.values()]
     benzer = lambda k: any(len(k & g) / max(1, len(k | g)) >= 0.45 for g in gorulen_baslik)   # aynı etkinlik başka gazetede
+    # HTML duyuru sayfaları: UKAAS (önemli) + ayar.json › duyuru_sayfalari [{ad, url, arkeo_sart}]
+    for sayfa in [{"ad": "UKAAS · Kültür ve Turizm Bakanlığı", "url": UKAAS_DUYURU}] + list(sayfalar or []):
+        try:
+            for o in sayfa_duyurulari(sayfa["url"], sayfa["ad"], calisma, bool(sayfa.get("arkeo_sart"))):
+                u = guvenli_url(o["u"])
+                if not u or o["t"] < (sinir_yayin if o["tur"] == "yayin" else sinir):
+                    continue
+                kimlik = "du:" + hashlib.sha1(u.encode()).hexdigest()[:16]
+                metin = _ascii(o["b"])
+                et = etkinlik_tarihi(o["b"], o["t"]) if o["tur"] == "etkinlik" else ""
+                toplam[kimlik] = {"i": kimlik, "du": o["tur"], "s": o["s"], "b": o["b"][:200], "o": "", "u": u, "t": et or o["t"], "yt": o["t"],
+                                  **({"et": 1} if et else {}), "tr": 1, **({"onemli": 1} if ONEMLI_DESENI.search(metin) else {}),
+                                  "l": "tr", "g": toplam.get(kimlik, {}).get("g") or calisma}
+                gorulen_baslik.append(kelimeler(o["b"]))
+        except Exception as h:
+            print(f"Duyuru sayfası alınamadı: {sayfa['url'][:90]} ({h})", flush=True)
     for kaynak in DUYURU_KAYNAKLARI:
         try:
             ogeler = rss_ogeleri(kaynak["url"])
@@ -682,7 +746,7 @@ def duyurulari_topla(eski: list[dict], kayitlar: list[dict], calisma: str) -> li
             u = guvenli_url(o["u"])
             if not tur or not u or not o["b"] or (o["t"] and o["t"] < sinir) or TUR_DESENI.search(o["b"] + " " + o["o"][:300]):
                 continue
-            if kaynak.get("google") and not ARKEO_DESENI.search(_ascii(o["b"])):
+            if (kaynak.get("google") or kaynak.get("arkeo_sart")) and not ARKEO_DESENI.search(_ascii(o["b"])):
                 continue
             anahtar = kelimeler(o["b"])
             kimlik = "du:" + hashlib.sha1(u.encode()).hexdigest()[:16]
@@ -697,6 +761,7 @@ def duyurulari_topla(eski: list[dict], kayitlar: list[dict], calisma: str) -> li
                               "t": et or yayin, "yt": yayin, **({"et": 1} if et else {}),
                               **({"tr": 1} if kaynak["dil"] == "tr" or TR_DESENI.search(metin) else {}),
                               **({"ig": ig.group(0)} if ig else {}),
+                              **({"onemli": 1} if ONEMLI_DESENI.search(metin) else {}),
                               "l": kaynak["dil"], "g": toplam.get(kimlik, {}).get("g") or calisma}
     for k in kayitlar:   # bülten kayıtlarından (haber, rapor) duyuru olanlar
         if k.get("k") in ("Haber", "Rapor") and not k.get("oz"):
@@ -711,7 +776,8 @@ def duyurulari_topla(eski: list[dict], kayitlar: list[dict], calisma: str) -> li
                                          **({"tr": 1} if k.get("l") == "tr" or TR_DESENI.search(metin) else {}),
                                          "l": k.get("l", ""), "g": k.get("g") or calisma}
     l = sorted(toplam.values(), key=lambda d: (d.get("t") or "", d.get("g") or ""), reverse=True)[:300]
-    print(f"Duyurular: {sum(d['du'] == 'etkinlik' for d in l)} etkinlik, {sum(d['du'] == 'kazi' for d in l)} kazı çağrısı", flush=True)
+    print(f"Duyurular: {sum(d['du'] == 'etkinlik' for d in l)} etkinlik, {sum(d['du'] == 'kazi' for d in l)} kazı çağrısı, "
+          f"{sum(d['du'] == 'yayin' for d in l)} yayın, {sum(1 for d in l if d.get('onemli'))} önemli", flush=True)
     return l
 
 
@@ -902,7 +968,7 @@ def main() -> int:
         "surum": 1, "guncelleme": calisma, "yeni_sayisi": len(yeni),
         "kazi": harrix_hesap.ozet_metni(kazi) if kazi else "",
         "kavramlar": kavramlar, "kayitlar": tum,
-        "etkinlikler": duyurulari_topla(eski.get("etkinlikler", []), tum, calisma),
+        "etkinlikler": duyurulari_topla(eski.get("etkinlikler", []), tum, calisma, ayar.get("duyuru_sayfalari") or []),
         **({"sesli_ozet": ozet_ses} if ozet_ses else {}),
         **({"son_yorumlar": son_yorumlar} if son_yorumlar else {}),
         **duyurular_ve_banner(kullanici, calisma),

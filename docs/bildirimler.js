@@ -46,6 +46,9 @@ function bildirimListesi() {
   if (typeof KD !== "undefined" && KD.liste) KD.liste.forEach(d => l.push({ tur: "kazi", zaman: zamanIso(d.tarih),
     baslik: `${tx("Kazı duyurusu")}: ${d.baslik}`, metin: [d.kazi, d.il, d.basvuru_son ? tx("Son başvuru: {t}", { t: tarihYaz(d.basvuru_son) }) : ""].filter(Boolean).join(" · "),
     adres: "#ozel/kazi", kimlik: `kazi/${d.id}` }));
+  // UKAAS (Kazı, Araştırma ve Arkeometri Sempozyumu) duyuruları ve bildiri kitapları: herkese önemli duyuru
+  (VERI.etkinlikler || []).filter(d => d.onemli && (d.yt || d.t || "") >= gunOnce(21)).forEach(d => l.push({ tur: "duyuru", zaman: (d.g || "").slice(0, 19) || d.yt,
+    baslik: `${d.du === "yayin" ? "📚 " + tx("Yayımlandı") : "📣 " + tx("Önemli duyuru")}: ${d.b}`, metin: d.s || "", adres: d.u, dis: true, kimlik: `onemli/${d.i}` }));
   YENILIKLER.forEach((y, i) => l.push({ tur: "yenilik", zaman: y.tarih, baslik: tx(y.baslik), metin: tx(y.metin), adres: y.adres, kimlik: `yenilik/${i}` }));
   const sinir = new Date(Date.now() - 21 * 864e5).toISOString();
   return l.filter(b => b.zaman && b.zaman >= sinir).sort((a, b) => b.zaman.localeCompare(a.zaman)).slice(0, 80);

@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.34.0";
+const SURUM = "1.35.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -513,7 +513,7 @@ function duyuruKartHtml(d) {
   const bugun = new Date().toISOString().slice(0, 10), ic = d.k ? `#k/${encodeURIComponent(d.k)}` : d.u, gelecek = !!d.et && (d.t || "") >= bugun;
   return `<div class="du-kapsa"><a class="du-kart" href="${escUrl(ic)}"${d.k ? "" : ' target="_blank" rel="noopener"'}>
     <span class="du-tarih${gelecek ? " gelecek" : ""}"><b>${esc((d.t || "").slice(8, 10))}</b><small>${esc(new Date((d.t || bugun) + "T00:00:00").toLocaleDateString(DIL === "en" ? "en-GB" : "tr-TR", { month: "short", year: "2-digit" }))}</small></span>
-    <span class="du-ic"><b>${esc(d.b)}</b><small>${d.tr ? "🇹🇷 " : ""}${esc(d.s || "")}${d.l === "en" && DIL !== "en" ? " · EN" : ""}${gelecek ? ` · ${tx("yaklaşan")}` : ""}${d.et ? "" : ` · ${tx("duyuru tarihi")}`}</small>${d.o ? `<small class="du-ozet">${esc(d.o)}</small>` : ""}</span></a>
+    <span class="du-ic"><b>${d.onemli ? "⭐ " : ""}${esc(d.b)}</b><small>${d.tr ? "🇹🇷 " : ""}${esc(d.s || "")}${d.l === "en" && DIL !== "en" ? " · EN" : ""}${gelecek ? ` · ${tx("yaklaşan")}` : ""}${d.et ? "" : ` · ${tx("duyuru tarihi")}`}</small>${d.o ? `<small class="du-ozet">${esc(d.o)}</small>` : ""}</span></a>
     ${d.ig ? `<a class="du-ig" href="${escUrl(d.ig)}" target="_blank" rel="noopener">📷 Instagram</a>` : ""}</div>`;
 }
 function sayfaOzel(arg) {
@@ -530,6 +530,7 @@ function sayfaOzel(arg) {
   }
   if (bolum === "etkinlik") {
     const etk = duyuruSuz(hepsi.filter(d => d.du === "etkinlik"));
+    const yayinlar = hepsi.filter(d => d.du === "yayin").sort((x, y) => (y.yt || y.t || "").localeCompare(x.yt || x.t || "")).slice(0, 12);
     const yaklasan = etk.filter(d => d.et && (d.t || "") >= bugun).sort((x, y) => trOnce(x, y) || (x.t || "").localeCompare(y.t || ""));
     const son = etk.filter(d => !d.et && duyuruGuncel(d)).sort((x, y) => trOnce(x, y) || (y.t || "").localeCompare(x.t || ""));
     const gecmis = etk.filter(d => !duyuruGuncel(d)).sort((x, y) => trOnce(x, y) || (y.t || "").localeCompare(x.t || "")).slice(0, 80);
@@ -539,6 +540,11 @@ function sayfaOzel(arg) {
       <p class="aciklama ar-not" style="margin-top:10px">${tx("Sempozyum, kongre, konferans, çalıştay ve bildiri çağrıları; haber siteleri ve kurumlardan otomatik toplanır, günde dört kez güncellenir. Türkiye'dekiler önde.")}</p>
       ${yaklasan.length ? `<h3 class="ist-baslik">${tx("Yaklaşan")}</h3><div class="du-liste">${yaklasan.map(duyuruKartHtml).join("")}</div>` : ""}
       ${son.length ? `<h3 class="ist-baslik">${tx("Son duyurular")}</h3><div class="du-liste">${son.map(duyuruKartHtml).join("")}</div>` : ""}
+      <h3 class="ist-baslik">📚 ${tx("Bildiri kitapları")}</h3>
+      <p class="aciklama ar-not">${tx("Uluslararası Kazı, Araştırma ve Arkeometri Sempozyumu bildiri kitapları (Kültür ve Turizm Bakanlığı); dijital kopyalar sempozyum sitesinde.")}</p>
+      ${yayinlar.length ? `<div class="du-liste">${yayinlar.map(duyuruKartHtml).join("")}</div>` : ""}
+      <div class="ar-dis">${[["Kazı Sonuçları Toplantısı", "https://ukaas.ktb.gov.tr/TR-389973/kazi-sonuclari-toplantisi.html"], ["Araştırma Sonuçları Toplantısı", "https://ukaas.ktb.gov.tr/TR-389974/arastirma-sonuclari-toplantisi.html"],
+        ["Arkeometri Sonuçları Toplantısı", "https://ukaas.ktb.gov.tr/TR-389975/arkeometri-sonuclari-toplantisi.html"]].map(([ad, u]) => `<a class="ikincil-dugme" href="${u}" target="_blank" rel="noopener">${tx(ad)}</a>`).join("")}</div>
       ${gecmis.length ? `<h3 class="ist-baslik">${tx("Arşiv")}</h3><div class="du-liste">${gecmis.map(duyuruKartHtml).join("")}</div>` : ""}
       ${etk.length ? "" : bosHtml(tx("Bu süzgeçle etkinlik yok"), DU.arsiv ? tx("Bölgeyi değiştirmeyi dene.") : tx("Geçmişleri de göstermeyi ya da bölgeyi değiştirmeyi dene."))}`;
     duyuruSuzgecBagla(arg);

@@ -998,5 +998,12 @@ const EN = {
  "Topluluktan": "From the community",
  "Türkiye": "Türkiye",
  "duyuru tarihi": "announcement date",
- "kazi@universite.edu.tr ya da Instagram/web bağlantısı": "dig@university.edu or an Instagram/web link"
+ "kazi@universite.edu.tr ya da Instagram/web bağlantısı": "dig@university.edu or an Instagram/web link",
+ "Bildiri kitapları": "Proceedings",
+ "Uluslararası Kazı, Araştırma ve Arkeometri Sempozyumu bildiri kitapları (Kültür ve Turizm Bakanlığı); dijital kopyalar sempozyum sitesinde.": "Proceedings of the International Symposium of Excavations, Surveys and Archaeometry (Ministry of Culture and Tourism); digital copies are on the symposium site.",
+ "Yayımlandı": "Published",
+ "Önemli duyuru": "Important",
+ "Kazı Sonuçları Toplantısı": "Excavation Results Meeting",
+ "Araştırma Sonuçları Toplantısı": "Survey Results Meeting",
+ "Arkeometri Sonuçları Toplantısı": "Archaeometry Results Meeting"
 };
