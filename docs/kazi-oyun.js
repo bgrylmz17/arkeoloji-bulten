@@ -558,7 +558,7 @@ function kzYuru(i) {
   a.dongu = requestAnimationFrame(adim);
 }
 function kzKaz(i) {
-  if (!KZ || KZ.bitti || i < 0 || i >= KZ.hucreler.length) return;
+  if (!KZ || KZ.bitti || KZ.vurus <= 0 || i < 0 || i >= KZ.hucreler.length) return;   // vuruş bitince (kzSon gecikmeli) hızlı dokunuşlar eksiye düşürmesin
   const h = KZ.hucreler[i];
   if (h.derinlik === 0) return;
   h.derinlik--; KZ.vurus--; KZ.vurgu = i;
