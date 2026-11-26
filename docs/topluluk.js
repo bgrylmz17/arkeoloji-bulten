@@ -4,6 +4,8 @@
  *   sikayetler/{id}    { yorum, kayit, uid, neden, tarih }                      yalnız yönetici okur
  *   geribildirim/{id}  { tur, metin, eposta, uid, surum, cihaz, sayfa, tarih, durum } yalnız yönetici okur
  *   uzmanlar/{uid}, engelliler/{uid}                                          yalnız yönetici yazar
+ *   profiller/{uid}.unvan, unvanlar/{uid} { unvan }, unvan_talepleri/{uid}    akademik ünvan yönetici onayıyla
+ *   ziyaret/{gun} { n, k }   günlük açan cihaz sayısı (k: kurulu uygulama); yonetim/kullanicilar  (toplayici/kullanici_listesi.py)
  * Yönetici: ADMIN_EPOSTA ile (doğrulanmış e-posta) giriş yapan hesap. Kurallardaki adresle aynı olmalı. */
 const ADMIN_EPOSTA = "harrixapp@gmail.com";
 const YORUM_SINIR = 1000;
@@ -52,6 +54,112 @@ function adLevhasi(sonra) {
   });
 }
 
+/* ---------------------------------------------------------------- ünvan
+ * Arkeolog ve öğrenci beyanla görünür. Akademik ünvanlar talep → yönetici onayı (unvanlar/{uid}) ile görünür.
+ * Kazı duyurusunu yalnız onaylı Prof. Dr., Doç. Dr., Dr. Öğr. Üyesi ve Dr. gönderir (kurallar: duyuruYetkili). */
+const UNVANLAR = [
+  { id: "prof", ad: "Prof. Dr.", ad_en: "Prof. Dr.", akademik: true, duyuru: true },
+  { id: "doc", ad: "Doç. Dr.", ad_en: "Assoc. Prof. Dr.", akademik: true, duyuru: true },
+  { id: "dr_ogr", ad: "Dr. Öğr. Üyesi", ad_en: "Asst. Prof. Dr.", akademik: true, duyuru: true },
+  { id: "dr", ad: "Dr.", ad_en: "Dr.", akademik: true, duyuru: true },
+  { id: "ogr_gor", ad: "Öğr. Gör.", ad_en: "Lecturer", akademik: true },
+  { id: "ars_gor", ad: "Arş. Gör.", ad_en: "Research Assistant", akademik: true },
+  { id: "arkeolog", ad: "Arkeolog", ad_en: "Archaeologist" },
+  { id: "ogrenci", ad: "Öğrenci", ad_en: "Student" },
+];
+const unvanBul = id => UNVANLAR.find(u => u.id === id) || null;
+const unvanAd = id => { const u = unvanBul(id); return u ? (DIL === "en" ? u.ad_en : u.ad) : ""; };
+/* Adın yanında: akademik ünvan adın önünde ("Prof. Dr. Ayşe K."), arkeolog/öğrenci küçük etiket */
+function unvanliAdHtml(ad, unvan) {
+  const u = unvanBul(unvan);
+  if (!u) return esc(ad);
+  return u.akademik ? `${esc(unvanAd(unvan))} ${esc(ad)}` : `${esc(ad)}<span class="unvan-etiket">${esc(unvanAd(unvan))}</span>`;
+}
+const UNVAN = { uid: null, onayli: "", onayTarih: "", talep: null };
+async function unvanYukle(zorla) {
+  if (!H.kullanici) return UNVAN;
+  if (UNVAN.uid === H.kullanici.uid && !zorla) return UNVAN;
+  const { fs } = H.fb, uid = H.kullanici.uid;
+  const [o, t] = await Promise.all([fs.getDoc(fs.doc(H.db, "unvanlar", uid)).catch(() => null), fs.getDoc(fs.doc(H.db, "unvan_talepleri", uid)).catch(() => null)]);
+  UNVAN.uid = uid; UNVAN.onayli = o && o.exists() ? o.data().unvan || "" : ""; UNVAN.onayTarih = o && o.exists() ? String(o.data().tarih || "") : ""; UNVAN.talep = t && t.exists() ? t.data() : null;
+  return UNVAN;
+}
+/* Herkese açık profile yazılabilecek ünvan (kurallarla aynı mantık) */
+function gecerliUnvan() {
+  const u = unvanBul(profilAl().unvan);
+  if (!u) return "";
+  return !u.akademik || UNVAN.onayli === u.id ? u.id : "";
+}
+/* Girişte: yeni bir onay geldiyse profile işle; onay kaldırıldıysa akademik ünvanı düşür */
+async function unvanEsitle() {
+  try {
+    await unvanYukle(true);
+    if (UNVAN.onayli && D.unvanOnayGoruldu !== UNVAN.onayTarih) {
+      D.unvanOnayGoruldu = UNVAN.onayTarih; kaydet();
+      if (profilAl().unvan !== UNVAN.onayli) await profilKaydet({ unvan: UNVAN.onayli });
+    } else if (!UNVAN.onayli && (unvanBul(profilAl().unvan) || {}).akademik) await profilKaydet({ unvan: "" });
+  } catch (e) {}
+}
+function unvanDurumMetni() {
+  const p = profilAl().unvan;
+  if (UNVAN.talep && UNVAN.talep.unvan !== UNVAN.onayli) return tx("{u} · onay bekliyor", { u: unvanAd(UNVAN.talep.unvan) });
+  return gecerliUnvan() ? unvanAd(gecerliUnvan()) : p && unvanBul(p) ? tx("{u} · onay bekliyor", { u: unvanAd(p) }) : tx("Belirlenmedi");
+}
+async function unvanLevhasi() {
+  if (!H.kullanici) { location.hash = "#giris"; return; }
+  await unvanYukle();
+  const secili = (UNVAN.talep && UNVAN.talep.unvan) || profilAl().unvan || "";
+  levhaAc(`<h3>${tx("Ünvan")}</h3>
+    <p class="aciklama">${tx("Ünvanınız yorumlarda adınızın yanında görünür. Akademik ünvanlar kurum sayfanız ya da kurumsal e-postanızla doğrulandıktan sonra görünür; kazı duyurusunu Prof. Dr., Doç. Dr., Dr. Öğr. Üyesi ve Dr. ünvanlı üyeler gönderebilir.")}</p>
+    <div class="kutu unvan-liste">
+      <label class="satir"><span>${tx("Ünvan göstermeyin")}</span><input type="radio" name="unvan" value="" ${secili ? "" : "checked"}></label>
+      ${UNVANLAR.map(u => `<label class="satir"><span>${esc(unvanAd(u.id))}${u.akademik && UNVAN.onayli === u.id ? ` <small>✓ ${tx("doğrulandı")}</small>` : u.akademik ? ` <small>${tx("doğrulama gerekir")}</small>` : ""}</span>
+        <input type="radio" name="unvan" value="${u.id}" ${secili === u.id ? "checked" : ""}></label>`).join("")}
+    </div>
+    <div id="unvan-kanit" hidden>
+      <label class="kazi-form">${tx("Kurum")}<input id="unvan-kurum" maxlength="120" placeholder="${tx("Ör. Ankara Üniversitesi DTCF Arkeoloji Bölümü")}" value="${esc((UNVAN.talep || {}).kurum || "")}"></label>
+      <label class="kazi-form">${tx("Doğrulama için bağlantı ya da kurumsal e-posta")}<input id="unvan-kanit-girdi" maxlength="300" placeholder="${tx("Ör. akademik.ankara.edu.tr/… ya da ad@ankara.edu.tr")}" value="${esc((UNVAN.talep || {}).kanit || "")}"></label>
+    </div>
+    <p style="margin:14px 0 0"><button class="buyuk-dugme" id="unvan-kaydet">${tx("Kaydet")}</button></p>`, lv => {
+    const kanit = lv.querySelector("#unvan-kanit");
+    const guncelle = () => { const u = unvanBul(lv.querySelector("input[name=unvan]:checked").value); kanit.hidden = !(u && u.akademik && UNVAN.onayli !== u.id); };
+    lv.querySelectorAll("input[name=unvan]").forEach(r => r.onchange = guncelle); guncelle();
+    lv.querySelector("#unvan-kaydet").onclick = async () => {
+      const id = lv.querySelector("input[name=unvan]:checked").value, u = unvanBul(id), { fs } = H.fb;
+      try {
+        if (u && u.akademik && UNVAN.onayli !== id) {
+          const kurum = lv.querySelector("#unvan-kurum").value.trim().slice(0, 120), kanitM = lv.querySelector("#unvan-kanit-girdi").value.trim().slice(0, 300);
+          if (kurum.length < 2) { bildir(tx("Kurumunuzu yazın")); return; }
+          await fs.setDoc(fs.doc(H.db, "unvan_talepleri", H.kullanici.uid), { unvan: id, kurum, kanit: kanitM, ad: gorunenAd().slice(0, 40), tarih: fs.serverTimestamp() });
+          await unvanYukle(true);
+          levhaKapat(); bildir(tx("Talebiniz alındı. Doğrulandıktan sonra ünvanınız adınızın yanında görünür.")); rota(true); return;
+        }
+        if (UNVAN.talep) { await fs.deleteDoc(fs.doc(H.db, "unvan_talepleri", H.kullanici.uid)).catch(() => {}); }
+        await profilKaydet({ unvan: id });
+        await unvanYukle(true);
+        levhaKapat(); bildir(tx("Ünvan kaydedildi")); rota(true);
+      } catch (e) { bildir(tx("Kaydedilemedi; internet bağlantınızı kontrol edin.")); }
+    };
+  });
+}
+
+/* ---------------------------------------------------------------- ziyaret sayacı: cihaz başına günde bir (kişisel veri yok) */
+async function ziyaretSay() {
+  try {
+    const g = typeof oyunGunu === "function" ? oyunGunu() : new Date().toISOString().slice(0, 10);
+    if (D.ziyaretGun === g || H.yok) return;
+    const { fs } = await firebaseYukle();
+    const ref = fs.doc(H.db, "ziyaret", g), kur = typeof kurulu === "function" && kurulu() ? 1 : 0;
+    await fs.runTransaction(H.db, async t => {
+      const s = await t.get(ref).catch(() => null);
+      if (s && s.exists()) t.update(ref, { n: (s.data().n || 0) + 1, k: (s.data().k || 0) + kur });
+      else t.set(ref, { n: 1, k: kur });
+    });
+    D.ziyaretGun = g; kaydet();
+  } catch (e) { /* kurallar yayımlanmadıysa sessizce geç */ }
+}
+setTimeout(ziyaretSay, 4000);
+
 /* ---------------------------------------------------------------- kaba dil süzgeci (basit; son karar yöneticide) */
 const KUFUR = ["amk", "aq", "amq", "orospu", "oruspu", "piç", "pic", "sik", "sikik", "siktir", "sikeyim", "yarrak", "yarak", "göt", "got", "götveren",
   "ibne", "pezevenk", "şerefsiz", "serefsiz", "kahpe", "oç", "oc", "amcık", "amcik", "ananı", "anani", "gavat", "kaltak", "salak", "aptal", "gerizekalı", "gerizekali"];
@@ -72,7 +180,7 @@ function yorumHtml(y) {
     : y.avatar ? `<img class="avatar" src="${avatarAdresi(y.avatar)}" alt="" width="36" height="36">`
     : `<span class="avatar avatar-bas" style="width:36px;height:36px;font-size:15px">${esc((y.ad || "?")[0].toLocaleUpperCase("tr"))}</span>`;
   return `<li class="yorum${y.gizli ? " gizli" : ""}" data-yorum="${esc(y.id)}">${av}
-    <div class="yorum-ic"><p class="yorum-ust"><b>${esc(y.ad || tx("Okur"))}</b>${y.uzman ? `<span class="uzman-rozet">${tx("Uzman")}</span>` : ""}<small>${esc(yorumTarih(y.tarih))}</small></p>
+    <div class="yorum-ic"><p class="yorum-ust"><b>${unvanliAdHtml(y.ad || tx("Okur"), y.unvan)}</b>${y.uzman ? `<span class="uzman-rozet">${tx("Uzman")}</span>` : ""}<small>${esc(yorumTarih(y.tarih))}</small></p>
       <p class="yorum-metin">${esc(y.metin)}</p>
       <p class="yorum-eylem">${ben ? `<button data-y="sil">${tx("Sil")}</button>` : H.kullanici ? `<button data-y="sikayet">${tx("Bildir")}</button><button data-y="gizle">${tx("Bu kişiyi gizle")}</button>` : ""}</p></div></li>`;
 }
@@ -88,7 +196,7 @@ async function yorumlariGetir(kayitId) {
   const harita = new Map(profiller);
   for (const y of liste) {
     const p = harita.get(y.uid);
-    if (p) { if (p.ad) y.ad = p.ad; y.avatar = p.avatar || ""; y.foto = p.foto || ""; }
+    if (p) { if (p.ad) y.ad = p.ad; y.avatar = p.avatar || ""; y.foto = p.foto || ""; y.unvan = p.unvan || ""; }
   }
   return liste
     .sort((a, b) => ((a.tarih && a.tarih.toMillis ? a.tarih.toMillis() : Date.now()) - (b.tarih && b.tarih.toMillis ? b.tarih.toMillis() : Date.now())));
@@ -283,18 +391,121 @@ async function sayfaAyril(arg) {
 }
 
 /* ---------------------------------------------------------------- yönetim paneli (#yonetim) */
-const YON = { sekme: "geri" };
+const YON = { sekme: "istatistik", ara: "" };
+
+/* Yönetim › İstatistik: Firestore sayımları (getCountFromServer) + günlük açan cihaz (ziyaret/{gun}) */
+async function istatistikHtml(kutu) {
+  const { fs } = H.fb, k = ad => fs.collection(H.db, ad);
+  const say = q => fs.getCountFromServer(q).then(s => s.data().count).catch(() => "—");
+  const g = oyunGunu(), h = oyunHaftasi(), hafta = fs.Timestamp.fromMillis(Date.now() - 7 * 864e5);
+  const [uye, kullanici, yorum, yorumHafta, geri, sikayet, duyuru, unvanT, ziyaret, ...oyun] = await Promise.all([
+    say(k("profiller")),
+    fs.getDoc(fs.doc(H.db, "yonetim", "kullanicilar")).then(d => d.exists() ? d.data().sayi : "—").catch(() => "—"),
+    say(k("yorumlar")), say(fs.query(k("yorumlar"), fs.where("tarih", ">", hafta))),
+    say(fs.query(k("geribildirim"), fs.where("durum", "==", "yeni"))), say(k("sikayetler")),
+    say(fs.query(k("kazi_duyurulari"), fs.where("durum", "==", "bekliyor"))), say(k("unvan_talepleri")),
+    fs.getDocs(fs.query(k("ziyaret"), fs.orderBy(fs.documentId(), "desc"), fs.limit(30))).then(a => a.docs.map(d => ({ gun: d.id, ...d.data() }))).catch(() => []),
+    ...["kelime", "kazi", "sirala"].flatMap(o => [say(fs.query(k("skorlar"), fs.where("oyun_gun", "==", `${o}_${g}`))), say(fs.query(k("skorlar"), fs.where("oyun_hafta", "==", `${o}_${h}`)))]),
+  ]);
+  const bugun = ziyaret.find(z => z.gun === g) || { n: 0, k: 0 };
+  const top = n => ziyaret.slice(0, n).reduce((a, z) => a + (z.n || 0), 0);
+  const enCok = Math.max(1, ...ziyaret.map(z => z.n || 0));
+  const kart = (deger, ad, git) => `<${git ? `a href="${git}"` : "div"} class="ist-kart"><b>${esc(String(deger))}</b><small>${ad}</small></${git ? "a" : "div"}>`;
+  kutu.innerHTML = `<div class="ist-izgara">
+      ${kart(bugun.n || 0, tx("Bugün açan cihaz"))}${kart(top(7), tx("Son 7 gün (cihaz-gün)"))}${kart(bugun.k || 0, tx("Bugün uygulamadan açan"))}
+      ${kart(kullanici, tx("Kayıtlı hesap"))}${kart(uye, tx("Profili olan üye"))}${kart((VERI.kayitlar || []).length, tx("Bültendeki kayıt"))}
+      ${kart(yorum, tx("Yorum (toplam)"))}${kart(yorumHafta, tx("Yorum (7 gün)"))}${kart(geri, tx("Yeni geri bildirim"))}
+      ${kart(sikayet, tx("Şikâyet"))}${kart(duyuru, tx("Bekleyen duyuru"))}${kart(unvanT, tx("Ünvan talebi"))}
+    </div>
+    <h3 class="ist-baslik">${tx("Oyunlar · oynayan kişi")}</h3>
+    <div class="ist-izgara">${["Kelime Kazısı", "Kazı Başı", "Katman Sırala"].map((ad, i) => kart(`${oyun[i * 2]} / ${oyun[i * 2 + 1]}`, `${tx(ad)} · ${tx("bugün / hafta")}`)).join("")}</div>
+    <h3 class="ist-baslik">${tx("Son 30 gün · açan cihaz")}</h3>
+    ${ziyaret.length ? `<ul class="ist-cubuklar">${ziyaret.map(z => `<li><span>${esc(z.gun.slice(5))}</span><i style="width:${Math.round((z.n || 0) / enCok * 100)}%"></i><b>${z.n || 0}${z.k ? ` <small>(${z.k} ${tx("uygulama")})</small>` : ""}</b></li>`).join("")}</ul>`
+      : `<p class="aciklama">${tx("Henüz ziyaret kaydı yok (sayaç 1.21 ile başladı).")}</p>`}
+    <p class="aciklama">${tx("Misafirler hesapsız olduğu için kişi kişi listelenmez; yalnız günlük açan cihaz sayılır. Okuma/yazma kotası Firebase konsolundadır.")}</p>`;
+}
+
+/* Yönetim › Kullanıcılar: yonetim/kullanicilar (saatte bir toplayici/kullanici_listesi.py yazar) */
+async function kullanicilarHtml(kutu) {
+  const { fs } = H.fb;
+  const d = await fs.getDoc(fs.doc(H.db, "yonetim", "kullanicilar"));
+  if (!d.exists()) { kutu.innerHTML = bosHtml(tx("Liste henüz hazır değil"), tx("Sunucu listeyi saatte bir günceller (GitHub › Yönetici ve telefon bildirimleri).")); return; }
+  const v = d.data(), tum = v.liste || [];
+  const tarih = s => s ? new Date(s).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }) : "—";
+  const ciz = () => {
+    const a = katla(YON.ara);
+    const l = a ? tum.filter(x => katla(`${x.ad} ${x.eposta} ${unvanAd(x.unvan)}`).includes(a)) : tum;
+    kutu.querySelector("#kul-liste").innerHTML = l.slice(0, 300).map(x => `<li class="yon-kart${x.kapali ? " durum-gizli" : ""}" data-uid="${esc(x.uid)}" data-ad="${esc(x.ad || "")}">
+      <p class="yon-ust"><b>${unvanliAdHtml(x.ad || tx("(adsız)"), x.unvan)}</b><span class="etiket">${esc(x.giris || "—")}</span>${x.dogrulandi ? "" : `<span class="etiket">${tx("doğrulanmamış")}</span>`}</p>
+      <p><a href="mailto:${esc(x.eposta)}">${esc(x.eposta)}</a></p>
+      <p><small>${tx("Kayıt")}: ${esc(tarih(x.kayit))} · ${tx("Son giriş")}: ${esc(tarih(x.son))}</small></p>
+      <p class="yon-eylem"><button data-u="unvan">${tx("Ünvan ver")}</button><button data-u="uzman">${tx("Uzman yap")}</button><button data-u="engelle">${tx("Yorumdan men et")}</button></p></li>`).join("")
+      + (l.length > 300 ? `<li class="aciklama">${tx("İlk 300 gösteriliyor; aramayla daraltın.")}</li>` : "");
+    kutu.querySelectorAll("[data-u]").forEach(b => b.onclick = async () => {
+      const li = b.closest("[data-uid]"), uid = li.dataset.uid, ad = li.dataset.ad;
+      if (b.dataset.u === "unvan") return unvanVerLevhasi(uid, ad, () => sayfaYonetim());
+      if (b.dataset.u === "uzman") { await fs.setDoc(fs.doc(H.db, "uzmanlar", uid), { ad, tarih: fs.serverTimestamp() }); bildir(tx("Uzman rozeti verildi (yeni yorumlarda görünür)")); }
+      if (b.dataset.u === "engelle") { if (!confirm(tx("Bu kullanıcı yorum yazamayacak. Emin misiniz?"))) return; await fs.setDoc(fs.doc(H.db, "engelliler", uid), { ad, tarih: fs.serverTimestamp() }); bildir(tx("Kullanıcı engellendi")); }
+    });
+  };
+  kutu.innerHTML = `<p class="aciklama" style="margin:12px 16px 0">${tx("{n} hesap", { n: v.sayi || tum.length })} · ${tx("Güncelleme")}: ${esc(tarih(v.guncelleme))}</p>
+    <div class="arama-kutu" style="margin:10px 16px"><input id="kul-ara" placeholder="${tx("Ad, e-posta ya da ünvan ara")}" value="${esc(YON.ara)}"></div>
+    <ul class="yon-liste" id="kul-liste"></ul>`;
+  kutu.querySelector("#kul-ara").oninput = e => { YON.ara = e.target.value; ciz(); };
+  ciz();
+}
+
+/* Ünvanı onaylar ya da kaldırır: unvanlar/{uid} + profiller/{uid}.unvan (kurallar yöneticiye yalnız bu alanı açar) */
+async function unvanOnayla(uid, unvan, ek = {}) {
+  const { fs } = H.fb;
+  if (unvan) await fs.setDoc(fs.doc(H.db, "unvanlar", uid), { unvan, tarih: new Date().toISOString(), ...ek });
+  else await fs.deleteDoc(fs.doc(H.db, "unvanlar", uid));
+  await fs.updateDoc(fs.doc(H.db, "profiller", uid), { unvan: unvan || "" }).catch(() => {});
+  await fs.deleteDoc(fs.doc(H.db, "unvan_talepleri", uid)).catch(() => {});
+}
+function unvanVerLevhasi(uid, ad, sonra) {
+  levhaAc(`<h3>${tx("Ünvan ver")}</h3><p class="aciklama">${esc(ad)}</p>
+    <div class="kutu">${UNVANLAR.filter(u => u.akademik).map(u => `<button class="satir" data-v="${u.id}">${esc(unvanAd(u.id))}</button>`).join("")}
+      <button class="satir" data-v="" style="color:var(--rapor)">${tx("Akademik ünvanı kaldır")}</button></div>`, lv => {
+    lv.querySelectorAll("[data-v]").forEach(b => b.onclick = async () => {
+      try { await unvanOnayla(uid, b.dataset.v, { ad }); levhaKapat(); bildir(b.dataset.v ? tx("Ünvan onaylandı") : tx("Ünvan kaldırıldı")); if (sonra) sonra(); }
+      catch (e) { bildir(tx("Kaydedilemedi") + " " + (e.code || "")); }
+    });
+  });
+}
+/* Yönetim › Ünvan: bekleyen doğrulama talepleri */
+async function unvanTalepHtml(kutu) {
+  const { fs } = H.fb;
+  const l = (await fs.getDocs(fs.query(fs.collection(H.db, "unvan_talepleri"), fs.limit(200)))).docs.map(d => ({ uid: d.id, ...d.data() }));
+  const baglanti = s => /^https?:\/\//i.test(s) ? `<a href="${escUrl(s)}" target="_blank" rel="noopener">${esc(s)}</a>` : /@/.test(s) ? `<a href="mailto:${esc(s)}">${esc(s)}</a>` : esc(s);
+  kutu.innerHTML = l.length ? `<ul class="yon-liste">${l.map(t => `<li class="yon-kart durum-yeni" data-uid="${esc(t.uid)}" data-unvan="${esc(t.unvan)}" data-ad="${esc(t.ad || "")}">
+      <p class="yon-ust"><b>${esc(t.ad || "")}</b><span class="etiket">${esc(unvanAd(t.unvan))}</span></p>
+      <p>${esc(t.kurum || "")}</p>${t.kanit ? `<p><small>${baglanti(t.kanit)}</small></p>` : ""}
+      <p class="yon-eylem"><button data-t="onay">${tx("Onayla")}</button><button data-t="red">${tx("Reddet")}</button></p></li>`).join("")}</ul>`
+    : bosHtml(tx("Bekleyen ünvan talebi yok"), tx("Kullanıcılar sekmesinden de doğrudan ünvan verebilirsiniz."));
+  kutu.querySelectorAll("[data-t]").forEach(b => b.onclick = async () => {
+    const li = b.closest("[data-uid]");
+    try {
+      if (b.dataset.t === "onay") { await unvanOnayla(li.dataset.uid, li.dataset.unvan, { ad: li.dataset.ad }); bildir(tx("Ünvan onaylandı")); }
+      else { await fs.deleteDoc(fs.doc(H.db, "unvan_talepleri", li.dataset.uid)); bildir(tx("Talep reddedildi")); }
+    } catch (e) { bildir(tx("Kaydedilemedi") + " " + (e.code || "")); }
+    sayfaYonetim();
+  });
+}
 async function sayfaYonetim() {
   if (!yoneticiMi()) { $("#sayfa").innerHTML = bosHtml(tx("Yetkiniz yok"), tx("Bu sayfa yalnız yönetici hesabıyla açılır.")); return; }
   const { fs } = H.fb;
-  const sekmeler = [["geri", tx("Geri bildirim")], ["kazi", tx("Kazı duyuruları")], ["sikayet", tx("Şikâyetler")], ["yorum", tx("Son yorumlar")]];
-  $("#sayfa").innerHTML = `<div class="bolumlu" role="group">${sekmeler.map(([k, ad]) => `<button data-ys="${k}" aria-pressed="${YON.sekme === k}">${ad}</button>`).join("")}</div>
+  const sekmeler = [["istatistik", tx("İstatistik")], ["kullanicilar", tx("Kullanıcılar")], ["unvan", tx("Ünvan")], ["geri", tx("Geri bildirim")], ["kazi", tx("Kazı duyuruları")], ["sikayet", tx("Şikâyetler")], ["yorum", tx("Son yorumlar")]];
+  $("#sayfa").innerHTML = `<div class="bolumlu yon-sekmeler" role="group">${sekmeler.map(([k, ad]) => `<button data-ys="${k}" aria-pressed="${YON.sekme === k}">${ad}</button>`).join("")}</div>
     <div id="yon-icerik"><p class="aciklama" style="margin:16px">${tx("Yükleniyor…")}</p></div>`;
   $("#sayfa").querySelectorAll("[data-ys]").forEach(b => b.onclick = () => { YON.sekme = b.dataset.ys; sayfaYonetim(); });
   const kutu = $("#yon-icerik");
   const tarihSaat = t => (t && t.toDate ? t.toDate() : new Date()).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" });
   try {
     if (YON.sekme === "kazi") { await kaziYonetimHtml(kutu); return; }
+    if (YON.sekme === "istatistik") { await istatistikHtml(kutu); return; }
+    if (YON.sekme === "kullanicilar") { await kullanicilarHtml(kutu); return; }
+    if (YON.sekme === "unvan") { await unvanTalepHtml(kutu); return; }
     if (YON.sekme === "geri") {
       const a = await fs.getDocs(fs.query(fs.collection(H.db, "geribildirim"), fs.orderBy("tarih", "desc"), fs.limit(200)));
       const l = a.docs.map(d => ({ id: d.id, ...d.data() }));

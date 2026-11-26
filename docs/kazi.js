@@ -94,8 +94,17 @@ function kaziAyrinti(d) {
   });
 }
 
-function kaziFormu() {
+async function kaziFormu() {
   if (!H.kullanici) { levhaKapat(); location.hash = "#giris"; bildir(tx("Duyuru göndermek için giriş yapın")); return; }
+  // yalnız onaylı Prof. Dr., Doç. Dr., Dr. Öğr. Üyesi ve Dr. (kurallar: duyuruYetkili)
+  try { await unvanYukle(true); } catch (e) {}
+  if (!yoneticiMi() && !(unvanBul(UNVAN.onayli) || {}).duyuru) {
+    levhaAc(`<h3>${tx("Kazı duyurusu gönder")}</h3>
+      <p class="aciklama">${tx("Kazı duyurularını doğrulanmış Prof. Dr., Doç. Dr., Dr. Öğr. Üyesi ve Dr. ünvanlı üyeler gönderebilir. Ünvanınızı seçin; doğrulandıktan sonra duyuru gönderebilirsiniz.")}</p>
+      ${UNVAN.talep ? `<p class="aciklama">${tx("{u} · onay bekliyor", { u: unvanAd(UNVAN.talep.unvan) })}</p>` : ""}
+      <p style="margin:14px 0 0"><button class="buyuk-dugme" id="kd-unvan">${tx("Ünvanımı seç")}</button></p>`, lv => { lv.querySelector("#kd-unvan").onclick = unvanLevhasi; });
+    return;
+  }
   levhaAc(`<h3>${tx("Kazı duyurusu gönder")}</h3>
     <p class="aciklama">${tx("Duyurunuz yönetici incelemesinden sonra yayımlanır. İletişim bilgisi herkese açık görünür.")}</p>
     <form id="kazi-form" class="kazi-form">

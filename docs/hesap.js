@@ -175,7 +175,7 @@ async function hesapBaslat() {
     const { auth } = await firebaseYukle();
     try { await auth.getRedirectResult(H.auth); } catch (e) { if (e.code) bildir(hataMetni(e)); }
     auth.onAuthStateChanged(H.auth, async k => {
-      if (k) { await oturumAcildi(k); }
+      if (k) { await oturumAcildi(k); if (typeof unvanEsitle === "function") unvanEsitle(); }
       else { H.kullanici = null; H.dinleyiciler.forEach(c => c()); H.dinleyiciler = []; }
       H.hazir = true;
       if (/^#(ayarlar|giris|yonetim|k\/)/.test(location.hash)) rota(true);
@@ -275,8 +275,10 @@ async function acikProfilYaz() {
   const p = profilAl(), { fs } = H.fb;
   const ad = (p.ad || H.kullanici.displayName || "").trim().slice(0, 40);
   try {
+    if (typeof unvanYukle === "function") await unvanYukle().catch(() => {});
+    const unvan = typeof gecerliUnvan === "function" ? gecerliUnvan() : "";
     await fs.setDoc(fs.doc(H.db, "profiller", H.kullanici.uid),
-      { ad, avatar: (p.avatar || "").slice(0, 40), foto: (p.foto || "").slice(0, 60000), guncelleme: Date.now() });
+      { ad, avatar: (p.avatar || "").slice(0, 40), foto: (p.foto || "").slice(0, 60000), guncelleme: Date.now(), ...(unvan ? { unvan } : {}) });
   } catch (e) { /* kurallar henüz yayımlanmadıysa yorumlar eski resimle görünür */ }
 }
 function profilFotosu() {
@@ -323,6 +325,7 @@ function hesapGrubuHtml() {
     <div class="satir profil-satir">${avatarHtml()}<span class="profil-ad"><b>${esc(hesapAdi())}</b><small>${H.kullanici.providerData.some(p => p.providerId === "google.com") ? "Google" : tx("E-posta")}</small></span>
       <button class="ikincil-dugme profil-foto-dugme" id="profil-resmi">${tx("Değiştir")}</button></div>
     <button class="satir" id="gorunen-ad">${tx("Görünen ad")}<span class="sag">${esc(typeof gorunenAd === "function" ? gorunenAd() || tx("Belirlenmedi") : "")}</span></button>
+    ${typeof unvanLevhasi === "function" ? `<button class="satir" id="unvan-sec">${tx("Ünvan")}<span class="sag">${esc(unvanDurumMetni())}</span></button>` : ""}
     <label class="satir">${tx("Yenilikler e-postayla gelsin")}<input type="checkbox" class="anahtar" id="eposta-izni" ${izin ? "checked" : ""}></label>
     <div class="satir">${tx("Eşitleme")}<span class="sag">${esc(H.durum || (H.sonEsitleme ? tx("Eşitlendi, {saat}", { saat: saatYaz(H.sonEsitleme) }) : tx("Açık")))}</span></div>
     <button class="satir" id="cikis">${tx("Çıkış yap")}</button>
@@ -339,6 +342,8 @@ function hesapGrubuBagla() {
   if (resim && typeof avatarSecLevhasi === "function") resim.onclick = avatarSecLevhasi;
   const ad = document.getElementById("gorunen-ad");
   if (ad && typeof adLevhasi === "function") ad.onclick = () => adLevhasi();
+  const un = document.getElementById("unvan-sec");
+  if (un) un.onclick = unvanLevhasi;
   const izin = document.getElementById("eposta-izni");
   if (izin) izin.onchange = async e => {
     const acik = e.target.checked;

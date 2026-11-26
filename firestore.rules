@@ -13,6 +13,11 @@ service cloud.firestore {
     }
     function engelli() { return exists(/databases/$(database)/documents/engelliler/$(request.auth.uid)); }
     function uzman() { return exists(/databases/$(database)/documents/uzmanlar/$(request.auth.uid)); }
+    // Doğrulanmış akademik ünvan (unvanlar/{uid}, yalnız yönetici yazar). Kazı duyurusunu Prof., Doç., Dr. Öğr. Üyesi ve Dr. girer.
+    function onayliUnvan(uid) {
+      return exists(/databases/$(database)/documents/unvanlar/$(uid)) ? get(/databases/$(database)/documents/unvanlar/$(uid)).data.unvan : '';
+    }
+    function duyuruYetkili() { return yonetici() || onayliUnvan(request.auth.uid) in ['prof', 'doc', 'dr_ogr', 'dr']; }
 
     // Kişisel kitaplık, eşitlenen kayıtlar ve profil (fotoğraf, e-posta izni): yalnız sahibi
     match /kullanicilar/{uid} {
@@ -23,13 +28,52 @@ service cloud.firestore {
     }
 
     // Herkese açık profil (yorumlarda görünen ad ve güncel resim): herkes okur, yalnız sahibi yazar
+    // unvan: arkeolog ve öğrenci beyanla; akademik ünvan yalnız yöneticinin onayladığıyla aynıysa. Yönetici yalnız unvan alanını değiştirebilir.
     match /profiller/{uid} {
       allow read: if true;
       allow write: if ben(uid)
-        && request.resource.data.keys().hasOnly(['ad', 'avatar', 'foto', 'guncelleme'])
+        && request.resource.data.keys().hasOnly(['ad', 'avatar', 'foto', 'guncelleme', 'unvan'])
         && request.resource.data.ad is string && request.resource.data.ad.size() <= 40
         && request.resource.data.avatar is string && request.resource.data.avatar.size() <= 40
-        && request.resource.data.foto is string && request.resource.data.foto.size() <= 60000;
+        && request.resource.data.foto is string && request.resource.data.foto.size() <= 60000
+        && (!('unvan' in request.resource.data) || request.resource.data.unvan in ['', 'arkeolog', 'ogrenci']
+            || request.resource.data.unvan == onayliUnvan(uid));
+      allow update: if yonetici() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unvan']);
+    }
+
+    // Onaylı akademik ünvanlar: herkes okur, yalnız yönetici yazar
+    match /unvanlar/{uid} {
+      allow read: if true;
+      allow write: if yonetici();
+    }
+
+    // Ünvan doğrulama talebi: kişi kendi talebini yazar/görür/siler; yönetici okur ve siler
+    match /unvan_talepleri/{uid} {
+      allow read, delete: if yonetici() || ben(uid);
+      allow create, update: if ben(uid)
+        && request.resource.data.keys().hasOnly(['unvan', 'kurum', 'kanit', 'ad', 'tarih'])
+        && request.resource.data.unvan in ['prof', 'doc', 'dr_ogr', 'dr', 'ogr_gor', 'ars_gor']
+        && request.resource.data.kurum is string && request.resource.data.kurum.size() > 1 && request.resource.data.kurum.size() <= 120
+        && request.resource.data.kanit is string && request.resource.data.kanit.size() <= 300
+        && request.resource.data.ad is string && request.resource.data.ad.size() <= 40
+        && request.resource.data.tarih == request.time;
+    }
+
+    // Günlük ziyaret sayacı (misafir dahil, kişisel veri yok): n = açan cihaz, k = uygulama olarak kurulu açan cihaz
+    match /ziyaret/{gun} {
+      allow read: if yonetici();
+      allow create: if gun.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.keys().hasOnly(['n', 'k'])
+        && request.resource.data.n == 1 && request.resource.data.get('k', 0) in [0, 1];
+      allow update: if request.resource.data.keys().hasOnly(['n', 'k'])
+        && request.resource.data.n == resource.data.n + 1
+        && request.resource.data.get('k', 0) in [resource.data.get('k', 0), resource.data.get('k', 0) + 1];
+    }
+
+    // Yönetim belgeleri (kullanıcı listesi): yalnız yönetici okur; sunucu (hizmet hesabı) yazar
+    match /yonetim/{id} {
+      allow read: if yonetici();
+      allow write: if false;
     }
 
     // Yorumlar: gizli olmayanları herkes okur; giriş yapmış ve engellenmemiş kullanıcı yazar;
@@ -125,6 +169,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['tur', 'baslik', 'kazi', 'il', 'baslangic', 'bitis', 'basvuru_son', 'metin', 'iletisim', 'uid', 'ad', 'tarih', 'durum'])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.durum == 'bekliyor'
+        && duyuruYetkili()
         && request.resource.data.tur in ['sezon', 'gonullu', 'etkinlik', 'diger']
         && request.resource.data.baslik is string && request.resource.data.baslik.size() > 0 && request.resource.data.baslik.size() <= 120
         && request.resource.data.metin is string && request.resource.data.metin.size() > 0 && request.resource.data.metin.size() <= 2000

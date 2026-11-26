@@ -864,3 +864,18 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 /* ilk açılış: uygulama olarak kur penceresi */
 .kurulum-adim { text-align: left; margin: 0 0 14px; padding-left: 1.4em; line-height: 1.6; }
 .kurulum-adim b { font-weight: 600; }
+
+/* ünvan ve yönetim istatistikleri */
+.unvan-etiket { margin-left: 6px; padding: 1px 7px; border-radius: 9px; font-size: .72rem; font-weight: 600; background: var(--okr-zemin); color: var(--soluk); vertical-align: 1px; }
+.unvan-liste .satir small { color: var(--soluk); font-weight: 400; }
+.ist-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 14px 16px; }
+.ist-kart { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 12px; background: var(--kagit-2); border: 1px solid var(--cizgi); color: inherit; text-decoration: none; }
+.ist-kart b { font-size: 1.4rem; line-height: 1.2; }
+.ist-kart small { color: var(--soluk); font-size: .8rem; }
+.ist-baslik { margin: 18px 16px 0; font-size: 1rem; }
+.ist-cubuklar { list-style: none; margin: 10px 16px; padding: 0; display: grid; gap: 4px; }
+.ist-cubuklar li { display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 8px; font-size: .85rem; }
+.ist-cubuklar i { display: block; height: 10px; border-radius: 5px; background: var(--okr); min-width: 2px; }
+.ist-cubuklar small { color: var(--soluk); }
+.yon-sekmeler { grid-auto-columns: max-content; overflow-x: auto; scrollbar-width: none; }
+.yon-sekmeler button { padding: 7px 12px; white-space: nowrap; }
