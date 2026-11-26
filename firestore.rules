@@ -14,10 +14,14 @@ service cloud.firestore {
     function engelli() { return exists(/databases/$(database)/documents/engelliler/$(request.auth.uid)); }
     function uzman() { return exists(/databases/$(database)/documents/uzmanlar/$(request.auth.uid)); }
     // Doğrulanmış akademik ünvan (unvanlar/{uid}, yalnız yönetici yazar). Kazı duyurusunu Prof., Doç., Dr. Öğr. Üyesi ve Dr. girer.
-    function onayliUnvan(uid) {
-      return exists(/databases/$(database)/documents/unvanlar/$(uid)) ? get(/databases/$(database)/documents/unvanlar/$(uid)).data.unvan : '';
+    function unvanEsit(uid, deger) {
+      return exists(/databases/$(database)/documents/unvanlar/$(uid))
+        && get(/databases/$(database)/documents/unvanlar/$(uid)).data.unvan == deger;
     }
-    function duyuruYetkili() { return yonetici() || onayliUnvan(request.auth.uid) in ['prof', 'doc', 'dr_ogr', 'dr']; }
+    function duyuruYetkili() {
+      return yonetici() || (exists(/databases/$(database)/documents/unvanlar/$(request.auth.uid))
+        && get(/databases/$(database)/documents/unvanlar/$(request.auth.uid)).data.unvan in ['prof', 'doc', 'dr_ogr', 'dr']);
+    }
 
     // Kişisel kitaplık, eşitlenen kayıtlar ve profil (fotoğraf, e-posta izni): yalnız sahibi
     match /kullanicilar/{uid} {
@@ -37,7 +41,7 @@ service cloud.firestore {
         && request.resource.data.avatar is string && request.resource.data.avatar.size() <= 40
         && request.resource.data.foto is string && request.resource.data.foto.size() <= 60000
         && (!('unvan' in request.resource.data) || request.resource.data.unvan in ['', 'arkeolog', 'ogrenci']
-            || request.resource.data.unvan == onayliUnvan(uid));
+            || unvanEsit(uid, request.resource.data.unvan));
       allow update: if yonetici() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unvan']);
     }
 
