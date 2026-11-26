@@ -46,6 +46,15 @@ function bildirimListesi() {
   if (typeof KD !== "undefined" && KD.liste) KD.liste.forEach(d => l.push({ tur: "kazi", zaman: zamanIso(d.tarih),
     baslik: `${tx("Kazı duyurusu")}: ${d.baslik}`, metin: [d.kazi, d.il, d.basvuru_son ? tx("Son başvuru: {t}", { t: tarihYaz(d.basvuru_son) }) : ""].filter(Boolean).join(" · "),
     adres: "#ozel/kazi", kimlik: `kazi/${d.id}` }));
+  // takip edilen etkinlik yaklaşınca: 7 gün, 1 gün kala ve o gün (en son ulaşılan eşik)
+  const bugunMs = new Date(new Date().toDateString()).getTime();
+  (D.takip || []).filter(e => e.tur === "etkinlik" && e.t).forEach(e => {
+    const gunMs = new Date(e.t + "T00:00:00").getTime(), kalan = Math.round((gunMs - bugunMs) / 864e5);
+    const esik = [0, 1, 7].find(x => kalan >= 0 && kalan <= x);
+    if (esik === undefined) return;
+    l.push({ tur: "duyuru", zaman: new Date(gunMs - esik * 864e5).toISOString(), baslik: `📅 ${esik === 0 ? tx("Bugün") : esik === 1 ? tx("Yarın") : tx("Bir hafta kaldı")}: ${e.ad}`,
+      metin: e.s || "", adres: e.u || "#takip", dis: /^https?:/.test(e.u || ""), kimlik: `etk/${e.deger}/${esik}` });
+  });
   // UKAAS (Kazı, Araştırma ve Arkeometri Sempozyumu) duyuruları ve bildiri kitapları: herkese önemli duyuru
   (VERI.etkinlikler || []).filter(d => d.onemli && (d.yt || d.t || "") >= gunOnce(21)).forEach(d => l.push({ tur: "duyuru", zaman: (d.g || "").slice(0, 19) || d.yt,
     baslik: `${d.du === "yayin" ? "📚 " + tx("Yayımlandı") : "📣 " + tx("Önemli duyuru")}: ${d.b}`, metin: d.s || "", adres: d.u, dis: true, kimlik: `onemli/${d.i}` }));

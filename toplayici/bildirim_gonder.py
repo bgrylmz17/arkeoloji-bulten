@@ -7,6 +7,7 @@ Kategoriler ve sıklık (az ve öz):
   ozel      yeni Arkix Özel yazısı (her biri)
   sondakika "flash" işaretli yeni haber; çalışma başına en çok 1, günde en çok 2
   kazi      yeni onaylanan kazı duyurusu (en çok 2 / çalışma)
+  etkinlik  takip edilen etkinliğe 7 gün, 1 gün kala ve o gün (kitaplik.takip › tur "etkinlik"; uid gerekir; kategoriden bağımsız)
   onemli    Kazı, Araştırma ve Arkeometri Sempozyumu (UKAAS) duyurusu ya da bildiri kitapları: kategoriden bağımsız HERKESE,
             yayın tarihi son 14 gün, çalışma başına en çok 1 (bulten.json › etkinlikler, onemli: 1)
   takip     takip ettiklerinden son 24 saatte yeni kayıt sayısı; günde bir, 06 UTC sonrası (uid gerekir)
@@ -108,6 +109,8 @@ def main() -> int:
                         "./#ozel", f"onemli-{d['i']}"))
     takip_zamani = durum.get("takip_gun") != bugun and simdi.hour >= 6
 
+    gonderilen_etk = set(durum.get("etk") or [])
+    yeni_etk: set[str] = set()
     abonelikler = E.sorgu("bildirim_abonelik")
     print(f"Abonelik: {len(abonelikler)} · olay: {len(olaylar)} · takip turu: {takip_zamani}")
     sinir24 = (simdi - dt.timedelta(hours=24)).isoformat()
@@ -141,6 +144,23 @@ def main() -> int:
         for (k, tb, tm, eb, em, url, tag) in olaylar:
             if k in kat or k == "onemli":   # önemli duyurular herkese
                 gonder(a, eb if en else tb, em if en else tm, url, tag)
+        if a.get("uid"):   # takip edilen etkinlik yaklaşıyor
+            uid = a["uid"]
+            if uid not in takip_onbellek:
+                kul = E.oku(f"kullanicilar/{uid}") or {}
+                takip_onbellek[uid] = (kul.get("kitaplik") or {}).get("takip") or []
+            for e in takip_onbellek[uid]:
+                if e.get("tur") != "etkinlik" or not e.get("t"):
+                    continue
+                try:
+                    kalan = (dt.date.fromisoformat(e["t"][:10]) - simdi.date()).days
+                except ValueError:
+                    continue
+                anahtar = f"{a['_id'][:12]}:{e.get('deger')}:{kalan}"
+                if kalan in (7, 1, 0) and anahtar not in gonderilen_etk and simdi.hour >= 6:
+                    ne = {7: ("Bir hafta kaldı", "One week to go"), 1: ("Yarın", "Tomorrow"), 0: ("Bugün", "Today")}[kalan]
+                    gonder(a, "📅 " + (ne[1] if en else ne[0]), e.get("ad", ""), "./#takip", f"etk-{e.get('deger')}-{kalan}")
+                    yeni_etk.add(anahtar)
         if takip_zamani and "takip" in kat and a.get("uid"):
             uid = a["uid"]
             if uid not in takip_onbellek:
@@ -158,6 +178,7 @@ def main() -> int:
 
     if not kuru:
         E.yaz("sistem/push_durum", {"son": simdi_iso, "kazi": sorted(gonderilen_kazi | {k["_id"] for k in yeni_kazi})[-300:],
+                                    "etk": sorted(gonderilen_etk | yeni_etk)[-2000:],
                                     "sd_gun": bugun, "sd_sayi": sd_sayi, "takip_gun": bugun if takip_zamani else durum.get("takip_gun", "")})
     print(f"Bitti: {sayac}")
     return 0

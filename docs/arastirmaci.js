@@ -63,7 +63,7 @@ async function sayfaArastirmaci() {
   const kart = (deger, ad) => `<div class="ist-kart"><b>${esc(String(deger))}</b><small>${ad}</small></div>`;
   $("#sayfa").innerHTML = `<div class="arastirmaci">
     <div class="ar-ust"><div><h2>${esc(y.display_name)}</h2><p class="aciklama">${esc(kurum)}${a.orcid ? ` · ORCID ${esc(a.orcid)}` : ""}</p></div>
-      <button class="ikincil-dugme" id="ar-degis">${tx("Değiştir")}</button></div>
+      <span style="display:flex;gap:6px"><button class="ikincil-dugme" id="ar-nasil" aria-label="${tx("Nasıl kullanılır?")}">❔</button><button class="ikincil-dugme" id="ar-degis">${tx("Değiştir")}</button></span></div>
     <div class="ar-dis">${disProfiller(a).map(([ad, url, kayitli]) => `<a class="ikincil-dugme" href="${escUrl(url)}" target="_blank" rel="noopener">${esc(ad)}${kayitli ? " ✓" : ""}</a>`).join("")}
       <button class="ikincil-dugme ar-ekle" id="ar-dis-duzenle">＋ ${tx("Profil adreslerimi gir")}</button></div>
     <p class="aciklama ar-not">${tx("Bu sitelerin verisi uygulamaya çekilmez (Google Scholar'da otomatik çekme yasak, Web of Science ve Scopus kurumsal abonelik ister); düğmeler seni oradaki profiline götürür.")}</p>
@@ -85,7 +85,22 @@ async function sayfaArastirmaci() {
         ${w.open_access && w.open_access.oa_url ? `<a href="${escUrl(w.open_access.oa_url)}" target="_blank" rel="noopener">${tx("Açık erişim")}</a>` : ""}</span></li>`).join("")}</ul>
     </div>`;
   $("#ar-degis").onclick = () => arastirmaciKur(true);
+  $("#ar-nasil").onclick = arastirmaciNasil;
   $("#ar-dis-duzenle").onclick = () => disProfilLevhasi(a);
+}
+
+/* Nasıl kullanılır: ilk girişte bir kez, sonra "❔" düğmesiyle */
+function arastirmaciNasil() {
+  D.arNasilGoruldu = true; kaydet();
+  const adim = (n, b, m) => `<p class="nasil-adim"><b>${n}</b> <span><strong>${b}</strong><br>${m}</span></p>`;
+  levhaAc(`<div class="nasil"><h3>🎓 ${tx("Araştırmacı profili nasıl kullanılır?")}</h3>
+    ${adim(1, tx("Kendini bul"), tx("ORCID numaranı (0000-0002-…) ya da adını yaz, listeden kendini seç. Aynı adlı birden çok kişi çıkabilir: kurumuna ve yayın sayısına bak. Yayınların OpenAlex'te iki profile bölünmüşse en çok yayını olanı seç."))}
+    ${adim(2, tx("Kartları oku"), tx("Atıf: yayınlarına yapılan toplam atıf. h-indeks: en az h atıf almış h yayının. i10: en az 10 atıf almış yayın sayın."))}
+    ${adim(3, tx("Kim atıf yaptı?"), tx("Son atıf yapanlar listesinde hangi çalışmanın hangi yayınına atıf yaptığını görürsün; başlığa dokununca makale açılır."))}
+    ${adim(4, tx("Yayınların"), tx("En çok atıf alana göre sıralı. Okuma ve indirme sayıları için yayıncı sayfasına, ücretsiz kopya için Açık erişim bağlantısına dokun."))}
+    ${adim(5, tx("Öteki profillerin"), tx("Google Scholar adresini, Web of Science ResearcherID'ni ve Scopus numaranı gir; düğmeler doğrudan profillerine gider. Bu sitelerin sayıları uygulamaya çekilmez."))}
+    ${adim(6, tx("Yeni atıfları izle"), tx("Her girişinde son baktığından beri gelen yeni atıflar üstte yazar. Profilin giriş yaptığın her cihazda görünür."))}
+    <p><button class="buyuk-dugme" id="ar-nasil-tamam">${tx("Anladım")}</button></p></div>`, lv => { lv.querySelector("#ar-nasil-tamam").onclick = levhaKapat; });
 }
 
 function disProfilLevhasi(a) {
@@ -112,6 +127,7 @@ function arastirmaciKur(degistir) {
   $("#sayfa").innerHTML = `<div class="arastirmaci">
     <div class="ar-tanit"><div class="nasil-ikon">🎓</div><h2>${tx("Araştırmacı profilim")}</h2>
       <p class="aciklama">${tx("Yayınlarına yapılan atıfları, h-indeksini ve seni son atıf yapanları burada izle. ORCID numaranı ya da adını yaz, listeden kendini seç.")}</p></div>
+    <p style="text-align:center;margin:0"><button class="metin-dugme" id="ar-nasil">❔ ${tx("Nasıl kullanılır?")}</button></p>
     <form class="arama-kutu" id="ar-form" style="margin:12px 16px"><input id="ar-girdi" placeholder="${tx("0000-0002-1825-0097 ya da Ad Soyad")}" autocomplete="off" enterkeyhint="search"></form>
     <div id="ar-sonuc"></div>
     ${degistir ? `<p style="text-align:center"><button class="metin-dugme" id="ar-kaldir">${tx("Profili kaldır")}</button></p>` : ""}</div>`;
@@ -137,5 +153,7 @@ function arastirmaciKur(degistir) {
     } catch (e) { kap.innerHTML = bosHtml(tx("Bulunamadı"), e.message === "bulunamadi" ? tx("Bu ORCID OpenAlex'te kayıtlı değil; adınla dene.") : tx("OpenAlex şu an yanıt vermiyor.")); }
   };
   $("#ar-form").onsubmit = e => { e.preventDefault(); ara(); };
+  $("#ar-nasil").onclick = arastirmaciNasil;
+  if (!D.arNasilGoruldu) setTimeout(arastirmaciNasil, 400);   // ilk girişte bir kez
   const k = $("#ar-kaldir"); if (k) k.onclick = () => { arastirmaciKaydet(null); AR.yazar = null; arastirmaciKur(); };
 }

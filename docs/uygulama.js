@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.35.0";
+const SURUM = "1.36.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -514,16 +514,37 @@ function duyuruKartHtml(d) {
   return `<div class="du-kapsa"><a class="du-kart" href="${escUrl(ic)}"${d.k ? "" : ' target="_blank" rel="noopener"'}>
     <span class="du-tarih${gelecek ? " gelecek" : ""}"><b>${esc((d.t || "").slice(8, 10))}</b><small>${esc(new Date((d.t || bugun) + "T00:00:00").toLocaleDateString(DIL === "en" ? "en-GB" : "tr-TR", { month: "short", year: "2-digit" }))}</small></span>
     <span class="du-ic"><b>${d.onemli ? "⭐ " : ""}${esc(d.b)}</b><small>${d.tr ? "🇹🇷 " : ""}${esc(d.s || "")}${d.l === "en" && DIL !== "en" ? " · EN" : ""}${gelecek ? ` · ${tx("yaklaşan")}` : ""}${d.et ? "" : ` · ${tx("duyuru tarihi")}`}</small>${d.o ? `<small class="du-ozet">${esc(d.o)}</small>` : ""}</span></a>
-    ${d.ig ? `<a class="du-ig" href="${escUrl(d.ig)}" target="_blank" rel="noopener">📷 Instagram</a>` : ""}</div>`;
+    <span class="du-eylem">${d.du === "etkinlik" && d.et && gelecek ? `<button class="du-takip" data-etk="${esc(d.i)}" aria-pressed="${etkinlikTakipte(d.i)}">${etkinlikTakipte(d.i) ? "✓ " + tx("Takipte") : "🔔 " + tx("Hatırlat")}</button>` : ""}
+    ${d.ig ? `<a class="du-ig" href="${escUrl(d.ig)}" target="_blank" rel="noopener">📷 Instagram</a>` : ""}</span></div>`;
+}
+/* Etkinlik takibi: D.takip'e { tur: "etkinlik", deger: kimlik, ad, t, u, s } olarak yazılır (hesapla eşitlenir).
+ * Bir hafta, bir gün kala ve o gün bildirim (uygulama içi; girişliyse telefona: bildirim_gonder.py). */
+const etkinlikTakipte = i => (D.takip || []).some(x => x.tur === "etkinlik" && x.deger === i);
+function etkinlikTakipDegistir(d) {
+  D.takip = D.takip || [];
+  if (etkinlikTakipte(d.i)) { D.takip = D.takip.filter(x => !(x.tur === "etkinlik" && x.deger === d.i)); bildir(tx("Hatırlatma kaldırıldı")); }
+  else { D.takip.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), tur: "etkinlik", deger: d.i, ad: d.b.slice(0, 160), t: d.t, u: d.u, s: d.s || "" });
+    bildir(tx("Bir hafta ve bir gün kala hatırlatılacak")); }
+  kaydet();
+}
+function duyuruTakipBagla() {
+  $$(".du-takip").forEach(b => b.onclick = e => {
+    e.preventDefault(); e.stopPropagation();
+    const d = (VERI.etkinlikler || []).find(x => x.i === b.dataset.etk); if (!d) return;
+    etkinlikTakipDegistir(d);
+    const on = etkinlikTakipte(d.i); b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "✓ " + tx("Takipte") : "🔔 " + tx("Hatırlat");
+  });
 }
 function sayfaOzel(arg) {
   const bolum = arg === "kazi" ? "kazi" : arg === "arkix" ? "arkix" : "etkinlik";
   const sekme = `<div class="bolumlu ozel-sekme" role="group"><a href="#ozel" aria-pressed="${bolum === "etkinlik"}">${tx("Etkinlikler")}</a><a href="#ozel/kazi" aria-pressed="${bolum === "kazi"}">${tx("Kazı duyuruları")}</a><a href="#ozel/arkix" aria-pressed="${bolum === "arkix"}">Arkix Özel</a></div>`;
   const hepsi = VERI.etkinlikler || [], bugun = new Date().toISOString().slice(0, 10);
   if (bolum === "kazi") {
-    const oto = duyuruSuz(hepsi.filter(d => d.du === "kazi")).sort(trOnce);
-    $("#sayfa").innerHTML = sekme + `<div id="kazi-kap"></div>${oto.length ? `<h3 class="ist-baslik">${tx("Kazı ve alan okulu ilanları")}</h3>
-      <p class="aciklama ar-not">${tx("Kazı ve alan okulu ilanları otomatik toplanır; başvuru ayrıntıları ilanın kendi sayfasındadır.")}</p>${duyuruSuzgecHtml()}<div class="du-liste">${oto.map(duyuruKartHtml).join("")}</div>` : ""}`;
+    const tumIlan = hepsi.filter(d => d.du === "kazi"), oto = duyuruSuz(tumIlan).sort(trOnce);
+    // süzgeç, seçilen bölgede ilan olmasa da görünür kalır (yoksa geri dönülemiyordu)
+    $("#sayfa").innerHTML = sekme + `<div id="kazi-kap"></div>${tumIlan.length ? `<h3 class="ist-baslik">${tx("Kazı ve alan okulu ilanları")}</h3>
+      <p class="aciklama ar-not">${tx("Kazı ve alan okulu ilanları otomatik toplanır; başvuru ayrıntıları ilanın kendi sayfasındadır.")}</p>${duyuruSuzgecHtml()}
+      ${oto.length ? `<div class="du-liste">${oto.map(duyuruKartHtml).join("")}</div>` : `<p class="aciklama ar-not">${tx("Bu süzgeçle ilan yok.")}</p>`}` : ""}`;
     if (typeof kaziBolumuCiz === "function") kaziBolumuCiz($("#kazi-kap"));
     duyuruSuzgecBagla(arg);
     return;
@@ -547,7 +568,7 @@ function sayfaOzel(arg) {
         ["Arkeometri Sonuçları Toplantısı", "https://ukaas.ktb.gov.tr/TR-389975/arkeometri-sonuclari-toplantisi.html"]].map(([ad, u]) => `<a class="ikincil-dugme" href="${u}" target="_blank" rel="noopener">${tx(ad)}</a>`).join("")}</div>
       ${gecmis.length ? `<h3 class="ist-baslik">${tx("Arşiv")}</h3><div class="du-liste">${gecmis.map(duyuruKartHtml).join("")}</div>` : ""}
       ${etk.length ? "" : bosHtml(tx("Bu süzgeçle etkinlik yok"), DU.arsiv ? tx("Bölgeyi değiştirmeyi dene.") : tx("Geçmişleri de göstermeyi ya da bölgeyi değiştirmeyi dene."))}`;
-    duyuruSuzgecBagla(arg);
+    duyuruSuzgecBagla(arg); duyuruTakipBagla();
     $("#etk-gonder").onclick = () => typeof kaziFormu === "function" && kaziFormu("etkinlik");
     // topluluğun gönderdiği (onaylı) etkinlikler: kazi_duyurulari › tur "etkinlik"
     if (typeof kaziDuyurulariYukle === "function") kaziDuyurulariYukle().then(l => {

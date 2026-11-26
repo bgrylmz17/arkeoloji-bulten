@@ -999,3 +999,8 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .cekmece-grup:first-child { margin-top: 6px; }
 .du-suzgec { align-items: center; margin-top: 12px; } .du-arsiv { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--soluk); white-space: nowrap; margin-left: 4px; }
 .du-kapsa { display: flex; flex-direction: column; gap: 4px; } .du-ig { align-self: flex-end; font-size: 13px; font-weight: 650; color: var(--okr); }
+.du-eylem { display: flex; justify-content: flex-end; gap: 12px; align-items: center; } .du-eylem:empty { display: none; }
+.du-takip { border: 1px solid var(--cizgi); border-radius: 99px; padding: 4px 12px; background: var(--kagit-2); color: var(--murekkep); font: inherit; font-size: 13px; cursor: pointer; }
+.du-takip[aria-pressed="true"] { background: var(--okr-zemin); border-color: var(--okr); color: var(--okr); font-weight: 650; }
+button.cekmece-grup { display: flex; justify-content: space-between; align-items: center; width: calc(100% - 24px); margin: 12px 12px 2px; padding: 6px 8px; border: 0; border-radius: 8px; background: none; cursor: pointer; font-family: inherit; }
+button.cekmece-grup i { font-style: normal; transition: transform .15s; } button.cekmece-grup[aria-expanded="false"] i { transform: rotate(-90deg); }

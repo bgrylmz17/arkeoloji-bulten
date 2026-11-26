@@ -2,7 +2,7 @@
  * D.takip = [{ id, tur, deger, ad }]; hesapla eşitlenir (kitaplik.takip; native ile aynı şema).
  * Bugün sayfası, son bakıştan (D.takipGorulen) beri eşleşen yeni kayıtları sayar; #takip sayfası hepsini listeler. */
 const TAKIP_TURLERI = ["kelime", "kavram", "yazar", "dergi", "kaynak"];
-const takipTurAdi = tur => ({ kelime: tx("Anahtar kelime"), kavram: tx("Dönem / konu"), yazar: tx("Yazar"), dergi: tx("Dergi / yayın"), kaynak: tx("Haber kaynağı") }[tur] || tur);
+const takipTurAdi = tur => ({ kelime: tx("Anahtar kelime"), kavram: tx("Dönem / konu"), yazar: tx("Yazar"), dergi: tx("Dergi / yayın"), kaynak: tx("Haber kaynağı"), etkinlik: tx("Etkinlik") }[tur] || tur);
 const kucukHarf = s => (s || "").toLocaleLowerCase("tr");
 
 function takipEslesir(r, t) {
@@ -83,7 +83,8 @@ const konuSayisi = () => takipListesi().filter(t => t.tur === "kavram").length;
 function takipCikar(id) { D.takip = takipListesi().filter(t => t.id !== id); kaydet(); }
 
 function sayfaTakip() {
-  const liste = takipListesi();
+  const liste = takipListesi().filter(t => t.tur !== "etkinlik");
+  const etkinlikler = takipListesi().filter(t => t.tur === "etkinlik").sort((a, b) => (a.t || "").localeCompare(b.t || ""));
   const kavramlar = VERI.kavramlar.filter(k => k.grup !== "Kazım");
   const gruplar = [...new Set(kavramlar.map(k => k.grup))];
   const kayitlar = takipKayitlari().sort((a, b) => (b.g || "").localeCompare(a.g || "") || (b.t || "").localeCompare(a.t || ""));
@@ -94,6 +95,12 @@ function sayfaTakip() {
           <em>${takipKayitlari(t).length}</em><button data-takip-sil="${esc(t.id)}" aria-label="${tx("Takipten çıkar")}">×</button></span>`).join("")}</div>`
         : `<p class="aciklama">${tx("Konunuzu, döneminizi, bölgenizi, bir yazarı ya da dergiyi takibe alın; bültene uyan yeni kayıtlar burada ve Bugün sayfasında görünür.")}</p>`}
     </div>
+    ${etkinlikler.length ? `<div class="grup"><h3>📅 ${tx("Takip ettiğim etkinlikler")}</h3><div class="du-liste" style="margin:0">${etkinlikler.map(e => {
+      const kalan = Math.round((new Date(e.t + "T00:00:00") - new Date(new Date().toDateString())) / 864e5);
+      return `<div class="du-kapsa"><a class="du-kart" href="${escUrl(e.u)}" ${/^https?:/.test(e.u || "") ? 'target="_blank" rel="noopener"' : ""}>
+        <span class="du-tarih${kalan >= 0 ? " gelecek" : ""}"><b>${esc((e.t || "").slice(8, 10))}</b><small>${esc(new Date(e.t + "T00:00:00").toLocaleDateString(DIL === "en" ? "en-GB" : "tr-TR", { month: "short" }))}</small></span>
+        <span class="du-ic"><b>${esc(e.ad)}</b><small>${esc(e.s || "")} · ${kalan > 1 ? tx("{n} gün kaldı", { n: kalan }) : kalan === 1 ? tx("yarın") : kalan === 0 ? tx("bugün") : tx("geçti")}</small></span></a>
+        <span class="du-eylem"><button class="du-takip" data-takip-sil="${esc(e.id)}" aria-pressed="true">✓ ${tx("Takipte")}</button></span></div>`; }).join("")}</div></div>` : ""}
     <form class="grup takip-form" id="takip-form"><h3>${tx("Yeni takip")}</h3><div class="kutu" style="padding:12px">
       <div class="bolumlu" role="group">${TAKIP_TURLERI.map((tur, i) => `<button type="button" data-takip-tur="${tur}" aria-pressed="${i === 0}">${esc(takipTurAdi(tur))}</button>`).join("")}</div>
       <div id="takip-girdi" style="margin-top:10px"></div>
