@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.31.0";
+const SURUM = "1.32.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -1628,7 +1628,7 @@ function kaydirmaBagla() {
 /* ---------------------------------------------------------------- yönlendirme */
 const UST = { bugun: tx("Bugün"), ozet: tx("Bildirimler"), ozel: "Arkix Özel", akis: tx("Ara"), kitaplik: tx("Harrix Kitaplık"), ayarlar: tx("Ayarlar"), giris: tx("Giriş"),
   favoriler: tx("Favoriler"), notlar: tx("Notlu kayıtlar"), kaynakca: tx("Kaynakçam"), durum: tx("Kaynakların durumu"), ara: tx("Ara"), konu: tx("Konu"), k: "",
-  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli"), takip: tx("Takip ettiklerim"), ayril: tx("E-posta özeti"), oyunlar: tx("Oyunlar"), oyun: tx("Oyunlar") };
+  sozler: tx("Arkeoloji sözleri"), pdfler: tx("PDF arşivim"), yasal: tx("Koşullar ve KVKK"), yonetim: tx("Yönetim paneli"), takip: tx("Takip ettiklerim"), profilim: tx("Araştırmacı profilim"), ayril: tx("E-posta özeti"), oyunlar: tx("Oyunlar"), oyun: tx("Oyunlar") };
 const ALT_SAYFA = { giris: null, favoriler: "kitaplik", notlar: "kitaplik", kaynakca: "kitaplik", konu: "kitaplik", durum: null, k: null, ara: "akis",
   sozler: "kitaplik", pdfler: "kitaplik", yasal: null, yonetim: null, takip: null, ayarlar: null, ayril: null, oyunlar: null, oyun: null };
 let sonSekme = "bugun";
@@ -1665,6 +1665,7 @@ function rota(kaydirmayiKoru) {
   else if (ad === "sozler") sayfaSozler();
   else if (ad === "pdfler") sayfaPdfler();
   else if (ad === "yasal") sayfaYasal();
+  else if (ad === "profilim") { if (typeof sayfaArastirmaci === "function") sayfaArastirmaci(); else location.replace("#bugun"); }
   else if (ad === "takip") { if (typeof sayfaTakip === "function") sayfaTakip(); else location.replace("#kitaplik"); }
   else if (ad === "yonetim") { if (typeof sayfaYonetim === "function") sayfaYonetim(); else location.replace("#ayarlar"); }
   else if (ad === "k") sayfaAyrinti(arg);

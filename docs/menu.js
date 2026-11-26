@@ -11,6 +11,7 @@ function cekmeceAc() {
     <nav class="cekmece-liste">
       ${satir("#oyunlar", tx("Oyunlar"), tx("Yeni"))}
       ${satir("#ozel/kazi", tx("Kazı duyuruları"))}
+      ${satir("#profilim", tx("Araştırmacı profilim"), typeof arastirmaciAl === "function" && arastirmaciAl() ? "🎓" : "")}
       ${satir("#takip", tx("Takip ettiklerim"), takipYeni ? tx("{n} yeni", { n: takipYeni }) : String((D.takip || []).length))}
       ${satir("#favoriler", tx("Favoriler"), D.fav.length)}
       ${satir("#notlar", tx("Notlu kayıtlar"), Object.keys(D.notlar).length)}

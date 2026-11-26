@@ -973,3 +973,15 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .konu-cipler { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .konu-cipler .cip[aria-pressed="true"]::before { content: "✓ "; }
 .konu-sayac { text-align: center; color: var(--soluk); font-size: 13px; margin: 10px 0 0; }
+/* Araştırmacı profilim */
+.arastirmaci h2 { margin: 0; font-size: 1.3rem; }
+.ar-ust { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin: 16px 16px 4px; }
+.ar-ust .aciklama { margin: 2px 0 0; }
+.ar-tanit { text-align: center; margin: 18px 16px 4px; }
+.ar-not { margin: 4px 16px 8px; font-size: 12.5px; }
+.ar-liste { list-style: none; margin: 8px 16px; padding: 0; display: grid; gap: 8px; }
+.ar-liste li { padding: 10px 12px; border: 1px solid var(--cizgi); border-radius: 12px; background: var(--kagit-2); display: flex; flex-direction: column; gap: 3px; }
+.ar-liste small { color: var(--soluk); font-size: 12.5px; } .ar-liste strong { color: var(--murekkep); }
+.ar-liste a { color: inherit; } .ar-baglanti { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; } .ar-baglanti a { color: var(--okr); font-weight: 600; }
+.ar-sec { display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.ar-dis { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 16px; }
