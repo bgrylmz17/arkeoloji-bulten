@@ -963,3 +963,6 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 }
 :root[data-kontrast="yuksek"] :focus-visible { outline: 3px solid var(--murekkep); outline-offset: 2px; }
 :root[data-kontrast="yuksek"] .kutu, :root[data-kontrast="yuksek"] .kz-alan, :root[data-kontrast="yuksek"] .kz-aletler button { border-width: 2px; }
+.kontrast-onizleme { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 12px; margin: 10px 0; border: 1px solid var(--cizgi); border-radius: 12px; background: var(--kagit); }
+.kontrast-onizleme small { color: var(--soluk); } .kontrast-onizleme span { align-self: flex-start; margin-top: 6px; padding: 3px 8px; border-radius: 8px; background: var(--okr-zemin); color: var(--okr); font-weight: 700; font-size: 12.5px; }
+.kontrast-satir { border: 1px solid var(--cizgi); border-radius: 12px; padding: 8px 14px; font-weight: 600; }

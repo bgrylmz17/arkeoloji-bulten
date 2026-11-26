@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.30.0";
+const SURUM = "1.30.1";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -1283,6 +1283,25 @@ document.addEventListener("click", async e => {
   if (e.target.id === "ipucu-kapat") { e.preventDefault(); D.kurulumIpucu = false; kaydet(); rota(); }
   if (e.target.id === "kur" && kurulumOlayi) { kurulumOlayi.prompt(); await kurulumOlayi.userChoice; kurulumOlayi = null; rota(); }
 });
+/* Açılışta bir kez (1.30, eski kullanıcılara da): yüksek kontrastı canlı önizlemeyle sorar. Native: KontrastSorusu.tsx */
+function kontrastSorusu() {
+  return new Promise(tamam => {
+    if (D.kontrastSoruldu) return tamam();
+    const k = document.createElement("div");
+    k.className = "onay-kapi"; k.setAttribute("role", "dialog"); k.setAttribute("aria-modal", "true"); k.setAttribute("aria-labelledby", "kontrast-baslik");
+    k.innerHTML = `<div class="onay-kutu tanitim-kutu kontrast-kutu">
+      <div class="nasil-ikon" aria-hidden="true">👁️</div>
+      <h2 id="kontrast-baslik">${tx("Görünüm rahat mı?")}</h2>
+      <p style="text-align:center;min-height:0">${tx("Renkleri ayırt etmekte ya da soluk yazıları okumakta zorlanıyorsan yüksek kontrastı aç. Değişikliği hemen görürsün; Ayarlar’dan istediğin an değiştirebilirsin.")}</p>
+      <div class="kontrast-onizleme"><b>${tx("Göbeklitepe’de yeni dikilitaş")}</b><small>${tx("Haber · 2 saat önce")}</small><span>${tx("Önizleme")}</span></div>
+      <label class="satir kontrast-satir">${tx("Yüksek kontrast")}<input type="checkbox" class="anahtar" id="kontrast-ilk" ${D.kontrast ? "checked" : ""}></label>
+      <p style="margin:12px 0 0"><button class="buyuk-dugme" id="kontrast-tamam">${tx("Tamam")}</button></p></div>`;
+    document.body.appendChild(k);
+    k.querySelector("#kontrast-ilk").onchange = e => { D.kontrast = e.target.checked; kaydet(); temaUygula(); };
+    k.querySelector("#kontrast-tamam").onclick = () => { D.kontrastSoruldu = true; kaydet(); k.remove(); tamam(); };
+    k.querySelector("#kontrast-tamam").focus();
+  });
+}
 /* İlk açılışta bir kez: "Uygulama olarak kur" penceresi (Android/Chrome'da doğrudan kurar, iPhone'da adımları gösterir). */
 function kurulumPenceresi() {
   return new Promise(tamam => {
@@ -1701,6 +1720,7 @@ window.acilisBitti = new Promise(r => { window.acilisBittiCoz = r; });   // aç�
   if (!GOMULU && typeof tanitimGoster === "function" && (D.tanitimGoruldu || 0) < TANITIM_SURUM) {
     await tanitimGoster(); D.tanitimGoruldu = TANITIM_SURUM; kaydet();
   }
+  if (!GOMULU) await kontrastSorusu();
   if (!GOMULU) await kurulumPenceresi();
   if (window.GUNLUK && !GOMULU) await GUNLUK.acilis({ baslik: tx("Günün Ören Yeri"), dugme: tx("Bugüne başla") }, D.gunlukGun, g => { D.gunlukGun = g; kaydet(); });
   window.acilisBittiCoz();

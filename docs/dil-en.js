@@ -914,5 +914,11 @@ const EN = {
  "Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücrede nokta varsa yakında değerli bir buluntu var: kırmızı 3 nokta hemen yanında, mavi 2 nokta iki kare ötede.": "Tap the soil: each tap digs one layer. Finds lie at different depths; if an empty square shows dots, a valuable find is close: red 3 dots right next to it, blue 2 dots two squares away.",
  "Yüksek kontrast": "High contrast",
  "Yüksek kontrast açık": "High contrast on",
- "Yüksek kontrast kapalı": "High contrast off"
+ "Yüksek kontrast kapalı": "High contrast off",
+ "Görünüm rahat mı?": "Is the display comfortable?",
+ "Renkleri ayırt etmekte ya da soluk yazıları okumakta zorlanıyorsan yüksek kontrastı aç. Değişikliği hemen görürsün; Ayarlar’dan istediğin an değiştirebilirsin.": "If you find colours hard to tell apart or faint text hard to read, turn on high contrast. You'll see the change right away, and you can switch it any time in Settings.",
+ "Göbeklitepe’de yeni dikilitaş": "New pillar at Göbeklitepe",
+ "Haber · 2 saat önce": "News · 2 hours ago",
+ "Önizleme": "Preview",
+ "Tamam": "OK"
 };
