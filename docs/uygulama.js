@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.29.1";
+const SURUM = "1.30.0";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -170,6 +170,7 @@ if (GOMULU) {
   const q = new URLSearchParams(location.search);
   if (q.get("palet") && /^[a-z]+$/.test(q.get("palet"))) D.palet = q.get("palet");
   if (["oto", "acik", "koyu"].includes(q.get("tema"))) D.tema = q.get("tema");
+  if (q.has("kontrast")) D.kontrast = q.get("kontrast") === "1";
   D.dil = DIL; D.temaSecildi = true; D.girisSoruldu = true; D.kurulumSoruldu = true; D.ozetDavet = true;
   if (!location.hash) history.replaceState(null, "", "#oyunlar");
 }
@@ -282,6 +283,7 @@ function rozetGuncelle() {
 function temaUygula() {
   const kok = document.documentElement;
   if (D.tema === "oto") kok.removeAttribute("data-tema"); else kok.dataset.tema = D.tema;
+  if (D.kontrast) kok.dataset.kontrast = "yuksek"; else kok.removeAttribute("data-kontrast");
   if (!D.palet || D.palet === "gobeklitepe") kok.removeAttribute("data-palet"); else kok.dataset.palet = D.palet;
   kok.style.setProperty("--yazi-olcek", D.yazi);
   const koyu = D.tema === "koyu" || (D.tema === "oto" && matchMedia("(prefers-color-scheme: dark)").matches);
@@ -1317,6 +1319,7 @@ function sayfaAyarlar() {
     <div class="grup"><h3>${tx("Görünüm")}</h3><div class="kutu">
       <div class="satir">Dil / Language${dilSeciciHtml()}</div>
       <label class="satir">${tx("Tema")}<select id="tema"><option value="oto">${tx("Telefona uy")}</option><option value="acik">${dilSec("Açık", "Light")}</option><option value="koyu">${tx("Koyu")}</option></select></label>
+      <label class="satir">${tx("Yüksek kontrast")}<input type="checkbox" class="anahtar" id="kontrast" ${D.kontrast ? "checked" : ""}></label>
       <label class="satir">${tx("Tema")} · ${tx("ören yeri")}<select id="palet">${TEMALAR.map(t => `<option value="${t.id}">${esc(temaAdi(t))}</option>`).join("")}</select></label>
       <label class="satir">${tx("Arka plan")}<select id="zemin"><option value="siluet">${tx("Ören yeri çizimi")}</option><option value="milimetrik">${tx("Milimetrik kâğıt")}</option><option value="sade">${tx("Sade")}</option></select></label>
       <label class="satir">${tx("Menü")}<select id="menu-konum"><option value="sol">${tx("Soldan açılsın")}</option><option value="ust">${tx("Üstten insin")}</option></select></label>
@@ -1368,6 +1371,7 @@ function sayfaAyarlar() {
   $("#hep-turkce").onchange = e => { D.hepTurkce = e.target.checked; kaydet(); bildir(D.hepTurkce ? tx("Yabancı sayfalar Türkçe açılacak") : tx("Sayfalar özgün dilinde açılacak")); };
   dilSeciciBagla($("#sayfa"));
   sec("tema", D.tema, v => D.tema = v);
+  $("#kontrast").onchange = e => { D.kontrast = e.target.checked; kaydet(); temaUygula(); bildir(D.kontrast ? tx("Yüksek kontrast açık") : tx("Yüksek kontrast kapalı")); };
   sec("palet", D.palet, v => D.palet = v);
   sec("yazi", D.yazi, v => D.yazi = Number(v));
   if ($("#ses-hiz")) {

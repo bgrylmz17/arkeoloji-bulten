@@ -3,7 +3,7 @@
  * Buluntular farklı derinliklerde: sık buluntular çoğu 1–2 vuruşta, değerliler 2–3 vuruşta çıkar. Her kazıda 32 vuruş; günde 5 kazı izni.
  * Alanın bütün değerli buluntuları ve 14 sık buluntu gizlidir; çıkan buluntu tanıtılır, Buluntu Defteri'ne yazılır.
  * Her alanın kendi müziği var (WebAudio ile çalınan özgün kısa döngüler; kz-muzik).
- * İpucu: boş çıkan hücre, yakında değerli buluntu varsa "sıcak" görünür (1 hücre: kızıl, 2 hücre: amber).
+ * İpucu: boş çıkan hücre, yakında değerli buluntu varsa noktalı görünür (1 hücre: kırmızı 3 nokta, 2 hücre: mavi 2 nokta).
  * Puan: buluntu puanları + hepsi bulunursa kalan vuruş × 5. Günlük toplam skor tablosuna gider (oyunlar.js › skorGonder).
  * Piksel çizimler 12×12 metin haritası; harf → renk. Hepsi özgün, basit çizimler. */
 
@@ -183,6 +183,14 @@ function spriteCiz(ctx, ad, x, y, olcek = 1, golge = false, renk = null) {
   }));
 }
 
+/* İpucu noktaları: hemen yanında kırmızı 3 nokta, 2 kare ötede mavi 2 nokta (3 kare: 1 nokta). Beyaz kenar: toprakta seçilsin;
+ * renk + sayı + biçim: kırmızı-yeşil renk körlüğünde de ayırt edilir. */
+const IPUCU_RENK = { 1: "#c62828", 2: "#1565c0", 3: "#1565c0" };
+function ipucuNokta(ctx, x, y, d) {
+  const yerler = [[4, 5], [9, 8], [6, 11]].slice(0, d === 1 ? 3 : d === 2 ? 2 : 1);
+  ctx.fillStyle = "#ffffff"; for (const [a, b] of yerler) ctx.fillRect(x + a - 1, y + b - 1, 4, 4);
+  ctx.fillStyle = IPUCU_RENK[d] || IPUCU_RENK[2]; for (const [a, b] of yerler) ctx.fillRect(x + a, y + b, 2, 2);
+}
 /* Kırılan buluntunun üstüne çatlak (12×12 ızgarada) */
 function kirikCiz(ctx, x, y, olcek = 1) {
   ctx.fillStyle = "rgba(35,22,14,.9)";
@@ -808,7 +816,7 @@ function kzOyunCiz() {
       <span class="kz-elek-ad">🪣 ${tx("Elek")}</span><span class="kz-kova"><i></i><i></i><i></i></span>
       <span class="kz-elek-durum"><b>0</b> ${tx("eleme hazır")}</span><small>${tx("3 kova = 1 eleme · 1 vuruş")}</small></button>
     <div class="kz-cerceve"><canvas id="kz-tuval" width="${KZ_SUTUN * KZ_HUCRE}" height="${KZ_SAHNE + KZ_SATIR * KZ_HUCRE}" aria-label="${tx("Kazı alanı")}"></canvas></div>
-    <p class="aciklama kz-ipucu">${tx("Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücre kızıl ya da amber parlıyorsa yakında değerli bir buluntu var.")} ${tx("Seramik, cam, tablet ve fresk kırılgandır: kazmayla çıkarırsan kırılabilir, fırça hiç kırmaz.")} ${tx("Değerli buluntuyu sağlam çıkarırsan +3 vuruş.")}</p>
+    <p class="aciklama kz-ipucu">${tx("Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücrede nokta varsa yakında değerli bir buluntu var: kırmızı 3 nokta hemen yanında, mavi 2 nokta iki kare ötede.")} ${tx("Seramik, cam, tablet ve fresk kırılgandır: kazmayla çıkarırsan kırılabilir, fırça hiç kırmaz.")} ${tx("Değerli buluntuyu sağlam çıkarırsan +3 vuruş.")}</p>
     <p class="kz-bulunanlar" id="kz-bulunanlar"></p>
     <p class="kz-alt-dugmeler"><button class="ikincil-dugme" id="kz-nasil-oyun">❔ ${tx("Nasıl oynanır?")}</button>
       <button class="ikincil-dugme" id="kz-bitir">${tx("Kazıyı bitir")}</button></p></div>`;
@@ -863,7 +871,7 @@ function kzCiz() {
       if (h.buluntu) { if (h.nadir) { ctx.fillStyle = "#e3b341"; ctx.fillRect(x + 1, y + 1, 14, 14); ctx.fillStyle = t[3]; ctx.fillRect(x + 2, y + 2, 12, 12); } spriteCiz(ctx, h.buluntu.id, x + 2, y + 2, 1); if (h.kirik && !h.restore) kirikCiz(ctx, x + 2, y + 2, 1); }
       else {
         const d = kzYakinlik(i);
-        if (d <= KZ.menzil) { ctx.fillStyle = d === 1 ? "#d2452b" : "#e0a12c"; for (const [a, b] of [[5, 6], [9, 9], [7, 11]].slice(0, d === 1 ? 3 : d === 2 ? 2 : 1)) ctx.fillRect(x + a, y + b, 2, 2); }
+        if (d <= KZ.menzil) ipucuNokta(ctx, x, y, d);
       }
     }
     if (h.derinlik > 0 && KZ.camur && KZ.camur.has(Math.floor(i / KZ_SUTUN))) {
@@ -1063,7 +1071,7 @@ function kzTanimla(b, devam0) {
     ctx.fillStyle = KZ.alan.toprak[3]; ctx.fillRect(0, 0, 144, 144); spriteCiz(ctx, b.id, 0, 0, 12);
     lv.querySelectorAll("[data-t]").forEach(d => d.onclick = () => {
       const dogru = d.dataset.t === b.id;
-      lv.querySelectorAll("[data-t]").forEach(x => { x.disabled = true; if (x.dataset.t === b.id) x.classList.add("dogru"); else if (x === d) x.classList.add("yanlis"); });
+      lv.querySelectorAll("[data-t]").forEach(x => { x.disabled = true; if (x.dataset.t === b.id) { x.classList.add("dogru"); x.textContent = "✓ " + x.textContent; } else if (x === d) { x.classList.add("yanlis"); x.textContent = "✗ " + x.textContent; } });
       if (dogru && KZ) { const ek = Math.round((b.tam || b.kazanilan || b.puan) * KZ_TANIM_ORAN); KZ.puan += ek; b.kazanilan = (b.kazanilan || 0) + ek; KZ.tanim = (KZ.tanim || 0) + 1; kzCiz(); oyunSesi("yerinde", 3); }
       else oyunSesi("sil");
       setTimeout(devam, dogru ? 700 : 1300);

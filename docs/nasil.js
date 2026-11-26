@@ -17,7 +17,7 @@ function nasilHucre(cv, derinlik, sprite, nokta) {
   if (derinlik === 0) { ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(0, 0, 16, 2); ctx.fillRect(0, 0, 2, 16); }
   if (derinlik > 0 && derinlik < 3) { ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(0, 0, 16, 1); ctx.fillRect(0, 0, 1, 16); }
   if (sprite) spriteCiz(ctx, sprite, 2, 2, 1);
-  if (nokta) { ctx.fillStyle = nokta === 1 ? "#d2452b" : "#e0a12c"; for (const [a, b] of [[5, 6], [9, 9], [7, 11]].slice(0, nokta === 1 ? 3 : 2)) ctx.fillRect(a, b, 2, 2); }
+  if (nokta && typeof ipucuNokta === "function") ipucuNokta(ctx, 0, 0, nokta);
 }
 
 function nasilGoster(oyun) {
@@ -31,8 +31,8 @@ function nasilGoster(oyun) {
           <div class="nasil-kutu"><span>📅 ${tx("Günde 5 kazı izni")}</span><span>⛏ ${tx("Her kazıda 32 vuruş")}</span></div>` },
       { ikon: "⛏", baslik: tx("Kazmak"), metin: tx("Açmadaki bir kareye dokun: arkeoloğun oraya yürür ve bir katman kazar. Her karede 3 katman var; buluntu hangi katmanda olduğunu bilmeden çıkar."),
         ek: `<div class="nasil-seri">${f(h(3), tx("Üst toprak"))}<i>→</i>${f(h(2), tx("1. vuruş"))}<i>→</i>${f(h(1), tx("2. vuruş"))}<i>→</i>${f(h(0, "tdikili"), tx("Buluntu!"))}</div>` },
-      { ikon: "🔥", baslik: tx("İpuçlarını oku"), metin: tx("Boş çıkan karede renkli noktalar varsa yakında değerli bir buluntu var. Kızıl: hemen yanında. Amber: iki kare ötede. Noktaları izle, vuruşunu boşa harcama."),
-        ek: `<div class="nasil-seri">${f(h(0, "", 1), tx("Kızıl: hemen yanında"))}${f(h(0, "", 2), tx("Amber: 2 kare ötede"))}${f(h(0), tx("Boş: yakında yok"))}</div>` },
+      { ikon: "🔥", baslik: tx("İpuçlarını oku"), metin: tx("Boş çıkan karede nokta varsa yakında değerli bir buluntu var. Kırmızı 3 nokta: hemen yanında. Mavi 2 nokta: iki kare ötede. Noktaları izle, vuruşunu boşa harcama."),
+        ek: `<div class="nasil-seri">${f(h(0, "", 1), tx("Kırmızı, 3 nokta: hemen yanında"))}${f(h(0, "", 2), tx("Mavi, 2 nokta: 2 kare ötede"))}${f(h(0), tx("Boş: yakında yok"))}</div>` },
       { ikon: "🧰", baslik: tx("Aletini seç"), metin: tx("Seramik, cam, tablet ve fresk kırılgandır. Hızlı mı kazacaksın, dikkatli mi? Karar senin."),
         ek: `<div class="nasil-alet">
           <div>${h(0, "alet_kazma")}<b>${tx("Kazma")}</b><span>${tx("2 katman")} · 1 ${tx("vuruş")}</span><em class="risk">${tx("%50 kırar")}</em></div>

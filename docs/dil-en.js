@@ -907,5 +907,12 @@ const EN = {
  "eleme hazır": "ready to sieve",
  "vuruş": "strike",
  "Önce ne olduğunu tahmin et: doğru bilirsen +%25 puan. Sağlam çıkardıysan +3 vuruş kazanırsın. Kırıldıysa puanın %30'u gelir; parçaları birleştirip restore edersen %70'e çıkar.": "First guess what it is: get it right for +25% points. Uncovered intact, you win +3 strikes. If it broke you get 30% of its points; restore it by fitting the pieces back to raise that to 70%.",
- "İpuçlarını oku": "Read the hints"
+ "İpuçlarını oku": "Read the hints",
+ "Boş çıkan karede nokta varsa yakında değerli bir buluntu var. Kırmızı 3 nokta: hemen yanında. Mavi 2 nokta: iki kare ötede. Noktaları izle, vuruşunu boşa harcama.": "If an empty square shows dots, a valuable find is close. Red, 3 dots: right next to it. Blue, 2 dots: two squares away. Follow the dots and don't waste strikes.",
+ "Kırmızı, 3 nokta: hemen yanında": "Red, 3 dots: right next to it",
+ "Mavi, 2 nokta: 2 kare ötede": "Blue, 2 dots: 2 squares away",
+ "Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücrede nokta varsa yakında değerli bir buluntu var: kırmızı 3 nokta hemen yanında, mavi 2 nokta iki kare ötede.": "Tap the soil: each tap digs one layer. Finds lie at different depths; if an empty square shows dots, a valuable find is close: red 3 dots right next to it, blue 2 dots two squares away.",
+ "Yüksek kontrast": "High contrast",
+ "Yüksek kontrast açık": "High contrast on",
+ "Yüksek kontrast kapalı": "High contrast off"
 };
