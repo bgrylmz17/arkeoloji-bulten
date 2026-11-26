@@ -9,7 +9,7 @@ DINAMIK = ["Haber", "Makale", "Tez", "Rapor", "Kitap",               # turAdi(r.
            "Son 48 saatte arkeoloji gündeminde {liste} öne çıktı.", "Dün arkeoloji gündeminde {liste} öne çıktı.",
            "Bugün", "Yayınlar", "Kitaplık", "Ayarlar", "Geri", "Ara", "Bölümler"]  # statikCevir
 anahtar = set(DINAMIK)
-for f in ("uygulama.js", "hesap.js", "topluluk.js", "takip.js", "temalar.js", "tanitim.js", "menu.js"):
+for f in ("uygulama.js", "hesap.js", "topluluk.js", "takip.js", "temalar.js", "tanitim.js", "menu.js", "kazi.js", "bildirimler.js", "oyunlar.js", "kazi-oyun.js", "sirala.js", "nasil.js"):
     for m in re.finditer(r'(?<![\w.])tx\(("(?:\\.|[^"\\])*")', (KOK / f).read_text(encoding="utf-8")):
         anahtar.add(json.loads(m.group(1)))
 en_metin = (KOK / "dil-en.js").read_text(encoding="utf-8")

@@ -1,12 +1,12 @@
 /* Arkix — servis çalışanı
  * Uygulama dosyaları önbellekten (internetsiz açılır), bülten verisi önce ağdan, olmazsa önbellekten.
  * Android'de kurulu uygulama için arka planda yoklayıp yeni kayıt varsa bildirim gösterir. */
-const SURUM = "bulten-1.20.1";
+const SURUM = "bulten-1.20.2";
 const KABUK = ["./", "index.html", "stil.css", "dil.js", "dil-en.js", "uygulama.js", "hesap.js", "firebase-ayar.js", "reklam.js", "desen.js", "gunluk.js", "gunluk/gunluk.json", "topluluk.js", "takip.js", "temalar.js", "tanitim.js", "menu.js", "kazi.js", "bildirimler.js", "oyunlar.js", "kazi-oyun.js", "sirala.js", "nasil.js", "avatar/avatarlar.json", "manifest.webmanifest",
   "ikon/logo.svg", "ikon/ikon-192.png", "ikon/ikon-512.png", "ikon/apple-touch-icon.png", "ikon/favicon-64.png"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(SURUM).then(c => c.addAll(KABUK)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(SURUM).then(c => c.addAll(KABUK.map(d => new Request(d, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
@@ -30,7 +30,7 @@ self.addEventListener("fetch", e => {
   }
   // uygulama kabuğu: önbellek önce, arkada tazele
   e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(onb => {
-    const ag = fetch(e.request).then(y => {
+    const ag = fetch(e.request, { cache: "no-cache" }).then(y => {
       if (y.ok) { const k = y.clone(); caches.open(SURUM).then(c => c.put(e.request, k)); }
       return y;
     }).catch(() => onb);

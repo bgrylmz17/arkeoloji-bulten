@@ -56,6 +56,12 @@ def simdi() -> str:
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
 
 
+def guvenli_url(u) -> str:
+    """Yalnız http(s) bağlantısı geçer; javascript:, data: vb. düşer (kaynaktan zararlı bağlantı gelmesin)."""
+    u = str(u or "").strip()
+    return u if re.match(r"(?i)^https?://", u) else ""
+
+
 def apa_html(satir: dict) -> str:
     """APA 7 künyesi; italik kısımlar <i> ile."""
     try:
@@ -673,9 +679,9 @@ def main() -> int:
         eski_kayitlar[s["id"]] = {
             "i": s["id"], "k": s["kategori"], "s": s["kaynak"], "b": s["baslik"],
             "y": s.get("yazarlar") or "", "w": s.get("yayin_yeri") or "", "t": s.get("tarih") or "",
-            "u": s.get("gercek_url") or s.get("url") or "", "d": s.get("doi") or "",
+            "u": guvenli_url(s.get("gercek_url") or s.get("url")), "d": s.get("doi") or "",
             "o": (s.get("ozet") or "")[:900], "e": [e for e in (s.get("etiketler") or "").split(",") if e],
-            "p": s.get("pdf_url") or "", "l": s.get("dil") or "", "g": calisma,
+            "p": guvenli_url(s.get("pdf_url")), "l": s.get("dil") or "", "g": calisma,
             "bt": s.get("baslik_tr", ""), "ot": s.get("ozet_tr", ""),
             "be": s.get("baslik_en", ""), "oe": s.get("ozet_en", ""),
             "a": apa_html(s),

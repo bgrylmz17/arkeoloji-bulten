@@ -754,5 +754,15 @@ const EN = {
  "Çingene Kızı mozaiği": "Gypsy Girl mosaic",
  "Çıkan her buluntu tanıtılır ve Buluntu Defteri'ne yazılır. Alanın bütün değerli buluntularını bulursan kalan her vuruş 5 puan getirir.": "Every find is introduced and added to your Finds Register. Find all of a site's valuable finds and each remaining strike earns 5 points.",
  "Üst toprak": "Topsoil",
- "“Sırayı kontrol et”e bas: kaç buluntunun doğru yerde olduğunu görürsün. 3 deneme hakkın var.": "Press “Check the order” to see how many finds are in the right place. You have 3 tries."
+ "“Sırayı kontrol et”e bas: kaç buluntunun doğru yerde olduğunu görürsün. 3 deneme hakkın var.": "Press “Check the order” to see how many finds are in the right place. You have 3 tries.",
+ "Yönetici skorları tabloya yazılmaz.": "Admin scores are not added to the table.",
+ "Safari'nin altındaki Paylaş düğmesine dokunun": "Tap the Share button at the bottom of Safari",
+ "“Ana Ekrana Ekle”yi seçin": "Choose “Add to Home Screen”",
+ "Sağ üstteki “Ekle”ye dokunun": "Tap “Add” at the top right",
+ "Tarayıcının menüsünü açın (⋮)": "Open the browser menu (⋮)",
+ "“Uygulamayı yükle” ya da “Ana ekrana ekle”yi seçin": "Choose “Install app” or “Add to Home screen”",
+ "Arkix'i uygulama olarak kur": "Install Arkix as an app",
+ "Ana ekranınıza ekleyin: tek dokunuşla açılır, tam ekran çalışır, internet yokken de okursunuz. Mağaza gerekmez, yer kaplamaz.": "Add it to your home screen: opens with one tap, runs full screen and works offline. No store needed, takes almost no space.",
+ "Uygulamayı kur": "Install app",
+ "Anladım": "Got it"
 };

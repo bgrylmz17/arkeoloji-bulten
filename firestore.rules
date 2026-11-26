@@ -88,6 +88,52 @@ service cloud.firestore {
         && request.resource.data.tarih == request.time;
     }
 
+    // Oyun skorları: kişi başına oyun ve gün başına bir belge ({oyun}_{gun}_{uid}); herkes okur, yalnız sahibi yazar.
+    match /skorlar/{id} {
+      allow read: if true;
+      allow create, update: if girdi() && !engelli()
+        && id == request.resource.data.oyun + '_' + request.resource.data.gun + '_' + request.auth.uid
+        && request.resource.data.keys().hasOnly(['oyun', 'gun', 'oyun_gun', 'oyun_hafta', 'uid', 'ad', 'avatar', 'puan', 'ayrinti', 'tarih'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.oyun in ['kelime', 'kazi', 'sirala']
+        && request.resource.data.gun is string && request.resource.data.gun.size() == 10
+        && request.resource.data.oyun_gun == request.resource.data.oyun + '_' + request.resource.data.gun
+        && request.resource.data.puan is int && request.resource.data.puan >= 0 && request.resource.data.puan <= 5000
+        && request.resource.data.ad is string && request.resource.data.ad.size() <= 40
+        && request.resource.data.tarih == request.time;
+      allow delete: if yonetici() || ben(resource.data.uid);
+    }
+
+    // Telefona bildirim abonelikleri: belge kimliği jetonun SHA-256 özeti (tahmin edilemez). Herkes kendi aboneliğini yazar/siler;
+    // okumayı yalnız sunucu (hizmet hesabı) yapar. uid boş ya da giriş yapan kişi.
+    match /bildirim_abonelik/{id} {
+      allow read: if false;
+      allow create, update: if request.resource.data.keys().hasOnly(['token', 'platform', 'kategoriler', 'uid', 'dil', 'guncelleme'])
+        && request.resource.data.token is string && request.resource.data.token.size() > 10 && request.resource.data.token.size() <= 4096
+        && request.resource.data.platform in ['web', 'ios', 'android']
+        && request.resource.data.kategoriler is list && request.resource.data.kategoriler.size() <= 6
+        && request.resource.data.dil in ['tr', 'en']
+        && (request.resource.data.uid == '' || ben(request.resource.data.uid))
+        && request.resource.data.guncelleme == request.time;
+      allow delete: if true;
+    }
+
+    // Kazı duyuruları: giriş yapmış kullanıcı gönderir (bekliyor), yönetici onaylar; onaylılar herkese açık
+    match /kazi_duyurulari/{id} {
+      allow read: if resource.data.durum == 'onayli' || yonetici() || ben(resource.data.uid);
+      allow create: if girdi() && !engelli()
+        && request.resource.data.keys().hasOnly(['tur', 'baslik', 'kazi', 'il', 'baslangic', 'bitis', 'basvuru_son', 'metin', 'iletisim', 'uid', 'ad', 'tarih', 'durum'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.durum == 'bekliyor'
+        && request.resource.data.tur in ['sezon', 'gonullu', 'etkinlik', 'diger']
+        && request.resource.data.baslik is string && request.resource.data.baslik.size() > 0 && request.resource.data.baslik.size() <= 120
+        && request.resource.data.metin is string && request.resource.data.metin.size() > 0 && request.resource.data.metin.size() <= 2000
+        && request.resource.data.iletisim is string && request.resource.data.iletisim.size() <= 200
+        && request.resource.data.tarih == request.time;
+      allow update: if yonetici() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['durum']);
+      allow delete: if yonetici() || ben(resource.data.uid);
+    }
+
     // Uzman rozeti: herkes okur (yorum yazarken denetlenir), yalnız yönetici verir
     match /uzmanlar/{uid} {
       allow read: if true;

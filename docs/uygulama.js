@@ -5,7 +5,7 @@
  */
 "use strict";
 
-const SURUM = "1.20.1";
+const SURUM = "1.20.2";
 const DEPO_ANAHTARI = "harrix-bulten";
 const TURLER = ["Makale", "Tez", "Haber", "Rapor"];
 // Ekranda görünen adlar (dil değişince sayfa yeniden yüklenir, bu sabitler yeni dille kurulur)
@@ -211,6 +211,9 @@ async function sozleriYukle() {
 /* ---------------------------------------------------------------- yardımcılar */
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+/* Bağlantı adresi: http(s), mailto ve şemasız (uygulama içi) adresler geçer; javascript:, data: vb. "#" olur. */
+const guvenliUrl = s => { s = String(s ?? "").trim(); return /^[a-z][a-z0-9+.-]*:/i.test(s) && !/^(https?|mailto):/i.test(s) ? "#" : s; };
+const escUrl = s => esc(guvenliUrl(s));
 const katla = s => String(s || "").toLocaleLowerCase("tr").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i");
 const titres = ms => { if (navigator.vibrate) try { navigator.vibrate(ms || 8); } catch (e) {} };
 
@@ -361,10 +364,10 @@ function sayfaBugun() {
   const sd = sonDakika();
   const ust = `
     ${window.GUNLUK ? GUNLUK.kahramanHtml({ baslik: tx("Günün Ören Yeri") }) : ""}
-    ${b && b.aktif ? `<a class="harrix-banner" ${b.url ? `href="${esc(b.url)}" target="_blank" rel="noopener"` : ""}>
+    ${b && b.aktif ? `<a class="harrix-banner" ${b.url ? `href="${escUrl(b.url)}" target="_blank" rel="noopener"` : ""}>
       <span class="banner-etiket">${esc(b.etiket || "HARRIX")}</span><span class="banner-metin"><b>${esc(b.baslik)}</b>${b.altBaslik ? `<small>${esc(b.altBaslik)}</small>` : ""}</span></a>` : ""}
     ${sd.length ? `<section class="son-dakika" aria-label="${tx("Son dakika ve öne çıkanlar")}"><h2><span class="nabiz" aria-hidden="true"></span>${tx("Son dakika ve öne çıkanlar")}</h2>
-      <div class="sd-serit">${sd.map(d => `<a class="sd-kart${d.onemli ? " onemli" : ""}" href="${esc(d.adres)}" ${d.dis ? 'target="_blank" rel="noopener"' : ""}>
+      <div class="sd-serit">${sd.map(d => `<a class="sd-kart${d.onemli ? " onemli" : ""}" href="${escUrl(d.adres)}" ${d.dis ? 'target="_blank" rel="noopener"' : ""}>
         <b>${esc(d.baslik)}</b><small>${esc(d.alt)}</small></a>`).join("")}</div></section>` : ""}
     ${VERI.guncelleme ? `<button class="katman-kart" id="anlat-ac" aria-label="${tx("Günün Katmanları")}">
       <span class="katman-simge" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
@@ -864,12 +867,12 @@ function sayfaAyrinti(id) {
       ${goster.tr && cevOzet(r) ? `<p class="ceviri-not">${tx("Makine çevirisidir; alıntı yapmadan önce özgün metne bakın.")}</p>` : ""}
       ${(() => {
         const ad = r.k === "Makale" || r.k === "Tez" ? tx("Yayını aç") : tx("Haberi aç");
-        if (!yabanci) return `<a class="buyuk-dugme" href="${esc(r.u)}" target="_blank" rel="noopener">${ad}</a>`;
+        if (!yabanci) return `<a class="buyuk-dugme" href="${escUrl(r.u)}" target="_blank" rel="noopener">${ad}</a>`;
         const tr = turkceAdres(r.u);
         return D.hepTurkce
           ? `<a class="buyuk-dugme" href="${esc(tr)}" target="_blank" rel="noopener">${ad} (${HEDEF_AD})</a>
-             <p class="cift-bag"><a href="${esc(r.u)}" target="_blank" rel="noopener">${tx("Özgün dilinde aç")}</a></p>`
-          : `<div class="iki-dugme"><a class="buyuk-dugme" href="${esc(r.u)}" target="_blank" rel="noopener">${ad}</a>
+             <p class="cift-bag"><a href="${escUrl(r.u)}" target="_blank" rel="noopener">${tx("Özgün dilinde aç")}</a></p>`
+          : `<div class="iki-dugme"><a class="buyuk-dugme" href="${escUrl(r.u)}" target="_blank" rel="noopener">${ad}</a>
              <a class="buyuk-dugme ikinci" href="${esc(tr)}" target="_blank" rel="noopener">${HEDEF === "en" ? "🌐 Open in English" : "🌐 Türkçe aç"}</a></div>`;
       })()}
       <div class="eylemler">
@@ -882,7 +885,7 @@ function sayfaAyrinti(id) {
         <button class="eylem" data-e="kaynakca" aria-pressed="${D.kaynakca.includes(r.i)}"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>${tx("Kaynakça")}</button>
         ${SES.destek ? `<button class="eylem" data-e="dinle"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6"/></svg>${tx("Dinle")}</button>` : ""}
         <button class="eylem" data-e="paylas"><svg viewBox="0 0 24 24"><path d="M12 15V3m-4 4l4-4 4 4M5 12v8h14v-8"/></svg>${tx("Paylaş")}</button>
-        ${r.p ? `<a class="eylem" href="${esc(r.p)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 4v11m-4-4l4 4 4-4M5 20h14"/></svg>PDF</a>`
+        ${r.p ? `<a class="eylem" href="${escUrl(r.p)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 4v11m-4-4l4 4 4-4M5 20h14"/></svg>PDF</a>`
           : r.d ? `<button class="eylem" data-e="acik"><svg viewBox="0 0 24 24"><path d="M12 4v11m-4-4l4 4 4-4M5 20h14"/></svg>${tx("Açık kopya ara")}</button>` : ""}
         <button class="eylem" data-e="kunye"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>${tx("APA kopyala")}</button>
         ${r.p ? `<button class="eylem" data-e="arsiv"><svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM6 8v12h12V8M10 12h4"/></svg>${tx("PDF'i arşive al")}</button>` : ""}
@@ -1266,6 +1269,34 @@ document.addEventListener("click", async e => {
   if (e.target.id === "ipucu-kapat") { e.preventDefault(); D.kurulumIpucu = false; kaydet(); rota(); }
   if (e.target.id === "kur" && kurulumOlayi) { kurulumOlayi.prompt(); await kurulumOlayi.userChoice; kurulumOlayi = null; rota(); }
 });
+/* İlk açılışta bir kez: "Uygulama olarak kur" penceresi (Android/Chrome'da doğrudan kurar, iPhone'da adımları gösterir). */
+function kurulumPenceresi() {
+  return new Promise(tamam => {
+    if (kurulu() || D.kurulumSoruldu) return tamam();
+    D.kurulumSoruldu = true; kaydet();
+    const k = document.createElement("div");
+    k.className = "onay-kapi"; k.setAttribute("role", "dialog"); k.setAttribute("aria-modal", "true"); k.setAttribute("aria-labelledby", "kurulum-baslik");
+    const bitir = () => { k.remove(); window.removeEventListener("beforeinstallprompt", ciz); tamam(); };
+    const ciz = () => {
+      const adim = iOS
+        ? `<ol class="kurulum-adim"><li>${tx("Safari'nin altındaki Paylaş düğmesine dokunun")} <b aria-hidden="true">⬆︎</b></li><li>${tx("“Ana Ekrana Ekle”yi seçin")}</li><li>${tx("Sağ üstteki “Ekle”ye dokunun")}</li></ol>`
+        : kurulumOlayi ? "" : `<ol class="kurulum-adim"><li>${tx("Tarayıcının menüsünü açın (⋮)")}</li><li>${tx("“Uygulamayı yükle” ya da “Ana ekrana ekle”yi seçin")}</li></ol>`;
+      k.innerHTML = `<div class="onay-kutu tanitim-kutu">
+        <div class="tanitim-ikon"><img src="ikon/ikon-192.png" alt="" width="96" height="96"></div>
+        <h2 id="kurulum-baslik">${tx("Arkix'i uygulama olarak kur")}</h2>
+        <p>${tx("Ana ekranınıza ekleyin: tek dokunuşla açılır, tam ekran çalışır, internet yokken de okursunuz. Mağaza gerekmez, yer kaplamaz.")}</p>
+        ${adim}
+        <div class="tanitim-dugmeler"><button class="ikincil-dugme" id="kurulum-sonra">${tx("Şimdi değil")}</button>
+          ${kurulumOlayi ? `<button class="buyuk-dugme" id="kurulum-kur">${tx("Uygulamayı kur")}</button>` : `<button class="buyuk-dugme" id="kurulum-tamam">${tx("Anladım")}</button>`}</div></div>`;
+      k.querySelector("#kurulum-sonra").onclick = bitir;
+      const kur = k.querySelector("#kurulum-kur");
+      if (kur) kur.onclick = async () => { const o = kurulumOlayi; kurulumOlayi = null; bitir(); try { o.prompt(); await o.userChoice; } catch (e) {} };
+      const t = k.querySelector("#kurulum-tamam"); if (t) t.onclick = bitir;
+    };
+    window.addEventListener("beforeinstallprompt", ciz);   // olay pencere açıkken gelirse "kur" düğmesi belirsin
+    ciz(); document.body.appendChild(k);
+  });
+}
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); kurulumOlayi = e; if (location.hash === "#bugun" || !location.hash) rota(true); });
 
 function sayfaAyarlar() {
@@ -1421,7 +1452,7 @@ async function pdfIndirArsivle(r) {
     levhaAc(`<h3>${tx("PDF doğrudan alınamadı")}</h3>
       <p class="aciklama">${tx("Yayıncının sitesi PDF'in uygulama içinden indirilmesine izin vermiyor. PDF'i açıp telefona indirin, sonra buradan seçerek arşive ekleyin.")}</p>
       <p style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
-        <a class="buyuk-dugme" href="${esc(r.p)}" target="_blank" rel="noopener">${tx("PDF'i aç")}</a>
+        <a class="buyuk-dugme" href="${escUrl(r.p)}" target="_blank" rel="noopener">${tx("PDF'i aç")}</a>
         <label class="buyuk-dugme ikinci" style="cursor:pointer">${tx("İndirdiğim PDF'i seç")}<input type="file" accept="application/pdf,.pdf" hidden id="arsiv-sec"></label></p>`, lv => {
       lv.querySelector("#arsiv-sec").onchange = async e => { if (await pdfEkleDosya(e.target.files[0], r)) { levhaKapat(); bildir(tx("PDF arşivinize eklendi")); } };
     });
@@ -1654,6 +1685,7 @@ window.acilisBitti = new Promise(r => { window.acilisBittiCoz = r; });   // aç�
   if (typeof tanitimGoster === "function" && (D.tanitimGoruldu || 0) < TANITIM_SURUM) {
     await tanitimGoster(); D.tanitimGoruldu = TANITIM_SURUM; kaydet();
   }
+  await kurulumPenceresi();
   if (window.GUNLUK) await GUNLUK.acilis({ baslik: tx("Günün Ören Yeri"), dugme: tx("Bugüne başla") }, D.gunlukGun, g => { D.gunlukGun = g; kaydet(); });
   window.acilisBittiCoz();
   if (typeof epostaSorusuKontrol === "function") setTimeout(epostaSorusuKontrol, 1200);

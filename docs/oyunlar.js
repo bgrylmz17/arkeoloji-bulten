@@ -20,8 +20,9 @@ function oyunHaftasi(d = new Date()) {   // ISO hafta: 2026-W48
 const OYUN_ADI = { kelime: "Kelime Kazısı", kazi: "Kazı Başı", sirala: "Katman Sırala" };
 
 async function skorGonder(oyun, puan, ayrinti) {
-  if (!H.kullanici || H.yok) return false;
   if (typeof oyunYoneticisi === "function" && oyunYoneticisi()) return false;   // yönetici sınırsız oynar; tablo adil kalsın
+  const bekle = () => { D.bekleyenSkor = D.bekleyenSkor || {}; D.bekleyenSkor[oyun] = { gun: oyunGunu(), puan, ayrinti }; kaydet(); return false; };
+  if (!H.kullanici || H.yok) return bekle();   // girişten sonra skorBekleyenleriGonder yazar
   try {
     const { fs } = await firebaseYukle();
     const gun = oyunGunu(), uid = H.kullanici.uid;
@@ -29,13 +30,22 @@ async function skorGonder(oyun, puan, ayrinti) {
       oyun, gun, oyun_gun: `${oyun}_${gun}`, oyun_hafta: `${oyun}_${oyunHaftasi()}`, uid,
       ad: (gorunenAd() || tx("Arkeolog")).slice(0, 40), avatar: (profilAl().avatar || "").slice(0, 40),
       puan: Math.max(0, Math.min(5000, Math.round(puan))), ayrinti: String(ayrinti || "").slice(0, 80), tarih: fs.serverTimestamp() });
+    if (D.bekleyenSkor && D.bekleyenSkor[oyun]) { delete D.bekleyenSkor[oyun]; kaydet(); }
     return true;
-  } catch (e) { return false; }
+  } catch (e) { return bekle(); }
+}
+/* Giriş yapmadan oynanan ya da gönderilemeyen bugünkü skor: giriş yapılınca tabloya yazılır. Eski günlerinki atılır. */
+async function skorBekleyenleriGonder(oyun) {
+  const b = D.bekleyenSkor && D.bekleyenSkor[oyun];
+  if (!b || !H.kullanici || H.yok) return false;
+  if (b.gun !== oyunGunu()) { delete D.bekleyenSkor[oyun]; kaydet(); return false; }
+  return skorGonder(oyun, b.puan, b.ayrinti);
 }
 
 async function skorTablosuCiz(kap, oyun, kapsam = "gun") {
   kap.innerHTML = `<p class="aciklama">${tx("Yükleniyor…")}</p>`;
   let satirlar = [];
+  try { await skorBekleyenleriGonder(oyun); } catch (e) {}
   try {
     const { fs } = await firebaseYukle();
     const alan = kapsam === "gun" ? "oyun_gun" : "oyun_hafta";
@@ -56,6 +66,7 @@ async function skorTablosuCiz(kap, oyun, kapsam = "gun") {
     ? `<ol class="skor-liste">${goster.map(satir).join("")}${benSira >= 20 ? `<li class="ayrac">…</li>${satir(satirlar[benSira], benSira)}` : ""}</ol>`
     : `<p class="aciklama">${tx("Henüz skor yok. İlk sen ol!")}</p>`;
   if (!H.kullanici) kap.insertAdjacentHTML("beforeend", `<p class="aciklama"><a href="#giris">${tx("Giriş yap")}</a> · ${tx("skorların tabloya yazılsın")}</p>`);
+  else if (typeof oyunYoneticisi === "function" && oyunYoneticisi()) kap.insertAdjacentHTML("beforeend", `<p class="aciklama">${tx("Yönetici skorları tabloya yazılmaz.")}</p>`);
 }
 function skorBolumuHtml(oyun) {
   return `<section class="oyun-skor" data-oyun="${oyun}"><div class="oyun-skor-ust"><h3>${tx("Skor tablosu")}</h3>
@@ -243,12 +254,12 @@ function sayfaKelime() {
         <div>${"ERTYUIOPĞÜ".split("").map(tus).join("")}</div>
         <div>${"ASDFGHJKLŞİ".split("").map(tus).join("")}</div>
         <div><button class="kk-tus genis" data-h="SIL" aria-label="${tx("Sil")}">⌫</button>${"ZCVBNMÖÇ".split("").map(tus).join("")}<button class="kk-tus genis" data-h="TAMAM">${tx("Dene")}</button></div></div>`}
-    ${yoneticiSifirlaHtml("kelime")}${skorBolumuHtml("kelime")}</div>`;
+    ${typeof yoneticiSifirlaHtml === "function" ? yoneticiSifirlaHtml("kelime") : ""}${skorBolumuHtml("kelime")}</div>`;
   $(".oyun-skor h3").textContent = tx("Kelime Kazısı · Skor tablosu");
   skorBolumuBagla($("#sayfa"));
   $("#kk-nasil").onclick = kelimeNasil;
-  yoneticiSifirlaBagla();
-  oyunNasilIlk("kelime");
+  if (typeof yoneticiSifirlaBagla === "function") yoneticiSifirlaBagla();
+  if (typeof oyunNasilIlk === "function") oyunNasilIlk("kelime");
   oyunSesBagla();
   const ip = $("#kk-ipucu");
   if (ip) ip.onclick = () => { kd.ipucu = true; kaydet(); oyunSesi("ipucu"); const y = window.scrollY; sayfaKelime(); window.scrollTo(0, y); };
@@ -289,7 +300,7 @@ function kelimePaylas() {
   if (navigator.share) navigator.share({ text: metin }).catch(() => {});
   else navigator.clipboard.writeText(metin).then(() => bildir(tx("Panoya kopyalandı")), () => {});
 }
-function kelimeNasil() { nasilGoster("kelime"); }
+function kelimeNasil() { if (typeof nasilGoster === "function") nasilGoster("kelime"); }
 document.addEventListener("keydown", e => {
   if (location.hash !== "#oyun/kelime" || e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
   if (!$("#levha").hidden) return;

@@ -54,13 +54,13 @@ function sayfaSirala() {
         <p style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="buyuk-dugme" id="sr-paylas">${tx("Sonucu paylaş")}</button><a class="ikincil-dugme" href="#oyunlar">${tx("Oyunlar")}</a></p></div>`
       : `<p class="sirala-durum">${son ? tx("{n}/5 doğru yerde · kalan deneme: {k}", { n: dogruSayi(son), k: 3 - sd.denemeler.length }) : tx("3 deneme hakkın var. Okla yukarı-aşağı taşı.")}</p>
         <p style="text-align:center"><button class="buyuk-dugme" id="sr-kontrol" style="max-width:320px;margin:0 auto">${tx("Sırayı kontrol et")}</button></p>`}
-    ${yoneticiSifirlaHtml("sirala")}${skorBolumuHtml("sirala")}</div>`;
+    ${typeof yoneticiSifirlaHtml === "function" ? yoneticiSifirlaHtml("sirala") : ""}${skorBolumuHtml("sirala")}</div>`;
   $(".oyun-skor h3").textContent = tx("Katman Sırala · Skor tablosu");
   skorBolumuBagla($("#sayfa"));
   oyunSesBagla();
-  $("#sr-nasil").onclick = () => nasilGoster("sirala");
-  yoneticiSifirlaBagla();
-  oyunNasilIlk("sirala");
+  $("#sr-nasil").onclick = () => typeof nasilGoster === "function" && nasilGoster("sirala");
+  if (typeof yoneticiSifirlaBagla === "function") yoneticiSifirlaBagla();
+  if (typeof oyunNasilIlk === "function") oyunNasilIlk("sirala");
   $$(".sirala-kart").forEach(li => {
     spriteCiz(li.querySelector("canvas").getContext("2d"), li.dataset.id, 0, 0, 4);
     if (sd.bitti) li.onclick = () => { const b = siralaBuluntu(li.dataset.id); kzBuluntuLevhasi(b, b.alan, false); };

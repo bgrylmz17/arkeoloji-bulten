@@ -62,7 +62,7 @@ function bildirimAkisiHtml(okunmamisSinir) {
   return `<ul class="bildirim-liste">${l.map((b, i) => {
     const g = grup(b), baslikSatiri = g !== son ? `<li class="bildirim-grup">${g}</li>` : ""; son = g;
     const yeni = okunmamisSinir === null ? i < 3 : b.zaman > okunmamisSinir;
-    return `${baslikSatiri}<li><a class="bildirim${yeni ? " yeni" : ""}" href="${esc(b.adres)}" ${b.dis ? 'target="_blank" rel="noopener"' : ""}>
+    return `${baslikSatiri}<li><a class="bildirim${yeni ? " yeni" : ""}" href="${escUrl(b.adres)}" ${b.dis ? 'target="_blank" rel="noopener"' : ""}>
       <span class="bildirim-ikon b-${b.tur}"><svg viewBox="0 0 24 24">${BILDIRIM_IKON[b.tur] || BILDIRIM_IKON.duyuru}</svg></span>
       <span class="bildirim-govde"><b>${esc(b.baslik)}</b>${b.metin ? `<small>${esc(b.metin)}</small>` : ""}</span>
       <time>${esc(bildirimNeZaman(b.zaman))}</time></a></li>`;
