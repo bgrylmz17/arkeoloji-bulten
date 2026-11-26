@@ -838,5 +838,9 @@ const EN = {
  "Mala": "Trowel",
  "Puanın": "Your score",
  "Seramik, cam, tablet ve fresk kırılgandır: kazmayla çıkarırsan kırılabilir, fırça hiç kırmaz.": "Pottery, glass, tablets and frescoes are fragile: the pickaxe may break them, the brush never does.",
- "{n} kırık": "{n} broken"
+ "{n} kırık": "{n} broken",
+ "3 kova toprak = 1 eleme, 1 vuruş": "3 buckets of soil = 1 sieving, 1 strike",
+ "Ele": "Sieve",
+ "Elekten bir şey çıkmadı": "Nothing in the sieve",
+ "Kazdığın toprak kovaya gider. 🪣 Ele düğmesi 3 kova toprağı 1 vuruşla eler; çoğu kez boncuk, kömür, mikrolit ya da küçük sikke çıkar.": "The soil you dig goes into buckets. 🪣 Sieve uses 1 strike to sift 3 buckets; it often turns up beads, charcoal, microliths or small coins."
 };

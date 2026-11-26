@@ -890,3 +890,5 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .bolumlu.kz-bolge { margin: 14px 16px 10px; }
 .kz-meydan { margin: 0 16px 4px; width: calc(100% - 32px); border-color: var(--okr); }
 .kz-buluntu.kirik h3 { text-decoration: line-through; text-decoration-color: rgba(0,0,0,.3); }
+.kz-alt-dugmeler { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.kz-alt-dugmeler button:disabled { opacity: .45; }

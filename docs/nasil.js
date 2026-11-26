@@ -43,7 +43,8 @@ function nasilGoster(oyun) {
         <figure><canvas width="16" height="16" data-d="0" data-s="alet_mala"></canvas><figcaption>${tx("Mala")}</figcaption></figure>
         <figure><canvas width="16" height="16" data-d="0" data-s="alet_firca"></canvas><figcaption>${tx("Fırça")}</figcaption></figure>
       </div>
-      <p class="nasil-adim"><b>5</b> ${tx("Çıkan her buluntu tanıtılır ve Buluntu Defteri'ne yazılır. Alanın bütün değerli buluntularını bulursan kalan her vuruş 5 puan getirir.")}</p>
+      <p class="nasil-adim"><b>5</b> ${tx("Kazdığın toprak kovaya gider. 🪣 Ele düğmesi 3 kova toprağı 1 vuruşla eler; çoğu kez boncuk, kömür, mikrolit ya da küçük sikke çıkar.")}</p>
+      <p class="nasil-adim"><b>6</b> ${tx("Çıkan her buluntu tanıtılır ve Buluntu Defteri'ne yazılır. Alanın bütün değerli buluntularını bulursan kalan her vuruş 5 puan getirir.")}</p>
       <p class="aciklama">⭐ ${tx("Haftanın alanında puan ×2. ✨ Nadiren olağanüstü korunmuş buluntu çıkar: ×3.")}</p>
       <p class="aciklama">🏆 ${tx("Günün Açması: herkes aynı açmayı kazar, günde tek deneme, kazı izni harcamaz. Ayrı skor tablosu var.")}</p>
       <p><button class="buyuk-dugme" id="nasil-tamam">${tx("Kazmaya başla")}</button></p></div>`, lv => {

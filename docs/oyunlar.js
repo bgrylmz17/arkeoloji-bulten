@@ -110,6 +110,7 @@ function oyunSesi(tur, ek = 0) {
     k.buffer = b; k.connect(f); f.connect(g); g.connect(c.destination); k.start(t0 + bas);
   };
   if (tur === "kazma") { ton(1900 - ek * 250, 0, 0.05, "square", 0.08); gurultu(0.01, 0.12, 700 - ek * 120, 0.5); }   // metal tık + toprak
+  else if (tur === "elek") { for (let k = 0; k < 4; k++) gurultu(k * 0.07, 0.07, 1400 + k * 200, 0.3); }   // elek sallama
   else if (tur === "firca") { gurultu(0, 0.09, 3200, 0.22); gurultu(0.06, 0.08, 2600, 0.16); }   // fırça hışırtısı
   else if (tur === "kirik") { gurultu(0, 0.18, 1800, 0.6); ton(330, 0.02, 0.25, "sawtooth", 0.08, -180); ton(220, 0.12, 0.3, "triangle", 0.1, -100); }   // çatlama
   else if (tur === "adim") ton(220 + Math.random() * 40, 0, 0.03, "triangle", 0.06);
