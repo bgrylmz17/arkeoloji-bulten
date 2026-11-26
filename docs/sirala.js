@@ -12,6 +12,24 @@ const SIRALA_DONEM = [
   { sira: 7, ad: "Hitit dönemi (MÖ 1650–1200)", ad_en: "Hittite period (1650–1200 BC)", ids: ["tablet", "riton", "kilic", "bulla"] },
   { sira: 8, ad: "Roma dönemi (MS 1.–3. yüzyıl)", ad_en: "Roman period (1st–3rd century AD)", ids: ["kandil", "artemis", "gladyator", "mozaik", "mars", "fresk"] },
 ];
+/* 1.28: dünya alanlarıyla 14 dönem; yil: [başlangıç, bitiş] (MÖ eksi). Aynı güne yalnız tarihleri çakışmayan dönemler düşer, doğru sıra tektir. */
+const SIRALA_DONEM2 = [
+  { ad: "Alt Paleolitik", ad_en: "Lower Palaeolithic", yil: [-1000000, -300000], ids: ["elbaltasi"] },
+  { ad: "Orta Paleolitik (Neandertaller çağı)", ad_en: "Middle Palaeolithic (age of Neanderthals)", yil: [-300000, -40000], ids: ["levallois", "dis"] },
+  { ad: "Epipaleolitik (yaklaşık 20.000–12.000 yıl önce)", ad_en: "Epipalaeolithic (about 20,000–12,000 years ago)", yil: [-20000, -10000], ids: ["dilgicik", "nukleus", "tasfigurin"] },
+  { ad: "Çanak Çömleksiz Neolitik (MÖ 9600–8200)", ad_en: "Pre-Pottery Neolithic (9600–8200 BC)", yil: [-9600, -8200], ids: ["tdikili", "akbaba", "okucu", "bas"] },
+  { ad: "Neolitik Çatalhöyük (MÖ 7100–5950)", ad_en: "Neolithic Çatalhöyük (7100–5950 BC)", yil: [-7100, -5950], ids: ["figurin", "ayna", "bukranion", "muhur"] },
+  { ad: "Geç Neolitik Britanya, Stonehenge (MÖ 3000–2400)", ad_en: "Late Neolithic Britain, Stonehenge (3000–2400 BC)", yil: [-3000, -2400], ids: ["geyikkazma", "mavitas", "olukcanak", "domuzdisi"] },
+  { ad: "Eski Krallık Mısır, Gize (MÖ 2600–2500)", ad_en: "Old Kingdom Egypt, Giza (2600–2500 BC)", yil: [-2600, -2500], ids: ["ekmekkalibi", "biratesti", "keski", "kabartma"] },
+  { ad: "Erken Tunç Çağı, Troya II (MÖ 2550–2250)", ad_en: "Early Bronze Age, Troy II (2550–2250 BC)", yil: [-2550, -2250], ids: ["depas", "kupe"] },
+  { ad: "Minos Girit, Knossos (MÖ 2000–1350)", ad_en: "Minoan Crete, Knossos (2000–1350 BC)", yil: [-2000, -1350], ids: ["lineerb", "labrys", "kamares", "bogafresk"] },
+  { ad: "Hitit dönemi (MÖ 1650–1200)", ad_en: "Hittite period (1650–1200 BC)", yil: [-1650, -1200], ids: ["tablet", "riton", "kilic", "bulla"] },
+  { ad: "Nabati Petra (MÖ 300 – MS 106)", ad_en: "Nabataean Petra (300 BC – AD 106)", yil: [-300, 106], ids: ["nabaticanak", "nabatisikke", "sukanali", "nabatiyazit"] },
+  { ad: "Qin Hanedanı, Xi'an (MÖ 221–206)", ad_en: "Qin dynasty, Xi'an (221–206 BC)", yil: [-221, -206], ids: ["askerbas", "bronzok", "banliang", "tetik"] },
+  { ad: "Roma dönemi (MÖ 1. – MS 3. yüzyıl)", ad_en: "Roman period (1st c. BC – 3rd c. AD)", yil: [-50, 300], ids: ["kandil", "artemis", "gladyator", "mozaik", "mars", "fresk", "amfora", "pfresk", "ekmek", "kopek"] },
+  { ad: "İnka, Machu Picchu (MS 1450–1572)", ad_en: "Inca, Machu Picchu (AD 1450–1572)", yil: [1450, 1572], ids: ["aribalo", "tupu", "tascekic", "kustabak"] },
+].map((d, i, l) => ({ ...d, sira: [...l].sort((a, b) => a.yil[0] - b.yil[0]).indexOf(d) + 1 }));
+const SIRALA_YENI_GUN = "2026-11-27";
 const SIRALA_PUAN = [500, 300, 150];
 function siralaRastgele(tohum) {   // mulberry32
   return () => { tohum |= 0; tohum = tohum + 0x6D2B79F5 | 0; let t = Math.imul(tohum ^ tohum >>> 15, 1 | tohum); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -22,7 +40,14 @@ function siralaBuluntu(id) {
 }
 function gununSiralamasi() {
   const gun = oyunGunu(), r = siralaRastgele(Number(gun.replace(/-/g, "")) * 7919);
-  const gruplar = [...SIRALA_DONEM].sort(() => r() - .5).slice(0, 5);
+  let gruplar;
+  if (gun < SIRALA_YENI_GUN) gruplar = [...SIRALA_DONEM].sort(() => r() - .5).slice(0, 5);   // eski düzen (o güne başlamış oyunlar bozulmasın)
+  else {
+    const kar = [...SIRALA_DONEM2];
+    for (let i = kar.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [kar[i], kar[j]] = [kar[j], kar[i]]; }
+    gruplar = [];
+    for (const d of kar) if (gruplar.length < 5 && gruplar.every(x => d.yil[1] < x.yil[0] || x.yil[1] < d.yil[0])) gruplar.push(d);
+  }
   const ogeler = gruplar.map(g => ({ id: g.ids[Math.floor(r() * g.ids.length)], donem: g })).filter(o => siralaBuluntu(o.id));
   let karisik = [...ogeler].sort(() => r() - .5);
   if (karisik.every((o, i) => o.donem.sira === [...ogeler].sort((a, b) => a.donem.sira - b.donem.sira)[i].donem.sira)) karisik = karisik.reverse();
