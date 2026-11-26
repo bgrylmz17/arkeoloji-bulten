@@ -405,7 +405,7 @@ async function istatistikHtml(kutu) {
     say(fs.query(k("geribildirim"), fs.where("durum", "==", "yeni"))), say(k("sikayetler")),
     say(fs.query(k("kazi_duyurulari"), fs.where("durum", "==", "bekliyor"))), say(k("unvan_talepleri")),
     fs.getDocs(fs.query(k("ziyaret"), fs.orderBy(fs.documentId(), "desc"), fs.limit(30))).then(a => a.docs.map(d => ({ gun: d.id, ...d.data() }))).catch(() => []),
-    ...["kelime", "kazi", "sirala"].flatMap(o => [say(fs.query(k("skorlar"), fs.where("oyun_gun", "==", `${o}_${g}`))), say(fs.query(k("skorlar"), fs.where("oyun_hafta", "==", `${o}_${h}`)))]),
+    ...["kelime", "kazi", "sirala", "meydan"].flatMap(o => [say(fs.query(k("skorlar"), fs.where("oyun_gun", "==", `${o}_${g}`))), say(fs.query(k("skorlar"), fs.where("oyun_hafta", "==", `${o}_${h}`)))]),
   ]);
   const bugun = ziyaret.find(z => z.gun === g) || { n: 0, k: 0 };
   const top = n => ziyaret.slice(0, n).reduce((a, z) => a + (z.n || 0), 0);
@@ -418,7 +418,7 @@ async function istatistikHtml(kutu) {
       ${kart(sikayet, tx("Şikâyet"))}${kart(duyuru, tx("Bekleyen duyuru"))}${kart(unvanT, tx("Ünvan talebi"))}
     </div>
     <h3 class="ist-baslik">${tx("Oyunlar · oynayan kişi")}</h3>
-    <div class="ist-izgara">${["Kelime Kazısı", "Kazı Başı", "Katman Sırala"].map((ad, i) => kart(`${oyun[i * 2]} / ${oyun[i * 2 + 1]}`, `${tx(ad)} · ${tx("bugün / hafta")}`)).join("")}</div>
+    <div class="ist-izgara">${["Kelime Kazısı", "Kazı Başı", "Katman Sırala", "Günün Açması"].map((ad, i) => kart(`${oyun[i * 2]} / ${oyun[i * 2 + 1]}`, `${tx(ad)} · ${tx("bugün / hafta")}`)).join("")}</div>
     <h3 class="ist-baslik">${tx("Son 30 gün · açan cihaz")}</h3>
     ${ziyaret.length ? `<ul class="ist-cubuklar">${ziyaret.map(z => `<li><span>${esc(z.gun.slice(5))}</span><i style="width:${Math.round((z.n || 0) / enCok * 100)}%"></i><b>${z.n || 0}${z.k ? ` <small>(${z.k} ${tx("uygulama")})</small>` : ""}</b></li>`).join("")}</ul>`
       : `<p class="aciklama">${tx("Henüz ziyaret kaydı yok (sayaç 1.21 ile başladı).")}</p>`}

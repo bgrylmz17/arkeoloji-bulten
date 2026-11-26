@@ -139,7 +139,7 @@ service cloud.firestore {
         && id == request.resource.data.oyun + '_' + request.resource.data.gun + '_' + request.auth.uid
         && request.resource.data.keys().hasOnly(['oyun', 'gun', 'oyun_gun', 'oyun_hafta', 'uid', 'ad', 'avatar', 'puan', 'ayrinti', 'tarih'])
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.oyun in ['kelime', 'kazi', 'sirala']
+        && request.resource.data.oyun in ['kelime', 'kazi', 'sirala', 'meydan']
         && request.resource.data.gun is string && request.resource.data.gun.size() == 10
         && request.resource.data.oyun_gun == request.resource.data.oyun + '_' + request.resource.data.gun
         && request.resource.data.puan is int && request.resource.data.puan >= 0 && request.resource.data.puan <= 5000

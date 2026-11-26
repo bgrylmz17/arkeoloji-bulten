@@ -879,3 +879,14 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .ist-cubuklar small { color: var(--soluk); }
 .yon-sekmeler { grid-auto-columns: max-content; overflow-x: auto; scrollbar-width: none; }
 .yon-sekmeler button { padding: 7px 12px; white-space: nowrap; }
+
+/* Kazı Başı: aletler, bölge, Günün Açması, kırık */
+.kz-aletler { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 auto 8px; max-width: 560px; padding: 0 12px; }
+.kz-aletler button { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--cizgi); border-radius: 10px; background: var(--kagit-2); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.kz-aletler button[aria-pressed="true"] { border-color: var(--okr); box-shadow: 0 0 0 2px var(--okr) inset; }
+.kz-aletler canvas { width: 24px; height: 24px; image-rendering: pixelated; flex: none; }
+.kz-aletler span { display: flex; flex-direction: column; min-width: 0; }
+.kz-aletler b { font-size: 13px; } .kz-aletler small { font-size: 10.5px; color: var(--soluk); line-height: 1.2; }
+.bolumlu.kz-bolge { margin: 14px 16px 10px; }
+.kz-meydan { margin: 0 16px 4px; width: calc(100% - 32px); border-color: var(--okr); }
+.kz-buluntu.kirik h3 { text-decoration: line-through; text-decoration-color: rgba(0,0,0,.3); }

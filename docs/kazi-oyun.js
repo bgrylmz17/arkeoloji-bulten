@@ -11,6 +11,38 @@ const KZ_SUTUN = 10, KZ_SATIR = 8, KZ_HUCRE = 16, KZ_SAHNE = 48, KZ_VURUS = 32, 
 
 /* ---------------------------------------------------------------- çizimler */
 const SPRITE = {
+  /* dünya alanları */
+  amfora: { r: { o: "#c0703a", d: "#7a4424", l: "#dc9a62" }, h: [
+    "....d..d....", "...dooood...", "....oooo....", "...oolloo...", "..oolllloo..", "..oolllloo..", "..oooooooo..", "...oooooo...", "....oooo....", ".....oo.....", ".....dd.....", "............"] },
+  pfresk: { r: { r: "#a8322a", k: "#2b2420", y: "#d9a43a", w: "#efe6d2" }, h: [
+    "............", ".rrrrrrrr...", ".rrrrrrrrr..", ".rkkkkkkrr..", ".rkyyyykrrr.", ".rkywwykrrr.", ".rkyyyykrr..", ".rkkkkkkrr..", ".rrrrrrrr...", "..rrrrrr....", "............", "............"] },
+  ekmek: { r: { b: "#4a3020", d: "#22160e", l: "#6e4a32" }, h: [
+    "............", "............", "....bbbb....", "..bbdbbdbb..", ".bblbdblbbb.", ".bdddddddddb", ".bblbdblbbb.", "..bbdbbdbb..", "....bbbb....", "............", "............", "............"] },
+  kopek: { r: { w: "#ece4d4", k: "#2b2420", r: "#a8322a" }, h: [
+    "wwwwwwwwwwww", "wwkwwwwwwwww", "wkkkwwwwwwww", "wkkkkkkkkkww", "wwwkkkkkkkkw", "wwwkkkkkkkkw", "wwrkwwwwkwkw", "wwkwkwwwkwkw", "wwkwkwwwkwwk", "wwwwwwwwwwww", "wkwkwkwkwkww", "wwwwwwwwwwww"] },
+  ekmekkalibi: { r: { o: "#b5703f", d: "#7d4a28" }, h: [
+    "............", "..oooooooo..", "..oddddddo..", "..oddddddo..", "...oddddo...", "...oddddo...", "....oddo....", "....oddo....", ".....oo.....", "............", "............", "............"] },
+  biratesti: { r: { o: "#c08050", d: "#8a5432", l: "#d9a274" }, h: [
+    "....oooo....", "....dddd....", "...oooooo...", "..oooooooo..", "..oolooooo..", "..oolooooo..", "..oooooooo..", "...oooooo...", "....oooo....", ".....oo.....", "............", "............"] },
+  keski: { r: { c: "#c07a3a", d: "#7a4a24" }, h: [
+    "..........cc", ".........ccd", "........ccd.", ".......ccd..", "......ccd...", ".....ccd....", "....ccd.....", "...ccd......", "..ccd.......", ".ccd........", "cc..........", "............"] },
+  kabartma: { r: { g: "#d9cdb4", k: "#6b5a44" }, h: [
+    "gggggggggggg", "gkkggggkgggg", "gkggkggkkkgg", "gkkggggkgggg", "gggggggggggg", "ggkkkggkggkg", "ggkgkggkkkkg", "ggkkkggggggg", "gggggggggggg", "gkkkkkkkkkkg", "gggggggggggg", "............"] },
+  lineerb: { r: { t: "#c9a27a", k: "#6b4a30" }, h: [
+    "............", "..tttttttt..", ".tttttttttt.", ".tktkktkktt.", ".tttttttttt.", ".tkktktkktt.", ".tttttttttt.", ".tktkkttkt..", "..tttttttt..", "............", "............", "............"] },
+  labrys: { r: { b: "#b8863a", w: "#7a5530" }, h: [
+    "............", ".bb..ww..bb.", ".bbb.ww.bbb.", ".bbbbwwbbbb.", ".bbbbwwbbbb.", ".bbb.ww.bbb.", ".bb..ww..bb.", ".....ww.....", ".....ww.....", ".....ww.....", ".....ww.....", "............"] },
+  kamares: { r: { k: "#2b2420", w: "#efe6d2", r: "#c0502a" }, h: [
+    "............", "..kkkkkkkk..", "..kwkrkwkk..", "..kkwkkrkk..", "..krkwkkwk..", "...kkkkkk...", "....kkkk....", ".....kk.....", "....kkkk....", "............", "............", "............"] },
+  bogafresk: { r: { b: "#6fa7c4", d: "#7a4a2a", w: "#efe6d2", y: "#d9a43a" }, h: [
+    "bbbbbbbbbbbb", "bbbbbwwbbbbb", "bbbbwwwwbbbb", "bdbbbbbbbbdb", "bbdddddddbbb", "bddddddddddb", "bbdbbbbbbdbb", "bbdbbbbbbdbb", "yyyyyyyyyyyy", "............", "............", "............"] },
+  /* aletler */
+  alet_kazma: { r: { m: "#9aa3ab", w: "#7a5530" }, h: [
+    "............", "..mmmmmmmm..", ".mm..ww..mm.", "m....ww....m", ".....ww.....", ".....ww.....", ".....ww.....", ".....ww.....", ".....ww.....", ".....ww.....", "............", "............"] },
+  alet_mala: { r: { m: "#9aa3ab", w: "#7a5530" }, h: [
+    "..........ww", ".........ww.", "........ww..", ".......m....", "......mmm...", ".....mmmmm..", "....mmmmmm..", "...mmmmmm...", "...mmmmm....", "...mmmm.....", "...mm.......", "............"] },
+  alet_firca: { r: { w: "#7a5530", m: "#9aa3ab", b: "#d9b36a" }, h: [
+    "......ww....", "......ww....", "......ww....", "......ww....", "......ww....", ".....mmmm...", ".....bbbb...", "....bbbbbb..", "....bbbbbb..", "....b.bb.b..", "............", "............"] },
   canak: { r: { o: "#c0703a", d: "#8a4a24", l: "#dc9a62" }, h: [
     "............", "....oooo....", "...oolllo...", "..oolllloo..", "..oooooooo..", ".odddddddddo", ".oooooooooo.", "..oooooooo..", "...oooooo...", "....ooo.....", "............", "............"] },
   kemik: { r: { w: "#efe6d2", s: "#c2b294" }, h: [
@@ -104,6 +136,30 @@ function spriteCiz(ctx, ad, x, y, olcek = 1, golge = false) {
   }));
 }
 
+/* Kırılan buluntunun üstüne çatlak (12×12 ızgarada) */
+function kirikCiz(ctx, x, y, olcek = 1) {
+  ctx.fillStyle = "rgba(35,22,14,.9)";
+  for (const [i, j] of [[2, 1], [3, 2], [4, 3], [4, 4], [5, 5], [6, 5], [7, 6], [7, 7], [8, 8], [9, 9], [6, 4], [7, 3], [8, 2], [3, 7], [2, 8]])
+    ctx.fillRect(x + i * olcek, y + j * olcek, olcek, olcek);
+}
+
+/* Aletler: kazma hızlı ama kırılgan buluntuyu kırabilir; fırça kırmaz ama iki vuruş harcar */
+const KZ_ALETLER = {
+  kazma: { ad: "Kazma", ad_en: "Pickaxe", kisa: "2 katman · kırabilir", kisa_en: "2 layers · may break", katman: 2, bedel: 1, kirma: 0.5, sprite: "alet_kazma" },
+  mala:  { ad: "Mala", ad_en: "Trowel", kisa: "1 katman · az risk", kisa_en: "1 layer · low risk", katman: 1, bedel: 1, kirma: 0.1, sprite: "alet_mala" },
+  firca: { ad: "Fırça", ad_en: "Brush", kisa: "1 katman · 2 vuruş · kırmaz", kisa_en: "1 layer · 2 strikes · safe", katman: 1, bedel: 2, kirma: 0, sprite: "alet_firca" },
+};
+const aletAd = a => DIL === "en" ? a.ad_en : a.ad;
+const KZ_KIRIK_ORAN = 0.3;   // kırılan buluntu puanın %30'unu getirir, deftere yazılmaz
+
+/* Tohumlu rastgele (Günün Açması: herkese aynı açma) */
+function kzTohum(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function kzRng(tohum) {
+  let a = tohum >>> 0;
+  return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function karistir(dizi, rng) { for (let i = dizi.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [dizi[i], dizi[j]] = [dizi[j], dizi[i]]; } return dizi; }
+
 /* ---------------------------------------------------------------- ören yerleri ve buluntular */
 const KZ_SIK = [
   { id: "yonga", ad: "Çakmaktaşı yongası", ad_en: "Flint flake", puan: 15, tarihOncesi: true,
@@ -168,10 +224,10 @@ const KZ_ALANLAR = [
   { id: "catal", ad: "Çatalhöyük", il: "Konya", tarihOncesi: true, canak: true, donem: "Neolitik, MÖ 7100–5950", donem_en: "Neolithic, 7100–5950 BC",
     toprak: ["#c9ad86", "#a88a64", "#7f6648", "#dccfb6"], gok: ["#f1e2bd", "#dcc79a"],
     buluntular: [
-      { id: "figurin", ad: "Oturan kadın figürini", ad_en: "Seated woman figurine", puan: 250,
+      { id: "figurin", kirilgan: true, ad: "Oturan kadın figürini", ad_en: "Seated woman figurine", puan: 250,
         bilgi: "Yanlarında iki kedigil bulunan bir tahtta oturan pişmiş toprak kadın figürini. Yaklaşık 8.000 yıllık; Ankara'daki Anadolu Medeniyetleri Müzesi'nde.",
         bilgi_en: "A clay figure of a woman seated on a throne flanked by two felines, about 8,000 years old; in the Museum of Anatolian Civilizations, Ankara." },
-      { id: "ayna", ad: "Obsidyen ayna", ad_en: "Obsidian mirror", puan: 200,
+      { id: "ayna", kirilgan: true, ad: "Obsidyen ayna", ad_en: "Obsidian mirror", puan: 200,
         bilgi: "Volkanik camın cilalanmasıyla yapılan aynalar, bilinen en eski aynalar arasındadır. Obsidyen Kapadokya'daki volkanlardan geliyordu.",
         bilgi_en: "Mirrors of polished volcanic glass are among the oldest known. The obsidian came from Cappadocian volcanoes." },
       { id: "bukranion", ad: "Boğa boynuzlu bukranion", ad_en: "Bull bucranium", puan: 160,
@@ -184,10 +240,10 @@ const KZ_ALANLAR = [
   { id: "hattusa", ad: "Hattuşa", il: "Çorum", donem: "Hitit, MÖ 1650–1200", donem_en: "Hittite, 1650–1200 BC",
     toprak: ["#b89a74", "#957756", "#6e563e", "#cfc0a4"], gok: ["#dfe8ef", "#b9cbd8"],
     buluntular: [
-      { id: "tablet", ad: "Çivi yazılı tablet", ad_en: "Cuneiform tablet", puan: 220,
+      { id: "tablet", kirilgan: true, ad: "Çivi yazılı tablet", ad_en: "Cuneiform tablet", puan: 220,
         bilgi: "Hitit başkentinde on binlerce tablet parçası bulundu. Kadeş Antlaşması'nın Akadca metni de Hattuşa arşivlerinden geliyor.",
         bilgi_en: "Tens of thousands of tablet fragments were found in the Hittite capital, including the Akkadian text of the Treaty of Kadesh." },
-      { id: "riton", ad: "Boğa biçimli kap", ad_en: "Bull-shaped vessel", puan: 200,
+      { id: "riton", kirilgan: true, ad: "Boğa biçimli kap", ad_en: "Bull-shaped vessel", puan: 200,
         bilgi: "Fırtına Tanrısı'nın boğaları Şeri ve Hurri'yi canlandırdığı düşünülen iki pişmiş toprak kap, 1963'te Büyükkale'de bulundu.",
         bilgi_en: "Two clay vessels thought to depict Serri and Hurri, the Storm God's bulls, found on Büyükkale in 1963." },
       { id: "kilic", ad: "Tunç kılıç", ad_en: "Bronze sword", puan: 240,
@@ -200,7 +256,7 @@ const KZ_ALANLAR = [
   { id: "troya", ad: "Troya", il: "Çanakkale", donem: "Tunç Çağı – Roma, MÖ 3000 – MS 500", donem_en: "Bronze Age – Roman, 3000 BC – AD 500",
     toprak: ["#bfa07c", "#9b7d5c", "#755b42", "#d2c3a8"], gok: ["#d8ecf2", "#a9d0de"],
     buluntular: [
-      { id: "depas", ad: "İki kulplu kadeh", ad_en: "Two-handled goblet", puan: 180,
+      { id: "depas", kirilgan: true, ad: "İki kulplu kadeh", ad_en: "Two-handled goblet", puan: 180,
         bilgi: "Depas amphikypellon denen uzun, iki kulplu kadeh Erken Tunç Çağı'nda, Troya II'de yaygındı. Paylaşılarak içmek için kullanıldığı düşünülür.",
         bilgi_en: "The tall, two-handled depas amphikypellon was common in Early Bronze Age Troy II, probably used for shared drinking." },
       { id: "kupe", ad: "Altın küpe", ad_en: "Gold earring", puan: 250,
@@ -209,14 +265,14 @@ const KZ_ALANLAR = [
       { id: "agirsak", ad: "İğ ağırşağı", ad_en: "Spindle whorl", puan: 110,
         bilgi: "Yün ve keten eğirirken iğe takılan delikli pişmiş toprak ağırlık. Troya'da binlercesi bulundu.",
         bilgi_en: "A pierced clay weight fitted to a spindle for spinning wool and flax. Thousands were found at Troy." },
-      { id: "pitos", ad: "Pitos (depolama küpü)", ad_en: "Pithos (storage jar)", puan: 150,
+      { id: "pitos", kirilgan: true, ad: "Pitos (depolama küpü)", ad_en: "Pithos (storage jar)", puan: 150,
         bilgi: "Tahıl, yağ ve şarap saklanan insan boyunda küpler. Troya VI–VII evlerinde tabana gömülü olarak bulundu.",
         bilgi_en: "Person-sized jars for grain, oil and wine, found sunk into house floors of Troy VI–VII." },
     ] },
   { id: "efes", ad: "Efes", il: "İzmir", donem: "Helenistik – Roma, MÖ 300 – MS 600", donem_en: "Hellenistic – Roman, 300 BC – AD 600",
     toprak: ["#c4a47e", "#a2825e", "#7a5f44", "#e0d4bd"], gok: ["#cfe6f5", "#9cc8e6"],
     buluntular: [
-      { id: "kandil", ad: "Pişmiş toprak kandil", ad_en: "Clay oil lamp", puan: 110,
+      { id: "kandil", kirilgan: true, ad: "Pişmiş toprak kandil", ad_en: "Clay oil lamp", puan: 110,
         bilgi: "Zeytinyağıyla yanan kandiller Roma döneminin en yaygın eşyalarındandı. Kalıpla çok sayıda üretilirdi.",
         bilgi_en: "Olive-oil lamps were among the most common Roman objects, mass-produced in moulds." },
       { id: "ari", ad: "Arılı gümüş sikke", ad_en: "Silver bee coin", puan: 200,
@@ -235,17 +291,68 @@ const KZ_ALANLAR = [
       { id: "mozaik", ad: "Çingene Kızı mozaiği", ad_en: "Gypsy Girl mosaic", puan: 250,
         bilgi: "Zeugma'nın simgesi; Gaziantep Zeugma Mozaik Müzesi'nde. Kimi betimlediği tartışmalıdır: Gaia ya da Ariadne olduğu öne sürülür.",
         bilgi_en: "Zeugma's emblem, in the Zeugma Mosaic Museum, Gaziantep. Whom it shows is debated; Gaia or Ariadne have been suggested." },
-      { id: "zbulla", ad: "Kil mühür baskısı", ad_en: "Clay bulla", puan: 140,
+      { id: "zbulla", kirilgan: true, ad: "Kil mühür baskısı", ad_en: "Clay bulla", puan: 140,
         bilgi: "Zeugma'da arşivin yanmasıyla pişip korunan on binlerce mühür baskısı bulundu; dünyanın en büyük bulla buluntularından.",
         bilgi_en: "Tens of thousands of sealings, baked and preserved when an archive burned, make Zeugma one of the largest bulla finds in the world." },
       { id: "mars", ad: "Tunç Mars heykeli", ad_en: "Bronze statue of Mars", puan: 220,
         bilgi: "Savaş tanrısı Mars'ın tunç heykeli kurtarma kazılarında bulundu; bugün Zeugma Mozaik Müzesi'nde.",
         bilgi_en: "The bronze statue of Mars, god of war, was found during rescue excavations and is now in the Zeugma Mosaic Museum." },
-      { id: "fresk", ad: "Duvar resmi parçası", ad_en: "Wall-painting fragment", puan: 160,
+      { id: "fresk", kirilgan: true, ad: "Duvar resmi parçası", ad_en: "Wall-painting fragment", puan: 160,
         bilgi: "Zeugma villalarının duvarları fresklerle süslüydü. Birecik Barajı'nın suları basmadan önce kurtarma kazılarıyla çıkarıldı.",
         bilgi_en: "Zeugma's villas had frescoed walls, removed in rescue digs before the Birecik Dam reservoir flooded them." },
     ] },
+  /* ---- Dünya */
+  { id: "pompeii", bolge: "dunya", ad: "Pompeii", il: "Napoli, İtalya", il_en: "Naples, Italy", donem: "Roma; MS 79'da Vezüv'ün külleri altında kaldı", donem_en: "Roman; buried by Vesuvius in AD 79",
+    toprak: ["#8d8579", "#6f685e", "#545049", "#b7ada0"], gok: ["#f2d9c4", "#d9a98e"],
+    buluntular: [
+      { id: "amfora", kirilgan: true, ad: "Amfora", ad_en: "Amphora", puan: 140,
+        bilgi: "Şarap, zeytinyağı ve balık sosu (garum) taşınan iki kulplu küp. Pompeii'de garum satan dükkânlar da bulundu.",
+        bilgi_en: "A two-handled jar for wine, olive oil and fish sauce (garum). Shops selling garum were also found at Pompeii." },
+      { id: "pfresk", kirilgan: true, ad: "Fresk parçası", ad_en: "Fresco fragment", puan: 200,
+        bilgi: "Pompeii evlerinin duvarları canlı renkli fresklerle boyalıydı. Bu boyama biçimleri bugün dört 'Pompeii üslubu' olarak sınıflandırılır.",
+        bilgi_en: "Pompeii's house walls were painted with vivid frescoes, classified today into four 'Pompeian styles'." },
+      { id: "ekmek", kirilgan: true, ad: "Kömürleşmiş ekmek", ad_en: "Carbonised bread", puan: 180,
+        bilgi: "Vezüv'ün sıcak külü fırınlardaki ekmekleri kömürleştirerek korudu. Dilimlere ayrılmış yuvarlak somunlar Roma fırıncılığını gösterir.",
+        bilgi_en: "Vesuvius's hot ash carbonised and preserved loaves in the bakeries. Round loaves scored into portions show Roman baking." },
+      { id: "kopek", ad: "“Cave canem” mozaiği", ad_en: "“Cave canem” mosaic", puan: 250,
+        bilgi: "“Köpeğe dikkat” yazan bu mozaik, Trajik Şair'in Evi'nin girişinde zincirli bir bekçi köpeğini gösterir.",
+        bilgi_en: "This 'Beware of the dog' mosaic shows a chained guard dog at the entrance of the House of the Tragic Poet." },
+    ] },
+  { id: "giza", bolge: "dunya", ad: "Gize", ad_en: "Giza", il: "Kahire, Mısır", il_en: "Cairo, Egypt", donem: "Eski Krallık, MÖ 2600–2500", donem_en: "Old Kingdom, 2600–2500 BC",
+    toprak: ["#d8bb8a", "#c09e6c", "#9d7f52", "#e8d6b4"], gok: ["#f6e3b6", "#eec98a"],
+    buluntular: [
+      { id: "ekmekkalibi", kirilgan: true, ad: "Ekmek kalıbı", ad_en: "Bread mould", puan: 140,
+        bilgi: "Piramit işçilerinin kentinde ekmek pişirilen çok sayıda çan biçimli kalıp bulundu. İşçiler ekmek ve birayla beslenirdi.",
+        bilgi_en: "Many bell-shaped bread moulds were found in the pyramid workers' town. Workers lived on bread and beer." },
+      { id: "biratesti", kirilgan: true, ad: "Bira testisi", ad_en: "Beer jar", puan: 120,
+        bilgi: "Bira, Mısırlıların günlük besiniydi. İşçilere verilen erzakın bir bölümü biraydı.",
+        bilgi_en: "Beer was a daily staple in Egypt; part of the workers' rations was beer." },
+      { id: "keski", ad: "Bakır keski", ad_en: "Copper chisel", puan: 180,
+        bilgi: "Kireçtaşı bloklar bakır keskiler, taş çekiçler ve kumla işlendi. Bakır yumuşak olduğu için keskiler sık sık bilenirdi.",
+        bilgi_en: "Limestone blocks were worked with copper chisels, stone hammers and sand. Copper is soft, so chisels were sharpened often." },
+      { id: "kabartma", ad: "Hiyeroglifli kabartma", ad_en: "Hieroglyphic relief", puan: 240,
+        bilgi: "Piramitlerin çevresindeki mastaba mezarlarının duvarlarında ölünün adı, unvanları ve sunuları hiyerogliflerle yazılıdır.",
+        bilgi_en: "The walls of the mastaba tombs around the pyramids record the deceased's name, titles and offerings in hieroglyphs." },
+    ] },
+  { id: "knossos", bolge: "dunya", ad: "Knossos", il: "Girit, Yunanistan", il_en: "Crete, Greece", donem: "Minos (Tunç Çağı), MÖ 2000–1350", donem_en: "Minoan (Bronze Age), 2000–1350 BC",
+    toprak: ["#b88b62", "#966c48", "#704f35", "#d4bc9c"], gok: ["#d6ecf5", "#a6d2e6"],
+    buluntular: [
+      { id: "lineerb", kirilgan: true, ad: "Lineer B tableti", ad_en: "Linear B tablet", puan: 220,
+        bilgi: "Saraydaki yangın kil tabletleri pişirip korudu. Lineer B, 1952'de Michael Ventris tarafından çözüldü; dili Yunancanın erken bir biçimidir.",
+        bilgi_en: "A palace fire baked and preserved the clay tablets. Linear B was deciphered by Michael Ventris in 1952; it records an early form of Greek." },
+      { id: "labrys", ad: "Çift ağızlı balta (labrys)", ad_en: "Double axe (labrys)", puan: 180,
+        bilgi: "Minos dininin en önemli simgelerinden. Knossos sarayının taş bloklarına da kazınmıştır.",
+        bilgi_en: "One of the chief symbols of Minoan religion, also carved on the stone blocks of the Knossos palace." },
+      { id: "kamares", kirilgan: true, ad: "Kamares kabı", ad_en: "Kamares ware cup", puan: 160,
+        bilgi: "Koyu zemin üzerine beyaz, kırmızı ve turuncu sarmallarla boyanmış ince cidarlı kaplar. Adını ilk bulunduğu Kamares Mağarası'ndan alır.",
+        bilgi_en: "Thin-walled vessels painted with white, red and orange spirals on a dark ground, named after the Kamares Cave where they were first found." },
+      { id: "bogafresk", kirilgan: true, ad: "Boğa sıçrama freski", ad_en: "Bull-leaping fresco", puan: 250,
+        bilgi: "Bir boğanın üzerinden sıçrayan gençleri gösteren fresk Knossos'ta bulundu; bugün Herakleion Arkeoloji Müzesi'nde.",
+        bilgi_en: "The fresco of youths leaping over a bull was found at Knossos and is now in the Heraklion Archaeological Museum." },
+    ] },
 ];
+const kzAlanAd = a => DIL === "en" && a.ad_en ? a.ad_en : a.ad;
+const kzAlanIl = a => DIL === "en" && a.il_en ? a.il_en : a.il;
 const kzAd = b => DIL === "en" && b.ad_en ? b.ad_en : b.ad;
 const kzBilgi = b => DIL === "en" && b.bilgi_en ? b.bilgi_en : b.bilgi;
 
@@ -299,6 +406,9 @@ const MUZIK = {
   hattusa:  { bpm: 92, kok: 110, olcek: [0, 1, 3, 5, 7, 8, 10], dalga: "square", melodi: [0, 1, 0, -1, 3, 2, 1, 0, 4, -1, 5, 4, 2, 1, 0, -1], bas: [0, 0, 4, 0], davul: [1, 0, 0, 1, 1, 0, 0, 0] },
   troya:    { bpm: 100, kok: 147, olcek: [0, 2, 4, 5, 7, 9, 10], dalga: "sawtooth", melodi: [4, 3, 2, 4, 5, -1, 4, 2, 1, 2, 3, -1, 2, 1, 0, -1], bas: [0, -1, 3, -1], davul: [1, 0, 0, 0, 1, 0, 1, 0] },
   efes:     { bpm: 96, kok: 165, olcek: [0, 2, 4, 6, 7, 9, 11], dalga: "triangle", melodi: [0, 2, 4, 6, 4, 2, 5, -1, 3, 4, 2, 0, 1, -1, 0, -1], bas: [0, 4, 2, 4] },
+  pompeii:  { bpm: 88, kok: 147, olcek: [0, 2, 4, 5, 7, 9, 11], dalga: "triangle", melodi: [0, 2, 4, 5, 4, 2, -1, 0, 4, 5, 7, 5, 4, -1, 2, -1], bas: [0, -1, 3, -1], davul: [1, 0, 0, 1, 0, 0, 1, 0] },
+  giza:     { bpm: 70, kok: 110, olcek: [0, 1, 4, 5, 7, 8, 11], dalga: "sine", melodi: [4, 3, 2, 1, 2, -1, 0, -1, 2, 3, 4, 5, 4, -1, -1, -1], bas: [0, -1, -1, 0], davul: [1, 0, 0, 0, 1, 0, 0, 0] },
+  knossos:  { bpm: 96, kok: 165, olcek: [0, 2, 3, 5, 7, 8, 10], dalga: "triangle", melodi: [0, 2, 4, 2, 3, 1, 0, -1, 4, 5, 6, 5, 4, 2, 0, -1], bas: [0, 4, 0, 3] },
   zeugma:   { bpm: 84, kok: 147, olcek: [0, 1, 4, 5, 7, 8, 10], dalga: "sawtooth", melodi: [4, 5, 4, 2, 1, 2, -1, 0, 1, 2, 3, 4, 2, 1, 0, -1], bas: [0, -1, 0, 3], davul: [1, 0, 0, 1, 0, 0, 1, 0] },
 };
 const KM = { ctx: null, zaman: null, adim: 0, sonraki: 0, alan: null, ana: null };
@@ -379,6 +489,16 @@ function kzSahne(ctx, alan, w) {
     r(44, 10, 72, 4, "#e6dccb"); r(44, 24, 72, 3, "#e6dccb");
     for (let x = 48; x < 112; x += 12) { r(x, 14, 4, 10, "#f2ebde"); r(x, 27, 4, 13, "#f2ebde"); }
     r(40, 38, 80, 2, "#d0c4ae");
+  } else if (alan.id === "pompeii") {
+    for (let y = 8; y < 40; y++) { const yar = (y - 8) * 1.7; r(Math.round(112 - yar), y, Math.round(yar * 2), 1, "#6d635a"); }
+    r(106, 2, 10, 5, "#9c948c"); r(100, 0, 8, 3, "#b5aea6"); r(112, 0, 6, 2, "#c4bdb5");
+    r(10, 16, 48, 3, "#d0c4ae"); for (const x of [14, 28, 42]) r(x, 19, 5, 21, "#e6dccb");
+  } else if (alan.id === "giza") {
+    const pir = (cx, h, a, k) => { for (let i = 0; i < h; i++) { r(cx - (h - i), 40 - i - 1, h - i, 1, a); r(cx, 40 - i - 1, h - i, 1, k); } };
+    pir(42, 22, "#e2c38a", "#c9a66b"); pir(88, 27, "#e2c38a", "#c9a66b"); pir(128, 16, "#e2c38a", "#c9a66b");
+  } else if (alan.id === "knossos") {
+    r(28, 12, 104, 4, "#d9c7a0"); r(26, 16, 108, 2, "#b8a47c"); r(60, 8, 3, 4, "#ece2cc"); r(66, 8, 3, 4, "#ece2cc"); r(93, 8, 3, 4, "#ece2cc"); r(99, 8, 3, 4, "#ece2cc");
+    for (const x of [40, 62, 84, 106]) { r(x, 18, 8, 3, "#2b2420"); r(x + 1, 21, 6, 17, "#b33a2a"); r(x + 2, 36, 4, 2, "#b33a2a"); r(x, 38, 8, 2, "#2b2420"); }
   } else if (alan.id === "zeugma") {
     r(0, 34, w, 6, "#6ea1b5"); r(0, 36, w, 1, "#9ccbd9");
     for (let x = 30; x < 130; x += 16) r(x, 20, 4, 14, "#e2d6c0");
@@ -398,6 +518,11 @@ function kaziKartGorseli(cv) {
 let KZ = null;   // { alan, hucreler: [{derinlik, buluntu, bulKat}], vurus, puan, bulunan: [], ozelSayi, bitti }
 const sikMi = b => KZ_SIK.includes(b);
 
+/* Günün Açması: herkes aynı alanı, aynı buluntu yerleşimiyle kazar; günde bir deneme, kazı izni harcamaz.
+ * Adil olsun diye arkeolog üstünlüğü ve haftanın alanı çarpanı yok. Skor: skorlar › oyun "meydan". */
+const meydanAlani = (g = oyunGunu()) => KZ_ALANLAR[kzTohum("alan-" + g) % KZ_ALANLAR.length];
+const meydanDurumu = () => { const g = oyunGunu(); return D.kzMeydan && D.kzMeydan.gun === g ? D.kzMeydan : null; };
+
 function sayfaKaziOyun(arg) {
   const kd = kaziDurumu();
   if (arg && KZ && KZ.alan.id === arg && !KZ.bitti) return kzOyunCiz();
@@ -405,27 +530,36 @@ function sayfaKaziOyun(arg) {
   kzMuzikDur();
   const defter = D.buluntuDefteri || {}, ark = arkeolog();
   const tum = KZ_ALANLAR.flatMap(a => a.buluntular.map(b => ({ ...b, alan: a })));
+  const bolge = D.kzBolge === "dunya" ? "dunya" : "anadolu", md = meydanDurumu(), ma = meydanAlani();
   $("#sayfa").innerHTML = `<div class="kazi-oyun">
     <div class="kz-ust"><p>${tx("Bir ören yeri seç, açmayı kaz, buluntuları çıkar.")}</p>
       <p class="kz-izin">${tx("Bugün kalan kazı izni")}: <b>${typeof oyunYoneticisi === "function" && oyunYoneticisi() ? "∞" : `${kd.hak}/${KZ_HAK}`}</b> · ${tx("Bugünkü puan")}: <b>${kd.toplam}</b> · <button class="metin-dugme" id="kz-nasil">${tx("Nasıl oynanır?")}</button></p></div>
     <button class="kz-arkeolog" id="kz-ark"><canvas width="24" height="32"></canvas>
       <span>${ark ? `<b>${esc(arkAd(ark))}</b><small>${esc(arkOzellik(ark))}</small>` : `<b>${tx("Arkeoloğunu seç")}</b><small>${tx("Kazıya başlamadan önce")}</small>`}</span><i>${ark ? tx("Değiştir") : "›"}</i></button>
-    <div class="kz-alanlar">${KZ_ALANLAR.map(a => {
+    <button class="kz-alan kz-meydan" id="kz-meydan" ${md ? "disabled" : ""}><canvas width="160" height="48"></canvas>
+      <span><b>🏆 ${tx("Günün Açması")} · ${esc(kzAlanAd(ma))}</b><small>${tx("Herkes aynı açmayı kazar · günde tek deneme · kazı izni harcamaz")}</small>
+      <em>${md ? (md.bitti ? tx("Bugünkü puanın: {p}", { p: md.puan }) : tx("Bugünkü denemeni kullandın")) : tx("Kazmaya başla")}</em></span></button>
+    <div class="bolumlu kucuk kz-bolge" role="group"><button data-bolge="anadolu" aria-pressed="${bolge === "anadolu"}">${tx("Anadolu")}</button><button data-bolge="dunya" aria-pressed="${bolge === "dunya"}">${tx("Dünya")}</button></div>
+    <div class="kz-alanlar">${KZ_ALANLAR.filter(a => (a.bolge || "anadolu") === bolge).map(a => {
       const bulunan = a.buluntular.filter(b => defter[b.id]).length;
       return `<button class="kz-alan" data-alan="${a.id}" ${kd.hak ? "" : "disabled"}><canvas width="160" height="48"></canvas>
-        <span><b>${esc(a.ad)}</b><small>${esc(a.il)} · ${esc(DIL === "en" ? a.donem_en : a.donem)}</small><em>${tx("Defter")}: ${bulunan}/${a.buluntular.length}${haftaninAlani().id === a.id ? ` · ⭐ ${tx("Haftanın alanı")}` : ""}${kzCarpan(a) > 1 ? ` · ×${String(kzCarpan(a)).replace(".", ",")}` : ""}</em></span></button>`;
+        <span><b>${esc(kzAlanAd(a))}</b><small>${esc(kzAlanIl(a))} · ${esc(DIL === "en" ? a.donem_en : a.donem)}</small><em>${tx("Defter")}: ${bulunan}/${a.buluntular.length}${haftaninAlani().id === a.id ? ` · ⭐ ${tx("Haftanın alanı")}` : ""}${kzCarpan(a) > 1 ? ` · ×${String(kzCarpan(a)).replace(".", ",")}` : ""}</em></span></button>`;
     }).join("")}</div>
     ${kd.hak ? "" : `<p class="aciklama" style="text-align:center">${tx("Bugünkü kazı izinlerin bitti. Yarın yeni izin!")}</p>`}
     <section class="kz-defter"><h3>${tx("Buluntu Defteri")} <small>${Object.keys(defter).filter(id => tum.some(b => b.id === id)).length}/${tum.length}</small></h3>
       <div class="kz-defter-izgara">${tum.map(b => `<button class="kz-defter-oge${defter[b.id] ? "" : " kayip"}${(D.altinDefter || {})[b.id] ? " altin" : ""}" data-b="${b.id}" title="${defter[b.id] ? esc(kzAd(b)) : "?"}">
         <canvas width="48" height="48"></canvas><small>${defter[b.id] ? esc(kzAd(b)) : "?"}</small></button>`).join("")}</div></section>
-    ${typeof yoneticiSifirlaHtml === "function" ? yoneticiSifirlaHtml("kazi") : ""}${skorBolumuHtml("kazi")}</div>`;
+    ${typeof yoneticiSifirlaHtml === "function" ? yoneticiSifirlaHtml("kazi") : ""}${skorBolumuHtml("kazi")}${skorBolumuHtml("meydan")}</div>`;
   $(".oyun-skor h3").textContent = tx("Kazı Başı · Skor tablosu");
+  $('.oyun-skor[data-oyun="meydan"] h3').textContent = tx("Günün Açması · Skor tablosu");
+  kzSahne($("#kz-meydan canvas").getContext("2d"), ma, 160);
+  $("#kz-meydan").onclick = () => arkeolog() ? kzBasla(ma, true) : arkeologSecimi(() => kzBasla(ma, true));
+  $$("[data-bolge]").forEach(b => b.onclick = () => { D.kzBolge = b.dataset.bolge; kaydet(); sayfaKaziOyun(""); });
   $("#kz-nasil").onclick = () => typeof nasilGoster === "function" && nasilGoster("kazi");
   if (typeof yoneticiSifirlaBagla === "function") yoneticiSifirlaBagla();
   spriteCiz($("#kz-ark canvas").getContext("2d"), ark ? ark.sprite : "ark_saha", 0, 0, 2, !ark);
   $("#kz-ark").onclick = () => arkeologSecimi();
-  $$(".kz-alan").forEach(b => {
+  $$(".kz-alanlar .kz-alan").forEach(b => {
     const a = KZ_ALANLAR.find(x => x.id === b.dataset.alan);
     kzSahne(b.querySelector("canvas").getContext("2d"), a, 160);
     b.onclick = () => arkeolog() ? kzBasla(a) : arkeologSecimi(() => kzBasla(a));
@@ -434,38 +568,46 @@ function sayfaKaziOyun(arg) {
   $$(".kz-defter-oge").forEach(b => {
     const bul = tum.find(x => x.id === b.dataset.b), ctx = b.querySelector("canvas").getContext("2d");
     spriteCiz(ctx, bul.id, 0, 0, 4, !defter[bul.id]);
-    b.onclick = () => defter[bul.id] ? kzBuluntuLevhasi(bul, bul.alan, false) : bildir(tx("Henüz bulunmadı: {alan}", { alan: bul.alan.ad }));
+    b.onclick = () => defter[bul.id] ? kzBuluntuLevhasi(bul, bul.alan, false) : bildir(tx("Henüz bulunmadı: {alan}", { alan: kzAlanAd(bul.alan) }));
   });
   skorBolumuBagla($("#sayfa"));
 }
 
-function kzBasla(alan) {
-  const kd = kaziDurumu();
-  if (kd.hak <= 0) { bildir(tx("Bugünkü kazı izinlerin bitti. Yarın yeni izin!")); return; }
-  if (!(typeof oyunYoneticisi === "function" && oyunYoneticisi())) kd.hak--;
+function kzBasla(alan, meydan = false) {
+  const kd = kaziDurumu(), g = oyunGunu();
+  if (meydan) {
+    if (meydanDurumu()) { bildir(tx("Bugünün açmasını kazdın. Yarın yeni açma!")); return; }
+    D.kzMeydan = { gun: g, puan: 0, bitti: false };   // yenilemeyle tekrar denenmesin
+  } else {
+    if (kd.hak <= 0) { bildir(tx("Bugünkü kazı izinlerin bitti. Yarın yeni izin!")); return; }
+    if (!(typeof oyunYoneticisi === "function" && oyunYoneticisi())) kd.hak--;
+  }
   kaydet();
-  const n = KZ_SUTUN * KZ_SATIR, yerler = [...Array(n).keys()].sort(() => Math.random() - .5);
+  const rng = meydan ? kzRng(kzTohum("meydan-" + g)) : Math.random;
+  const n = KZ_SUTUN * KZ_SATIR, yerler = karistir([...Array(n).keys()], rng);
   const hucreler = Array.from({ length: n }, () => ({ derinlik: 3, buluntu: null, bulKat: 0 }));
   // değerliler: 2–3 vuruşta (bulKat 1 ya da 0); sık buluntular: 1–3 vuruşta
-  alan.buluntular.forEach((b, i) => { hucreler[yerler[i]] = { derinlik: 3, buluntu: b, bulKat: Math.random() < .5 ? 1 : 0, nadir: Math.random() < KZ_NADIR_OLASILIK }; });
+  alan.buluntular.forEach((b, i) => { hucreler[yerler[i]] = { derinlik: 3, buluntu: b, bulKat: rng() < .5 ? 1 : 0, nadir: rng() < KZ_NADIR_OLASILIK }; });
   const sikler = KZ_SIK.filter(b => (b.tarihOncesi ? alan.tarihOncesi : true) && (b.cag ? (!alan.tarihOncesi || alan.canak) : true));
   for (let i = alan.buluntular.length; i < alan.buluntular.length + KZ_SIK_SAYI; i++)
-    hucreler[yerler[i]] = { derinlik: 3, buluntu: sikler[Math.floor(Math.random() * sikler.length)], bulKat: [2, 2, 1, 1, 0][Math.floor(Math.random() * 5)] };
+    hucreler[yerler[i]] = { derinlik: 3, buluntu: sikler[Math.floor(rng() * sikler.length)], bulKat: [2, 2, 1, 1, 0][Math.floor(rng() * 5)] };
   const ark = arkeolog();
-  KZ = { alan, hucreler, vurus: KZ_VURUS + (ark && ark.id === "saha" ? 6 : 0), puan: 0, bulunan: [], ozelSayi: alan.buluntular.length, bitti: false, vurgu: -1,
-    carpan: kzCarpan(alan), menzil: ark && ark.id === "jeofizik" ? 3 : 2, ark };
+  KZ = { alan, hucreler, vurus: KZ_VURUS + (!meydan && ark && ark.id === "saha" ? 6 : 0), puan: 0, bulunan: [], ozelSayi: alan.buluntular.length, bitti: false, vurgu: -1,
+    carpan: meydan ? 1 : kzCarpan(alan), menzil: !meydan && ark && ark.id === "jeofizik" ? 3 : 2, ark, meydan, rng, alet: D.kzAlet && KZ_ALETLER[D.kzAlet] ? D.kzAlet : "mala", kirik: 0 };
   kzMuzikBaslat(alan.id);
   if (location.hash !== `#oyun/kazi/${alan.id}`) location.hash = `#oyun/kazi/${alan.id}`; else kzOyunCiz();
 }
 
 function kzOyunCiz() {
   $("#sayfa").innerHTML = `<div class="kazi-oyun"><div class="kz-hud">
-      <span><b>${esc(KZ.alan.ad)}</b> · ${esc(KZ.ark ? arkAd(KZ.ark) : "")}</span>
+      <span><b>${KZ.meydan ? "🏆 " : ""}${esc(kzAlanAd(KZ.alan))}</b> · ${esc(KZ.meydan ? tx("Günün Açması") : KZ.ark ? arkAd(KZ.ark) : "")}</span>
       <span class="kz-vurus" title="${tx("Kalan vuruş")}">⛏ <b id="kz-vurus">${KZ.vurus}</b></span>
       <span>${tx("Puan")}: <b id="kz-puan">${KZ.puan}</b></span>
       <span><button class="kz-muzik" id="kz-muzik" aria-label="${tx("Müzik")}" title="${tx("Müzik")}">${kzMuzikAcik() ? "♪" : "♪̸"}</button>${oyunSesDugmesi()}</span></div>
+    <div class="kz-aletler" role="group" aria-label="${tx("Alet")}">${Object.entries(KZ_ALETLER).map(([id, a]) => `<button data-alet="${id}" aria-pressed="${KZ.alet === id}">
+      <canvas width="24" height="24"></canvas><span><b>${esc(aletAd(a))}</b><small>${esc(DIL === "en" ? a.kisa_en : a.kisa)}</small></span></button>`).join("")}</div>
     <div class="kz-cerceve"><canvas id="kz-tuval" width="${KZ_SUTUN * KZ_HUCRE}" height="${KZ_SAHNE + KZ_SATIR * KZ_HUCRE}" aria-label="${tx("Kazı alanı")}"></canvas></div>
-    <p class="aciklama kz-ipucu">${tx("Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücre kızıl ya da amber parlıyorsa yakında değerli bir buluntu var.")}</p>
+    <p class="aciklama kz-ipucu">${tx("Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücre kızıl ya da amber parlıyorsa yakında değerli bir buluntu var.")} ${tx("Seramik, cam, tablet ve fresk kırılgandır: kazmayla çıkarırsan kırılabilir, fırça hiç kırmaz.")}</p>
     <p class="kz-bulunanlar" id="kz-bulunanlar"></p>
     <p style="text-align:center"><button class="ikincil-dugme" id="kz-bitir">${tx("Kazıyı bitir")}</button></p></div>`;
   const cv = $("#kz-tuval");
@@ -481,6 +623,10 @@ function kzOyunCiz() {
     if (kzMuzikAcik()) kzMuzikBaslat(KZ.alan.id); else kzMuzikDur();
   };
   $("#kz-bitir").onclick = () => kzSon(false);
+  $$(".kz-aletler [data-alet]").forEach(b => {
+    spriteCiz(b.querySelector("canvas").getContext("2d"), KZ_ALETLER[b.dataset.alet].sprite, 0, 0, 2);
+    b.onclick = () => { KZ.alet = D.kzAlet = b.dataset.alet; kaydet(); oyunSesi("tus"); $$(".kz-aletler [data-alet]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); };
+  });
   oyunSesBagla();
   kzCiz();
 }
@@ -510,7 +656,7 @@ function kzCiz() {
     if (h.derinlik > 0 && h.derinlik < 3) { ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(x, y, KZ_HUCRE, 1); ctx.fillRect(x, y, 1, KZ_HUCRE); }
     if (h.derinlik === 0) {
       ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(x, y, KZ_HUCRE, 2); ctx.fillRect(x, y, 2, KZ_HUCRE);
-      if (h.buluntu) { if (h.nadir) { ctx.fillStyle = "#e3b341"; ctx.fillRect(x + 1, y + 1, 14, 14); ctx.fillStyle = t[3]; ctx.fillRect(x + 2, y + 2, 12, 12); } spriteCiz(ctx, h.buluntu.id, x + 2, y + 2, 1); }
+      if (h.buluntu) { if (h.nadir) { ctx.fillStyle = "#e3b341"; ctx.fillRect(x + 1, y + 1, 14, 14); ctx.fillStyle = t[3]; ctx.fillRect(x + 2, y + 2, 12, 12); } spriteCiz(ctx, h.buluntu.id, x + 2, y + 2, 1); if (h.kirik) kirikCiz(ctx, x + 2, y + 2, 1); }
       else {
         const d = kzYakinlik(i);
         if (d <= KZ.menzil) { ctx.fillStyle = d === 1 ? "#d2452b" : "#e0a12c"; for (const [a, b] of [[5, 6], [9, 9], [7, 11]].slice(0, d === 1 ? 3 : d === 2 ? 2 : 1)) ctx.fillRect(x + a, y + b, 2, 2); }
@@ -559,27 +705,31 @@ function kzYuru(i) {
 }
 function kzKaz(i) {
   if (!KZ || KZ.bitti || KZ.vurus <= 0 || i < 0 || i >= KZ.hucreler.length) return;   // vuruş bitince (kzSon gecikmeli) hızlı dokunuşlar eksiye düşürmesin
-  const h = KZ.hucreler[i];
+  const h = KZ.hucreler[i], alet = KZ_ALETLER[KZ.alet] || KZ_ALETLER.mala;
   if (h.derinlik === 0) return;
-  h.derinlik--; KZ.vurus--; KZ.vurgu = i;
-  oyunSesi("kazma", 2 - h.derinlik);
+  if (KZ.vurus < alet.bedel) { bildir(tx("Fırça için en az 2 vuruş gerekir")); return; }
+  h.derinlik = Math.max(0, h.derinlik - alet.katman); KZ.vurus -= alet.bedel; KZ.vurgu = i;
+  oyunSesi(KZ.alet === "firca" ? "firca" : "kazma", 2 - h.derinlik);
   kzYuru(i);
   setTimeout(() => { if (KZ && KZ.vurgu === i) { KZ.vurgu = -1; kzCiz(); } }, 90);
   if (navigator.vibrate) try { navigator.vibrate(8); } catch (e) {}
   let yeni = null;
   if (h.buluntu && h.derinlik <= h.bulKat) {
     h.derinlik = 0; yeni = h.buluntu; KZ.bulunan.push(yeni);
-    const p = sikMi(yeni) ? yeni.puan : Math.round(yeni.puan * KZ.carpan * (h.nadir ? 3 : 1));
-    KZ.puan += p; yeni = { ...yeni, kazanilan: p, nadir: !!h.nadir };
+    h.kirik = !!yeni.kirilgan && (KZ.rng || Math.random)() < alet.kirma;   // kırılgan buluntu alete göre kırılabilir
+    if (h.kirik) { h.nadir = false; KZ.kirik++; }
+    let p = sikMi(yeni) ? yeni.puan : Math.round(yeni.puan * KZ.carpan * (h.nadir ? 3 : 1));
+    if (h.kirik) p = Math.round(p * KZ_KIRIK_ORAN);
+    KZ.puan += p; yeni = { ...yeni, kazanilan: p, nadir: !!h.nadir, kirik: h.kirik };
     if (h.nadir) { D.altinDefter = D.altinDefter || {}; D.altinDefter[h.buluntu.id] = oyunGunu(); kaydet(); if (typeof rozetVer === "function") rozetVer("nadir"); }
-    setTimeout(() => oyunSesi(sikMi(h.buluntu) ? "sik" : "buluntu"), 120);
+    setTimeout(() => oyunSesi(h.kirik ? "kirik" : sikMi(h.buluntu) ? "sik" : "buluntu"), 120);
   }
   kzCiz();
   const ozelBitti = KZ.bulunan.filter(b => !sikMi(b)).length >= KZ.ozelSayi;
   if (yeni) {
     const ozel = !sikMi(h.buluntu);
-    const ilk = ozel && !(D.buluntuDefteri || {})[h.buluntu.id];
-    if (ozel) { D.buluntuDefteri = D.buluntuDefteri || {}; D.buluntuDefteri[h.buluntu.id] = D.buluntuDefteri[h.buluntu.id] || oyunGunu(); kaydet(); }
+    const ilk = ozel && !h.kirik && !(D.buluntuDefteri || {})[h.buluntu.id];
+    if (ozel && !h.kirik) { D.buluntuDefteri = D.buluntuDefteri || {}; D.buluntuDefteri[h.buluntu.id] = D.buluntuDefteri[h.buluntu.id] || oyunGunu(); kaydet(); }
     kzBuluntuLevhasi(yeni, KZ.alan, ilk, () => { if (ozelBitti || KZ.vurus <= 0) kzSon(ozelBitti); }, !ozel);
     return;
   }
@@ -587,15 +737,16 @@ function kzKaz(i) {
 }
 function kzBuluntuLevhasi(b, alan, ilk, sonra, sik) {
   const ozel = sik === undefined ? !KZ_SIK.some(x => x.id === b.id) : !sik;
-  levhaAc(`<div class="kz-buluntu${b.nadir ? " nadir" : ""}">${b.nadir ? `<p class="kz-yeni">✨ ${tx("Olağanüstü korunmuş! Puan ×3")}</p>` : ""}${ilk ? `<p class="kz-yeni">${tx("Deftere yeni buluntu!")}</p>` : ""}
+  levhaAc(`<div class="kz-buluntu${b.nadir ? " nadir" : ""}${b.kirik ? " kirik" : ""}">${b.nadir ? `<p class="kz-yeni">✨ ${tx("Olağanüstü korunmuş! Puan ×3")}</p>` : ""}
+    ${b.kirik ? `<p class="kz-yeni">💔 ${tx("Kırıldı! Parçaları topladın: puanın %30'u, deftere yazılmaz. Kırılgan buluntularda mala ya da fırça kullan.")}</p>` : ""}${ilk ? `<p class="kz-yeni">${tx("Deftere yeni buluntu!")}</p>` : ""}
     <canvas width="144" height="144" id="kz-buyuk"></canvas>
     <h3>${esc(kzAd(b))}</h3>
-    <p class="aciklama">${ozel ? `${esc(alan.ad)}, ${esc(alan.il)} · ${esc(DIL === "en" ? alan.donem_en : alan.donem)}` : tx("Sık buluntu")} · <b>+${b.kazanilan || b.puan}</b></p>
+    <p class="aciklama">${ozel ? `${esc(kzAlanAd(alan))}, ${esc(kzAlanIl(alan))} · ${esc(DIL === "en" ? alan.donem_en : alan.donem)}` : tx("Sık buluntu")} · <b>+${b.kazanilan || b.puan}</b></p>
     <p>${esc(kzBilgi(b))}</p>
     <p style="margin-top:14px"><button class="buyuk-dugme" id="kz-devam">${sonra ? tx("Kazmaya devam") : tx("Kapat")}</button></p></div>`, lv => {
     const ctx = lv.querySelector("#kz-buyuk").getContext("2d");
     ctx.fillStyle = alan.toprak[3]; ctx.fillRect(0, 0, 144, 144);
-    spriteCiz(ctx, b.id, 0, 0, 12);
+    spriteCiz(ctx, b.id, 0, 0, 12); if (b.kirik) kirikCiz(ctx, 0, 0, 12);
     const perde = () => { if (sonra) sonra(); };
     if (sonra) $("#tabaka").addEventListener("click", perde, { once: true });
     lv.querySelector("#kz-devam").onclick = () => { $("#tabaka").removeEventListener("click", perde); levhaKapat(); if (sonra) sonra(); };
@@ -609,13 +760,28 @@ function kzSon(hepsi) {
   const bonus = hepsi ? KZ.vurus * 5 : 0;
   KZ.puan += bonus;
   const kd = kaziDurumu();
+  if (KZ.meydan) {
+    D.kzMeydan = { gun: oyunGunu(), puan: KZ.puan, bitti: true }; kaydet();
+    try { skorGonder("meydan", KZ.puan, `${KZ.bulunan.filter(b => !sikMi(b)).length}/${KZ.ozelSayi}`); } catch (e) {}
+    const ozeller = KZ.bulunan.filter(b => !sikMi(b));
+    levhaAc(`<div class="kz-buluntu"><h3>🏆 ${tx("Günün Açması bitti")}</h3>
+      <p>${esc(kzAlanAd(KZ.alan))} · ${tx("{n} değerli buluntu", { n: ozeller.length })}${KZ.kirik ? ` · 💔 ${KZ.kirik}` : ""}</p>
+      ${bonus ? `<p>${tx("Kalan vuruş bonusu")}: <b>+${bonus}</b></p>` : ""}
+      <p class="kz-toplam">${tx("Puanın")}: <b>${KZ.puan}</b></p>
+      <p class="aciklama">${tx("Herkes aynı açmayı kazdı; skor tablosunda yerini gör. Yarın yeni açma!")}${H.kullanici ? "" : ` <a href="#giris">${tx("Giriş yap")}</a>, ${tx("skorların tabloya yazılsın")}`}</p>
+      <p style="margin-top:14px"><button class="buyuk-dugme" id="kz-geri">${tx("Ören yerlerine dön")}</button></p></div>`, lv => {
+      lv.querySelector("#kz-geri").onclick = () => { levhaKapat(); location.hash = "#oyun/kazi"; };
+    });
+    if ($("#kz-bitir")) $("#kz-bitir").outerHTML = `<a class="ikincil-dugme" href="#oyun/kazi">${tx("Ören yerlerine dön")}</a>`;
+    return;
+  }
   kd.toplam += KZ.puan; kd.kosular.push({ alan: KZ.alan.id, puan: KZ.puan }); kaydet();
   // skor ve rozet hatası sonuç penceresini engellemesin (yoksa KZ.bitti true kalır, "Kazıyı bitir" bir daha tepki vermez)
   try { skorGonder("kazi", kd.toplam, `${kd.kosular.length} kazı`); } catch (e) {}
   try { if (typeof rozetVer === "function") { rozetVer("ilk_kazi"); if (haftaninAlani().id === KZ.alan.id) rozetVer("haftanin"); if (typeof rozetKontrol === "function") rozetKontrol(); } } catch (e) {}
   const ozeller = KZ.bulunan.filter(b => !sikMi(b));
   levhaAc(`<div class="kz-buluntu"><h3>${hepsi ? tx("Açma tamamlandı!") : tx("Kazı bitti")}</h3>
-    <p>${esc(KZ.alan.ad)} · ${tx("{n} değerli buluntu", { n: ozeller.length })} · ${tx("{n} sık buluntu", { n: KZ.bulunan.length - ozeller.length })}</p>
+    <p>${esc(kzAlanAd(KZ.alan))} · ${tx("{n} değerli buluntu", { n: ozeller.length })} · ${tx("{n} sık buluntu", { n: KZ.bulunan.length - ozeller.length })}${KZ.kirik ? ` · 💔 ${tx("{n} kırık", { n: KZ.kirik })}` : ""}</p>
     ${bonus ? `<p>${tx("Kalan vuruş bonusu")}: <b>+${bonus}</b></p>` : ""}
     <p class="kz-toplam">${tx("Bu kazı")}: <b>${KZ.puan}</b> · ${tx("Bugün")}: <b>${kd.toplam}</b></p>
     <p class="aciklama">${tx("Kalan kazı izni")}: ${kd.hak}/${KZ_HAK}${H.kullanici ? "" : ` · <a href="#giris">${tx("Giriş yap")}</a>, ${tx("skorların tabloya yazılsın")}`}</p>

@@ -17,7 +17,7 @@ function oyunHaftasi(d = new Date()) {   // ISO hafta: 2026-W48
   const yb = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
   return `${t.getUTCFullYear()}-W${String(Math.ceil(((t - yb) / 864e5 + 1) / 7)).padStart(2, "0")}`;
 }
-const OYUN_ADI = { kelime: "Kelime Kazısı", kazi: "Kazı Başı", sirala: "Katman Sırala" };
+const OYUN_ADI = { kelime: "Kelime Kazısı", kazi: "Kazı Başı", sirala: "Katman Sırala", meydan: "Günün Açması" };
 
 async function skorGonder(oyun, puan, ayrinti) {
   if (typeof oyunYoneticisi === "function" && oyunYoneticisi()) return false;   // yönetici sınırsız oynar; tablo adil kalsın
@@ -110,6 +110,8 @@ function oyunSesi(tur, ek = 0) {
     k.buffer = b; k.connect(f); f.connect(g); g.connect(c.destination); k.start(t0 + bas);
   };
   if (tur === "kazma") { ton(1900 - ek * 250, 0, 0.05, "square", 0.08); gurultu(0.01, 0.12, 700 - ek * 120, 0.5); }   // metal tık + toprak
+  else if (tur === "firca") { gurultu(0, 0.09, 3200, 0.22); gurultu(0.06, 0.08, 2600, 0.16); }   // fırça hışırtısı
+  else if (tur === "kirik") { gurultu(0, 0.18, 1800, 0.6); ton(330, 0.02, 0.25, "sawtooth", 0.08, -180); ton(220, 0.12, 0.3, "triangle", 0.1, -100); }   // çatlama
   else if (tur === "adim") ton(220 + Math.random() * 40, 0, 0.03, "triangle", 0.06);
   else if (tur === "sik") { ton(660, 0, 0.12, "triangle", 0.18); ton(990, 0.07, 0.16, "triangle", 0.14); }
   else if (tur === "buluntu") [523, 659, 784, 1047, 1319].forEach((f, i) => ton(f, i * 0.07, 0.28, "triangle", 0.16));

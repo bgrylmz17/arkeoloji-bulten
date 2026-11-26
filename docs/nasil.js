@@ -37,8 +37,15 @@ function nasilGoster(oyun) {
         <figure><canvas width="16" height="16" data-d="0" data-n="1"></canvas><figcaption>${tx("Kızıl: değerli buluntu hemen yanında")}</figcaption></figure>
         <figure><canvas width="16" height="16" data-d="0" data-n="2"></canvas><figcaption>${tx("Amber: 2 kare ötede")}</figcaption></figure>
       </div>
-      <p class="nasil-adim"><b>4</b> ${tx("Çıkan her buluntu tanıtılır ve Buluntu Defteri'ne yazılır. Alanın bütün değerli buluntularını bulursan kalan her vuruş 5 puan getirir.")}</p>
+      <p class="nasil-adim"><b>4</b> ${tx("Aletini seç: kazma 2 katman birden kazar ama kırılgan buluntuyu (seramik, cam, tablet, fresk) kırabilir; mala 1 katman kazar, az risklidir; fırça hiç kırmaz ama 2 vuruş harcar. Kırılan buluntu puanın %30'unu getirir.")}</p>
+      <div class="nasil-seri">
+        <figure><canvas width="16" height="16" data-d="0" data-s="alet_kazma"></canvas><figcaption>${tx("Kazma")}</figcaption></figure>
+        <figure><canvas width="16" height="16" data-d="0" data-s="alet_mala"></canvas><figcaption>${tx("Mala")}</figcaption></figure>
+        <figure><canvas width="16" height="16" data-d="0" data-s="alet_firca"></canvas><figcaption>${tx("Fırça")}</figcaption></figure>
+      </div>
+      <p class="nasil-adim"><b>5</b> ${tx("Çıkan her buluntu tanıtılır ve Buluntu Defteri'ne yazılır. Alanın bütün değerli buluntularını bulursan kalan her vuruş 5 puan getirir.")}</p>
       <p class="aciklama">⭐ ${tx("Haftanın alanında puan ×2. ✨ Nadiren olağanüstü korunmuş buluntu çıkar: ×3.")}</p>
+      <p class="aciklama">🏆 ${tx("Günün Açması: herkes aynı açmayı kazar, günde tek deneme, kazı izni harcamaz. Ayrı skor tablosu var.")}</p>
       <p><button class="buyuk-dugme" id="nasil-tamam">${tx("Kazmaya başla")}</button></p></div>`, lv => {
       lv.querySelectorAll("canvas").forEach(c => nasilHucre(c, +c.dataset.d, c.dataset.s, +c.dataset.n || 0));
       lv.querySelector("#nasil-tamam").onclick = levhaKapat;
