@@ -858,11 +858,34 @@ function kzArkCiz(ctx) {
   const a = KZ.arkKonum; if (!a || !KZ.ark) return;
   const zip = a.yuruyor ? (Math.floor(performance.now() / 70) % 2) : 0;
   spriteCiz(ctx, KZ.ark.sprite, Math.round(a.x), Math.round(a.y) - zip, 1);
-  // kazma: sap ve demir; sallanırken yukarı kalkar
-  const kx = Math.round(a.x) + 10, ky = Math.round(a.y) + 8, kalk = a.salla > 0;
-  ctx.fillStyle = "#7a5530";
-  if (kalk) { ctx.fillRect(kx, ky - 6, 1, 7); ctx.fillStyle = "#9aa3ab"; ctx.fillRect(kx - 2, ky - 7, 5, 1); }
-  else { ctx.fillRect(kx, ky, 4, 1); ctx.fillRect(kx + 3, ky + 1, 1, 1); ctx.fillStyle = "#9aa3ab"; ctx.fillRect(kx + 4, ky - 1, 1, 4); }
+  const kx = Math.round(a.x) + 10, ky = Math.round(a.y) + 8, kalk = a.salla > 0, an = Math.floor(performance.now() / 80) % 2;
+  if (KZ.alet === "firca") {   // fırça: eğilip sağa sola fırçalar
+    const dx = kalk ? (an ? 2 : -1) : 0;
+    ctx.fillStyle = "#7a5530"; ctx.fillRect(kx + dx, ky + 2, 3, 1); ctx.fillStyle = "#d9b36a"; ctx.fillRect(kx + 3 + dx, ky + 1, 2, 3);
+  } else if (KZ.alet === "mala") {   // mala: toprağı kazır, aşağı yukarı
+    const dy = kalk ? (an ? 2 : 0) : 0;
+    ctx.fillStyle = "#7a5530"; ctx.fillRect(kx, ky + dy, 2, 1); ctx.fillStyle = "#9aa3ab"; ctx.fillRect(kx + 2, ky + dy, 3, 2); ctx.fillRect(kx + 3, ky + 2 + dy, 1, 1);
+  } else {   // kazma: sap ve demir; sallanırken yukarı kalkar
+    ctx.fillStyle = "#7a5530";
+    if (kalk) { ctx.fillRect(kx, ky - 6, 1, 7); ctx.fillStyle = "#9aa3ab"; ctx.fillRect(kx - 2, ky - 7, 5, 1); }
+    else { ctx.fillRect(kx, ky, 4, 1); ctx.fillRect(kx + 3, ky + 1, 1, 1); ctx.fillStyle = "#9aa3ab"; ctx.fillRect(kx + 4, ky - 1, 1, 4); }
+  }
+  if (a.not > 0) {   // buluntudan sonra deftere not alır
+    const nx = Math.round(a.x) - 7, ny = Math.round(a.y) + 4;
+    ctx.fillStyle = "#efe6d2"; ctx.fillRect(nx, ny, 6, 7); ctx.fillStyle = "#8a5a3a"; ctx.fillRect(nx, ny, 1, 7);
+    ctx.fillStyle = "#6b5a44"; for (let s = 0; s < 3; s++) ctx.fillRect(nx + 2, ny + 2 + s * 2, (a.not >> 3) % 3 >= s ? 3 : 1, 1);
+  }
+}
+/* Not alma animasyonu (buluntu penceresi kapanınca) */
+function kzNotAl() {
+  if (!KZ || !KZ.arkKonum) return;
+  KZ.arkKonum.not = 70;
+  if (!KZ.arkKonum.dongu) { const a = KZ.arkKonum; const adim = () => { if (!KZ || !$("#kz-tuval")) { a.dongu = null; return; } a.not--; kzTozIlerlet(); kzCiz(); a.dongu = a.not > 0 || KZ.toz.length ? requestAnimationFrame(adim) : null; }; a.dongu = requestAnimationFrame(adim); }
+}
+/* Değerli buluntuda altın parıltı */
+function kzParilti(i) {
+  const x = (i % KZ_SUTUN) * KZ_HUCRE + 8, y = KZ_SAHNE + Math.floor(i / KZ_SUTUN) * KZ_HUCRE + 8;
+  for (let k = 0; k < 14; k++) { const aci = k / 14 * Math.PI * 2; KZ.toz.push({ x, y, vx: Math.cos(aci) * 1.6, vy: Math.sin(aci) * 1.6 - .6, o: 18, c: k % 2 ? "#e3b341" : "#fff3c4" }); }
 }
 /* Kazarken toz: yalnız görüntü (Günün Açması'nın tohumlu rastgelesine dokunmaz) */
 function kzToz(i) {
@@ -914,9 +937,10 @@ function kzYuru(i) {
       a.x += uz <= hiz ? dx : dx / uz * hiz; a.y += uz <= hiz ? dy : dy / uz * hiz;
       if (zaman - sonAdim > 60) { oyunSesi("adim"); sonAdim = zaman; }
     } else if (a.salla > 0) { a.salla--; }
+    if (a.not > 0) a.not--;
     kzTozIlerlet();
     kzCiz();
-    if (a.yuruyor || a.salla > 0 || KZ.toz.length) a.dongu = requestAnimationFrame(adim);
+    if (a.yuruyor || a.salla > 0 || a.not > 0 || KZ.toz.length) a.dongu = requestAnimationFrame(adim);
     else { a.dongu = null; kzCiz(); }
   };
   a.dongu = requestAnimationFrame(adim);
@@ -953,7 +977,8 @@ function kzKaz(i) {
     const ozel = !sikMi(h.buluntu);
     const ilk = ozel && !h.kirik && !(D.buluntuDefteri || {})[h.buluntu.id];
     if (ozel && !h.kirik) { D.buluntuDefteri = D.buluntuDefteri || {}; D.buluntuDefteri[h.buluntu.id] = D.buluntuDefteri[h.buluntu.id] || oyunGunu(); kaydet(); }
-    kzBuluntuLevhasi(yeni, KZ.alan, ilk, () => { if (ozelBitti || KZ.vurus <= 0) kzSon(ozelBitti); }, !ozel);
+    const devam = () => kzBuluntuLevhasi(yeni, KZ.alan, ilk, () => { kzNotAl(); if (ozelBitti || KZ.vurus <= 0) kzSon(ozelBitti); }, !ozel);
+    if (ozel && !h.kirik) { kzParilti(i); setTimeout(() => kzTanimla(yeni, devam), 350); } else devam();
     return;
   }
   if (ozelBitti || KZ.vurus <= 0) setTimeout(() => kzSon(ozelBitti), 250);
@@ -990,6 +1015,33 @@ function kzPaylas() {
 
 ${izgara.join("\n")}`;
   paylasLevhasi({ baslik: tx("Kazı Başı"), url: "https://arkix.harrixapp.com/#oyun/kazi", metin });
+}
+/* Tanımlama: değerli buluntu çıkınca "Bu ne?" (3 seçenek). Doğru bilen +%25 puan alır. */
+const KZ_TANIM_ORAN = 0.25;
+function kzTanimla(b, devam0) {
+  let gitti = false;
+  const devam = () => { if (gitti) return; gitti = true; devam0(); };   // cevap + perdeye dokunma iki kez açmasın
+  const diger = karistir(KZ_ALANLAR.flatMap(a => a.buluntular).filter(x => x.id !== b.id), Math.random).slice(0, 2);
+  const secenek = karistir([b, ...diger], Math.random);
+  levhaAc(`<div class="kz-buluntu"><h3>🔎 ${tx("Bu buluntu ne?")}</h3>
+    <canvas width="144" height="144" id="kz-tanim"></canvas>
+    <p class="aciklama">${tx("Doğru tanımlarsan +%25 puan.")}</p>
+    <div class="kz-tanim-secenek">${secenek.map(x => `<button class="ikincil-dugme" data-t="${x.id}">${esc(kzAd(x))}</button>`).join("")}</div></div>`, lv => {
+    const ctx = lv.querySelector("#kz-tanim").getContext("2d");
+    ctx.fillStyle = KZ.alan.toprak[3]; ctx.fillRect(0, 0, 144, 144); spriteCiz(ctx, b.id, 0, 0, 12);
+    lv.querySelectorAll("[data-t]").forEach(d => d.onclick = () => {
+      const dogru = d.dataset.t === b.id;
+      lv.querySelectorAll("[data-t]").forEach(x => { x.disabled = true; if (x.dataset.t === b.id) x.classList.add("dogru"); else if (x === d) x.classList.add("yanlis"); });
+      if (dogru && KZ) { const ek = Math.round((b.tam || b.kazanilan || b.puan) * KZ_TANIM_ORAN); KZ.puan += ek; b.kazanilan = (b.kazanilan || 0) + ek; KZ.tanim = (KZ.tanim || 0) + 1; kzCiz(); oyunSesi("yerinde", 3); }
+      else oyunSesi("sil");
+      setTimeout(devam, dogru ? 700 : 1300);
+    });
+  });
+  // kapatılırsa (perdeye dokunma) buluntu penceresine geç
+  const perde = () => setTimeout(() => { if ($("#levha").hidden) devam(); }, 0);
+  $("#tabaka").addEventListener("click", perde, { once: true });
+  const temizle = new MutationObserver(() => { if (!document.querySelector("#kz-tanim")) { $("#tabaka").removeEventListener("click", perde); temizle.disconnect(); } });
+  temizle.observe($("#levha"), { childList: true });
 }
 /* Restorasyon: kırık buluntunun 3×3 parçasını yerine diz (iki parçaya dokun, yer değiştirsinler). Başarınca puan %70'e çıkar, deftere yazılır. */
 function kzRestorasyon(b, alan, sonra) {

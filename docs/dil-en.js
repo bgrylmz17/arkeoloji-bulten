@@ -850,5 +850,8 @@ const EN = {
  "Restore edildi! +{p} puan, deftere yazıldı.": "Restored! +{p} points, added to the notebook.",
  "Yeterli vuruş kalmadı": "Not enough strikes left",
  "{n} hamle": "{n} moves",
- "İki parçaya dokun, yer değiştirsinler. Bütün parçalar yerine oturunca buluntu kurtulur.": "Tap two pieces to swap them. When every piece is in place, the find is saved."
+ "İki parçaya dokun, yer değiştirsinler. Bütün parçalar yerine oturunca buluntu kurtulur.": "Tap two pieces to swap them. When every piece is in place, the find is saved.",
+ "Bu buluntu ne?": "What is this find?",
+ "Değerli bir buluntu çıkınca ne olduğunu tahmin et: doğru bilirsen +%25 puan.": "When a valuable find appears, guess what it is: get it right for +25% points.",
+ "Doğru tanımlarsan +%25 puan.": "Identify it correctly for +25% points."
 };
