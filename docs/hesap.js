@@ -91,6 +91,7 @@ const oyunAl = () => ({
   buluntuDefteri: D.buluntuDefteri || {}, altinDefter: D.altinDefter || {}, rozetler: D.rozetler || {}, kiyafetAcildi: D.kiyafetAcildi || {},
   nasilGoruldu: D.nasilGoruldu || {}, kaziOyun: D.kaziOyun || null, kzMeydan: D.kzMeydan || null, kelime: D.kelime || null,
   kelimeSeri: D.kelimeSeri || null, sirala: D.sirala || null,
+  kzKariyer: D.kzKariyer || null, kzSezon: D.kzSezon || null, kzSezonGun: D.kzSezonGun || null, kzHazine: D.kzHazine || null, kzArsiv: D.kzArsiv || [],
   tercih: Object.fromEntries(OYUN_TERCIH.filter(k => D[k] !== undefined).map(k => [k, D[k]])),
 });
 function oyunBirlestir(y, b) {
@@ -100,6 +101,14 @@ function oyunBirlestir(y, b) {
   const seriA = y.kelimeSeri, seriB = b.kelimeSeri;
   let seri = !seriA ? seriB || null : !seriB ? seriA : ((seriA.son || "") >= (seriB.son || "") ? { ...seriA } : { ...seriB });
   if (seri) seri.enIyi = Math.max((seriA || {}).enIyi || 0, (seriB || {}).enIyi || 0, seri.seri || 0);
+  // Kazı Sezonu (kazi-sezon.js): kariyerde yüksek itibar, keşifler ve yapılar birleşir; biten sezon (arşivde) geri gelmez
+  const ka = y.kzKariyer, kb = b.kzKariyer;
+  const kariyer = !ka ? kb || null : !kb ? ka : { ...((ka.itibar || 0) >= (kb.itibar || 0) ? ka : kb), kesif: erken(ka.kesif, kb.kesif),
+    yapilar: Object.fromEntries([...new Set([...Object.keys(ka.yapilar || {}), ...Object.keys(kb.yapilar || {})])].map(k => [k, Math.max((ka.yapilar || {})[k] || 0, (kb.yapilar || {})[k] || 0)])) };
+  const arsiv = [...new Map([...(b.kzArsiv || []), ...(y.kzArsiv || [])].map(x => [x.id, x])).values()].sort((p, q) => p.id < q.id ? 1 : -1).slice(0, 12);
+  const sa = y.kzSezon, sb = b.kzSezon, ilerleme = x => (x.gun || 0) * 10 + (x.bugun ? (x.bugun.bitti ? 5 : x.bugun.is ? 3 : 1) : 0);
+  let sezon = !sa ? sb || null : !sb ? sa : sa.id !== sb.id ? (sa.id > sb.id ? sa : sb) : (ilerleme(sa) >= ilerleme(sb) ? sa : sb);
+  if (sezon && arsiv.some(x => x.id === sezon.id)) sezon = null;
   return {
     buluntuDefteri: erken(y.buluntuDefteri, b.buluntuDefteri), altinDefter: erken(y.altinDefter, b.altinDefter),
     rozetler: erken(y.rozetler, b.rozetler), kiyafetAcildi: erken(y.kiyafetAcildi, b.kiyafetAcildi), nasilGoruldu: { ...(b.nasilGoruldu || {}), ...(y.nasilGoruldu || {}) },
@@ -110,12 +119,17 @@ function oyunBirlestir(y, b) {
     kelime: gunluk(y.kelime, b.kelime, x => (x.bitti ? 100 : 0) + (x.tahminler || []).length),
     sirala: gunluk(y.sirala, b.sirala, x => (x.bitti ? 100 : 0) + (x.denemeler || []).length),
     kelimeSeri: seri,
+    kzKariyer: kariyer, kzSezon: sezon, kzArsiv: arsiv,
+    kzSezonGun: gunluk(y.kzSezonGun, b.kzSezonGun, x => 10 - (x.kalan ?? 10)),
+    kzHazine: gunluk(y.kzHazine, b.kzHazine, x => (x.asama === "bitti" ? 100 : 0) + (x.tahminler || []).length + (x.kazilar || []).length),
     tercih: { ...(b.tercih || {}), ...(y.tercih || {}) },
   };
 }
 function oyunUygula(o) {
-  for (const k of ["buluntuDefteri", "altinDefter", "rozetler", "kiyafetAcildi", "nasilGoruldu", "kaziOyun", "kzMeydan", "kelime", "kelimeSeri", "sirala"])
+  for (const k of ["buluntuDefteri", "altinDefter", "rozetler", "kiyafetAcildi", "nasilGoruldu", "kaziOyun", "kzMeydan", "kelime", "kelimeSeri", "sirala",
+    "kzKariyer", "kzSezonGun", "kzHazine", "kzArsiv"])
     if (o[k] != null) D[k] = o[k];
+  if ("kzSezon" in o) D.kzSezon = o.kzSezon;   // null: sezon başka cihazda bitti
   for (const k of OYUN_TERCIH) if (D[k] === undefined && o.tercih && o.tercih[k] !== undefined) D[k] = o.tercih[k];
 }
 /* Buluttan gelen oyun verisini birleştirir; cihazda daha ileri bir şey varsa hesaba geri yazar */

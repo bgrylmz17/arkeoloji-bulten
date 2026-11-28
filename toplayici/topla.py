@@ -30,11 +30,12 @@ KOK = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(KOK))
 
 from harrix_bulten import ceviri, haber_kaynaklari, harrix_hesap, kaynakca, kaynaklar, sozler, tarayici, terimler  # noqa: E402
-from harrix_bulten.metin import TekrarDenetci, _ascii, arkeoloji_kesin, donem_etiketleri  # noqa: E402
+from harrix_bulten.metin import TekrarDenetci, _ascii, arkeoloji_disi, arkeoloji_kesin, donem_etiketleri  # noqa: E402
 from harrix_bulten.veritabani import Depo  # noqa: E402
 
 VERI = KOK / "docs" / "veri"
 AYAR_DOSYASI = KOK / "toplayici" / "ayar.json"
+KALDIRILAN_DOSYASI = VERI / "kaldirilan.json"   # yöneticinin kaldırdığı haberlerin başlıkları (kopyaları da atılsın)
 OZEL = KOK / "docs" / "ozel"   # Arkix Özel yazıları (*.md) ve fotoğrafları; yazım kılavuzu: docs/ozel/_ornek.md
 
 
@@ -516,6 +517,7 @@ def ozel_yazilar(eski_kayitlar: dict, calisma: str) -> list[dict]:
 # ---------------------------------------------------------------- topluluk (Firestore, herkese açık okuma)
 # Yorum sayıları ve son yorumlar bültene yazılır: listede sayı, Bugün'de "Tartışılanlar". Yöneticinin bültenden
 # kaldırdığı kayıtlar (gizli_kayitlar/{kimlik}) atılır. Kurallar: mobil/firestore.rules.
+GIZLI_BASLIKLAR: dict[str, tuple[str, str, str]] = {}   # topluluk_oku doldurur: {kimlik: (başlık, tür, tarih)}
 FIRESTORE = "https://firestore.googleapis.com/v1/projects/harrix-bulten/databases/(default)/documents"
 
 
@@ -553,7 +555,11 @@ def topluluk_oku() -> tuple[dict, list[dict], set[str]]:
     except Exception as hata:  # noqa: BLE001
         print(f"Yorumlar okunamadı: {hata}", flush=True)
     try:
-        gizli = {b.get("kayit") or urllib.parse.unquote(b["_id"]) for b in _fs_sorgu("gizli_kayitlar")}
+        for b in _fs_sorgu("gizli_kayitlar"):
+            kid = b.get("kayit") or urllib.parse.unquote(b["_id"])
+            gizli.add(kid)
+            if b.get("baslik"):
+                GIZLI_BASLIKLAR[kid] = (b["baslik"], b.get("tur") or "Haber", b.get("tarihK") or "")
     except Exception as hata:  # noqa: BLE001
         print(f"Kaldırılan kayıtlar okunamadı: {hata}", flush=True)
     return sayilar, son, gizli
@@ -791,6 +797,8 @@ def main() -> int:
 
     def gecerli(k):
         m = mod.get(k.get("s"))
+        if k.get("k") == "Haber" and not k.get("oz") and arkeoloji_disi(k.get("b", ""), k.get("o", "")):
+            return False
         return m not in ("genel", "bilim") or arkeoloji_kesin(k.get("b", ""), k.get("o", ""), bilim=m == "bilim")
     eski_kayitlar = {i: k for i, k in eski_kayitlar.items() if gecerli(k)}
     ayar = ayarlari_hazirla(kullanici, durum)
@@ -938,10 +946,26 @@ def main() -> int:
         print(f"Kaldırma talebiyle engellenen: {once - len(tum)} kayıt", flush=True)
     # topluluk: yöneticinin kaldırdığı kayıtlar atılır; yorum sayıları ve son yorumlar eklenir
     yorum_sayilari, son_yorumlar, gizli_kayitlar = topluluk_oku()
-    if gizli_kayitlar:
+    # Kaldırılan haberin başlığı saklanır: aynı haberin başka sitelerdeki kopyaları (ayrı kimlikle) da atılır,
+    # yoksa kopya "son dakika"da kalır. Başlık yönetici panelinden de gelir (gizli_kayitlar.baslik).
+    kaldirilan = {r["i"]: r for r in oku(KALDIRILAN_DOSYASI, [])}
+    for k in tum:
+        if k["i"] in gizli_kayitlar and k.get("k") in ("Haber", "Rapor"):
+            kaldirilan[k["i"]] = {"i": k["i"], "k": k["k"], "b": k.get("b", ""), "g": k.get("g", "")}
+    for kid, (baslik, kat, tarih) in GIZLI_BASLIKLAR.items():
+        kaldirilan.setdefault(kid, {"i": kid, "k": kat or "Haber", "b": baslik, "g": tarih or ""})
+    denetci = TekrarDenetci()
+    for r in kaldirilan.values():
+        if r.get("b"):
+            denetci.ekle(r["i"], r.get("k") or "Haber", r["b"], r.get("g") or "")
+    if gizli_kayitlar or kaldirilan:
         once = len(tum)
-        tum = [k for k in tum if k["i"] not in gizli_kayitlar]
-        print(f"Yöneticinin kaldırdığı: {once - len(tum)} kayıt", flush=True)
+        tum = [k for k in tum if k["i"] not in gizli_kayitlar and k["i"] not in kaldirilan
+               and (k.get("oz") or not denetci.tekrar_mi(k.get("k", ""), k.get("b", ""), k.get("g", "")))]
+        print(f"Yöneticinin kaldırdığı (kopyalarıyla): {once - len(tum)} kayıt", flush=True)
+    sinir_k = (dt.date.today() - dt.timedelta(days=int(kullanici.get("saklama_gun", 180)))).isoformat()
+    yaz(KALDIRILAN_DOSYASI, sorted((r for r in kaldirilan.values() if (r.get("g") or "9")[:10] >= sinir_k),
+                                   key=lambda r: r.get("g") or "", reverse=True))
     # Arkix Özel yazılar saklama süresine ve kayıt sınırına takılmaz
     tum = sorted(ozeller + tum, key=lambda k: (k.get("g", ""), k.get("t", "")), reverse=True)
     for k in tum:   # sözlüğe sonradan eklenen kavramlar (ör. bilim dalları) eski kayıtlara da işlensin

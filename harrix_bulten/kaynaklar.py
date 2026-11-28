@@ -28,7 +28,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import zlib
 
-from .metin import (arkeoloji_kesin, arkeoloji_mi, dil_normal, dil_tahmin, donem_etiketleri, html_temizle, puanla,
+from .metin import (arkeoloji_disi, arkeoloji_kesin, arkeoloji_mi, dil_normal, dil_tahmin, donem_etiketleri, html_temizle, puanla,
                    rapor_mu, tr_kucuk)
 
 # Sitelerin çoğu "bot" görünen istekleri engellediği için gerçek bir tarayıcı gibi tanıtıyoruz
@@ -467,6 +467,8 @@ def rss_oku(url: str, kaynak_adi: str, kavramlar, kategori: str = "Haber",
             if not arkeoloji_kesin(baslik, ozet, bilim=baglam_gerekli == "bilim"):
                 continue
         elif baglam_gerekli and not arkeoloji_mi(baslik, ozet):
+            continue
+        if kategori == "Haber" and arkeoloji_disi(baslik, ozet):
             continue
         yayin = alan.get("source") or kaynak_adi
         # Google Haberler başlıkları "Başlık - Kaynak" biçimindedir

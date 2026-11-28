@@ -150,6 +150,28 @@ def arkeoloji_kesin(baslik: str, ozet: str = "", bilim: bool = False) -> bool:
     return bilim and bool(_ESKI_YAS.search(metin)) and not re.search(r"dinozor|dinosaur", metin)
 
 
+# "Kazı" sözcüğü altyapı, yol ve inşaat haberlerinde de geçer ("kazı alanına düşen otomobil").
+# Kaza/asayiş ya da altyapı bağlamı varsa ve güçlü bir arkeoloji sözcüğü yoksa haber atılır.
+_DIS_DESENI = re.compile(
+    r"(?<![a-z])(?:"
+    r"kaza(?:da|si|sinda|ya|dan)?(?![a-z])|ters\s+dondu|devril|yaralan|hayatini\s+kaybet|can\s+verdi|olu\s+ve"
+    r"|(?:otomobil|arac|kamyon|tir|minibus|otobus|motosiklet|is\s+makine|kepce|ekskavator)\w*\s+(?:\w+\s+){0,3}(?:dus|devril|gomul|mahsur)"
+    r"|dusen\s+(?:otomobil|arac|kamyon|tir|motosiklet|cocuk|isci|yasli)"
+    r"|altyapi|dogal\s*gaz|kanalizasyon|icme\s+suyu|yagmur\s+suyu|fiber|elektrik\s+(?:hatt|kablo|altyapi)|asfalt"
+    r"|gocuk|goctu|toprak\s+kaymasi|isci\s+(?:mahsur|toprak\s+altinda)"
+    r")")
+_GUCLU_DESENI = re.compile(
+    r"(?<![a-z])(?:arkeolo|archaeolo|archeolo|hoyuk|oren\s+yeri|antik|tarih\s*oncesi|neoliti|paleoliti|kalkoliti"
+    r"|tarihi\s+(?:eser|yapi|mezar|kalinti|duvar|sarnic|kilise|hamam|su\s+yolu)|kurtarma\s+kazi|muze|lahit|mozaik|sikke"
+    r"|nekropol|bizans|roma\s+(?:donem|imparator)|hellenisti|osmanli\s+donem|tumulus|kaya\s+mezar|buluntu)")
+
+
+def arkeoloji_disi(baslik: str, ozet: str = "") -> bool:
+    """Haber arkeolojiyle ilgisiz bir kaza/altyapı haberi mi? (kazı sözcüğü yüzünden süzgeçten geçenler)"""
+    metin = _ascii(baslik + " " + ozet)
+    return bool(_DIS_DESENI.search(metin)) and not _GUCLU_DESENI.search(metin)
+
+
 def rapor_mu(baslik: str, ozet: str = "") -> bool:
     """Haber/yazının bir kazı sonucu / sezon raporu olup olmadığını tahmin eder."""
     return bool(_RAPOR_DESENI.search(_ascii(baslik + " " + ozet)))

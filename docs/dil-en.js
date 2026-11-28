@@ -1037,5 +1037,8 @@ const EN = {
  "Etkinlik gününü seç": "Choose the event date",
  "Hatırlatma kur": "Set a reminder",
  "Hatırlatma kurmak için etkinliği sola kaydır.": "Swipe an event left to set a reminder.",
- "Hatırlatmayı kaldır": "Remove reminder"
+ "Hatırlatmayı kaldır": "Remove reminder",
+ "Sezon · Gün {n}": "Season · Day {n}",
+ "Günü bitir": "End the day",
+ "Kareye basılı tutarsan seçili aleti bırakıp fırçayla kazarsın.": "Press and hold a square to dig it with the brush, whatever tool is selected."
 };

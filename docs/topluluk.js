@@ -528,7 +528,10 @@ async function sayfaYonetim() {
         else if (b.dataset.g === "kaldir") {
           if (!confirm(tx("Bu kayıt bir sonraki toplamada bültenden kalkacak ve bir daha alınmayacak. Emin misiniz?"))) return;
           const kayit = b.dataset.kayit;
-          await fs.setDoc(fs.doc(H.db, "gizli_kayitlar", encodeURIComponent(kayit).replace(/\./g, "%2E")), { kayit, tarih: fs.serverTimestamp() });
+          // başlık da yazılır: toplayıcı aynı haberin başka sitelerdeki kopyalarını da atar (yoksa "son dakika"da kalır)
+          const r = (VERI.kayitlar || []).find(x => x.i === kayit) || {};
+          await fs.setDoc(fs.doc(H.db, "gizli_kayitlar", encodeURIComponent(kayit).replace(/\./g, "%2E")),
+            { kayit, tarih: fs.serverTimestamp(), ...(r.b ? { baslik: String(r.b).slice(0, 300), tur: r.k || "Haber", tarihK: r.g || r.t || "" } : {}) });
           await fs.updateDoc(ref, { durum: "cozuldu" });
           bildir(tx("Kayıt kaldırılacak (en geç 6 saat içinde)"));
         }

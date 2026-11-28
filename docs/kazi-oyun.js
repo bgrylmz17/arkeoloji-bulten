@@ -726,6 +726,7 @@ const meydanDurumu = () => { const g = oyunGunu(); return D.kzMeydan && D.kzMeyd
 
 function sayfaKaziOyun(arg) {
   const kd = kaziDurumu();
+  if (["sezon", "hazine", "arsiv"].includes(arg) && typeof sayfaSezonYonlendir === "function") { kzMuzikDur(); return sayfaSezonYonlendir(arg); }   // kazi-sezon.js
   if (arg && KZ && KZ.alan.id === arg && !KZ.bitti) return kzOyunCiz();
   if (arg) { history.replaceState(null, "", "#oyun/kazi"); }
   kzMuzikDur();
@@ -735,6 +736,7 @@ function sayfaKaziOyun(arg) {
   $("#sayfa").innerHTML = `<div class="kazi-oyun">
     <div class="kz-ust"><p>${tx("Bir ören yeri seç, açmayı kaz, buluntuları çıkar.")}</p>
       <p class="kz-izin">${tx("Bugün kalan kazı izni")}: <b>${typeof oyunYoneticisi === "function" && oyunYoneticisi() ? "∞" : `${kd.hak}/${KZ_HAK}`}</b> · ${tx("Bugünkü puan")}: <b>${kd.toplam}</b> · <button class="metin-dugme" id="kz-nasil">${tx("Nasıl oynanır?")}</button></p></div>
+    ${typeof sezonHubHtml === "function" ? sezonHubHtml() : ""}
     <button class="kz-arkeolog" id="kz-ark"><canvas width="24" height="32"></canvas>
       <span>${ark ? `<b>${esc(arkAd(ark))}</b><small>${esc(arkOzellik(ark))}</small>` : `<b>${tx("Arkeoloğunu seç")}</b><small>${tx("Kazıya başlamadan önce")}</small>`}</span><i>${ark ? tx("Değiştir") : "›"}</i></button>
     <button class="kz-alan kz-meydan" id="kz-meydan" ${md ? "disabled" : ""}><canvas width="160" height="48"></canvas>
@@ -754,6 +756,7 @@ function sayfaKaziOyun(arg) {
   $(".oyun-skor h3").textContent = tx("Kazı Başı · Skor tablosu");
   $('.oyun-skor[data-oyun="meydan"] h3').textContent = tx("Günün Açması · Skor tablosu");
   kzSahne($("#kz-meydan canvas").getContext("2d"), ma, 160);
+  if (typeof sezonHubBagla === "function") sezonHubBagla();
   $("#kz-meydan").onclick = () => arkeolog() ? kzBasla(ma, true) : arkeologSecimi(() => kzBasla(ma, true));
   $$("[data-bolge]").forEach(b => b.onclick = () => { D.kzBolge = b.dataset.bolge; kaydet(); sayfaKaziOyun(""); });
   $("#kz-nasil").onclick = () => typeof nasilGoster === "function" && nasilGoster("kazi");
@@ -774,9 +777,11 @@ function sayfaKaziOyun(arg) {
   skorBolumuBagla($("#sayfa"));
 }
 
-function kzBasla(alan, meydan = false) {
+/* sz: Kazı Sezonu günü (kazi-sezon.js › szKazBasla): açma, vuruş, hava sezondan gelir; kazı izni harcanmaz. */
+function kzBasla(alan, meydan = false, sz = null) {
   const kd = kaziDurumu(), g = oyunGunu();
-  if (meydan) {
+  if (sz) { /* sezon günü */ }
+  else if (meydan) {
     if (meydanDurumu()) { bildir(tx("Bugünün açmasını kazdın. Yarın yeni açma!")); return; }
     D.kzMeydan = { gun: g, puan: 0, bitti: false };   // yenilemeyle tekrar denenmesin
   } else {
@@ -786,17 +791,22 @@ function kzBasla(alan, meydan = false) {
   kaydet();
   const rng = meydan ? kzRng(kzTohum("meydan-" + g)) : Math.random;
   const n = KZ_SUTUN * KZ_SATIR, yerler = karistir([...Array(n).keys()], rng);
-  const hucreler = Array.from({ length: n }, () => ({ derinlik: 3, buluntu: null, bulKat: 0 }));
-  // değerliler: 2–3 vuruşta (bulKat 1 ya da 0); sık buluntular: 1–3 vuruşta
-  alan.buluntular.forEach((b, i) => { hucreler[yerler[i]] = { derinlik: 3, buluntu: b, bulKat: rng() < .5 ? 1 : 0, nadir: rng() < KZ_NADIR_OLASILIK }; });
-  const sikler = KZ_SIK.filter(b => (b.tarihOncesi ? alan.tarihOncesi : true) && (b.cag ? (!alan.tarihOncesi || alan.canak) : true));
-  for (let i = alan.buluntular.length; i < alan.buluntular.length + KZ_SIK_SAYI; i++)
-    hucreler[yerler[i]] = { derinlik: 3, buluntu: sikler[Math.floor(rng() * sikler.length)], bulKat: [2, 2, 1, 1, 0][Math.floor(rng() * 5)] };
-  const zar = rng(), havaId = zar < 0.6 ? "gunes" : zar < 0.8 ? (alan.kurak ? "kum" : "yagmur") : (alan.kurak ? "kum" : "ruzgar");
-  const camur = new Set();
-  if (havaId === "yagmur") { const s = Math.floor(rng() * (KZ_SATIR - 1)); camur.add(s); camur.add(s + 1); }
+  let hucreler = sz && sz.hucreler;
+  if (!hucreler) {
+    hucreler = Array.from({ length: n }, () => ({ derinlik: 3, buluntu: null, bulKat: 0 }));
+    // değerliler: 2–3 vuruşta (bulKat 1 ya da 0); sık buluntular: 1–3 vuruşta
+    alan.buluntular.forEach((b, i) => { hucreler[yerler[i]] = { derinlik: 3, buluntu: b, bulKat: rng() < .5 ? 1 : 0, nadir: rng() < KZ_NADIR_OLASILIK }; });
+    const sikler = KZ_SIK.filter(b => (b.tarihOncesi ? alan.tarihOncesi : true) && (b.cag ? (!alan.tarihOncesi || alan.canak) : true));
+    for (let i = alan.buluntular.length; i < alan.buluntular.length + KZ_SIK_SAYI; i++)
+      hucreler[yerler[i]] = { derinlik: 3, buluntu: sikler[Math.floor(rng() * sikler.length)], bulKat: [2, 2, 1, 1, 0][Math.floor(rng() * 5)] };
+  }
+  const zar = rng(), havaId = sz ? sz.hava : zar < 0.6 ? "gunes" : zar < 0.8 ? (alan.kurak ? "kum" : "yagmur") : (alan.kurak ? "kum" : "ruzgar");
+  let camur = new Set();
+  if (sz) camur = sz.camur || camur;
+  else if (havaId === "yagmur") { const s = Math.floor(rng() * (KZ_SATIR - 1)); camur.add(s); camur.add(s + 1); }
   const ark = arkeolog();
-  KZ = { alan, hucreler, vurus: KZ_VURUS + (!meydan && ark && ark.id === "saha" ? 6 : 0), puan: 0, bulunan: [], ozelSayi: alan.buluntular.length, bitti: false, vurgu: -1,
+  KZ = { alan, hucreler, vurus: sz ? sz.vurus : KZ_VURUS + (!meydan && ark && ark.id === "saha" ? 6 : 0), puan: sz ? sz.puan || 0 : 0, bulunan: sz ? sz.bulunan || [] : [],
+    ozelSayi: sz ? sz.ozelSayi : alan.buluntular.length, bitti: false, vurgu: -1, sezon: !!sz, sezonGun: sz ? sz.gun : 0,
     carpan: meydan ? 1 : kzCarpan(alan), menzil: !meydan && ark && ark.id === "jeofizik" ? 3 : 2, ark, meydan, rng, alet: D.kzAlet && KZ_ALETLER[D.kzAlet] ? D.kzAlet : "mala", kirik: 0, kova: 0, toz: [], hava: havaId, camur, restore: 0, kiyafet: kiyafetRenk() };
   if (havaId === "ruzgar" || havaId === "kum") KZ.menzil = Math.max(1, KZ.menzil - 1);
   if (havaId !== "gunes") setTimeout(() => bildir(`${KZ_HAVA[havaId].simge} ${havaAd(KZ_HAVA[havaId])}: ${havaAciklama(KZ_HAVA[havaId])}`), 600);
@@ -806,7 +816,7 @@ function kzBasla(alan, meydan = false) {
 
 function kzOyunCiz() {
   $("#sayfa").innerHTML = `<div class="kazi-oyun"><div class="kz-hud">
-      <span><b title="${esc(havaAd(KZ_HAVA[KZ.hava] || KZ_HAVA.gunes))}">${(KZ_HAVA[KZ.hava] || KZ_HAVA.gunes).simge}</b> <b>${KZ.meydan ? "🏆 " : ""}${esc(kzAlanAd(KZ.alan))}</b> · ${esc(KZ.meydan ? tx("Günün Açması") : KZ.ark ? arkAd(KZ.ark) : "")}</span>
+      <span><b title="${esc(havaAd(KZ_HAVA[KZ.hava] || KZ_HAVA.gunes))}">${(KZ_HAVA[KZ.hava] || KZ_HAVA.gunes).simge}</b> <b>${KZ.meydan ? "🏆 " : ""}${esc(kzAlanAd(KZ.alan))}</b> · ${esc(KZ.meydan ? tx("Günün Açması") : KZ.sezon ? tx("Sezon · Gün {n}", { n: KZ.sezonGun }) : KZ.ark ? arkAd(KZ.ark) : "")}</span>
       <span class="kz-vurus" title="${tx("Kalan vuruş")}">⛏ <b id="kz-vurus">${KZ.vurus}</b></span>
       <span>${tx("Puan")}: <b id="kz-puan">${KZ.puan}</b></span>
       <span><button class="kz-muzik" id="kz-muzik" aria-label="${tx("Müzik")}" title="${tx("Müzik")}">${kzMuzikAcik() ? "♪" : "♪̸"}</button>${oyunSesDugmesi()}</span></div>
@@ -816,16 +826,33 @@ function kzOyunCiz() {
       <span class="kz-elek-ad">🪣 ${tx("Elek")}</span><span class="kz-kova"><i></i><i></i><i></i></span>
       <span class="kz-elek-durum"><b>0</b> ${tx("eleme hazır")}</span><small>${tx("3 kova = 1 eleme · 1 vuruş")}</small></button>
     <div class="kz-cerceve"><canvas id="kz-tuval" width="${KZ_SUTUN * KZ_HUCRE}" height="${KZ_SAHNE + KZ_SATIR * KZ_HUCRE}" aria-label="${tx("Kazı alanı")}"></canvas></div>
-    <p class="aciklama kz-ipucu">${tx("Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücrede nokta varsa yakında değerli bir buluntu var: kırmızı 3 nokta hemen yanında, mavi 2 nokta iki kare ötede.")} ${tx("Seramik, cam, tablet ve fresk kırılgandır: kazmayla çıkarırsan kırılabilir, fırça hiç kırmaz.")} ${tx("Değerli buluntuyu sağlam çıkarırsan +3 vuruş.")}</p>
+    <p class="aciklama kz-ipucu">${tx("Toprağa dokun: her dokunuş bir katman kazar. Buluntular farklı derinliklerde; boş çıkan hücrede nokta varsa yakında değerli bir buluntu var: kırmızı 3 nokta hemen yanında, mavi 2 nokta iki kare ötede.")} ${tx("Seramik, cam, tablet ve fresk kırılgandır: kazmayla çıkarırsan kırılabilir, fırça hiç kırmaz.")} ${tx("Değerli buluntuyu sağlam çıkarırsan +3 vuruş.")} ${tx("Kareye basılı tutarsan seçili aleti bırakıp fırçayla kazarsın.")}</p>
     <p class="kz-bulunanlar" id="kz-bulunanlar"></p>
     <p class="kz-alt-dugmeler"><button class="ikincil-dugme" id="kz-nasil-oyun">❔ ${tx("Nasıl oynanır?")}</button>
-      <button class="ikincil-dugme" id="kz-bitir">${tx("Kazıyı bitir")}</button></p></div>`;
+      <button class="ikincil-dugme" id="kz-bitir">${KZ.sezon ? tx("Günü bitir") : tx("Kazıyı bitir")}</button></p></div>`;
   const cv = $("#kz-tuval");
-  cv.onclick = e => {
-    if (!KM.zaman && kzMuzikAcik()) kzMuzikBaslat(KZ.alan.id);
+  const hucreBul = e => {
     const k = cv.getBoundingClientRect(), x = (e.clientX - k.left) / k.width * cv.width, y = (e.clientY - k.top) / k.height * cv.height - KZ_SAHNE;
-    if (y < 0) return;
-    kzKaz(Math.floor(y / KZ_HUCRE) * KZ_SUTUN + Math.floor(x / KZ_HUCRE));
+    return y < 0 ? -1 : Math.floor(y / KZ_HUCRE) * KZ_SUTUN + Math.floor(x / KZ_HUCRE);
+  };
+  // dokunmatik: kareye basılı tutmak (450 ms) o kareyi fırçayla kazar; seçili alet değişmez
+  let uzun = null, uzunOldu = false;
+  cv.onpointerdown = e => {
+    uzunOldu = false; clearTimeout(uzun);
+    const i = hucreBul(e); if (i < 0) return;
+    uzun = setTimeout(() => {
+      uzunOldu = true; if (!KZ || KZ.bitti) return;
+      const once = KZ.alet; KZ.alet = "firca"; if (navigator.vibrate) try { navigator.vibrate(20); } catch (x) {}
+      kzKaz(i); if (KZ) KZ.alet = once;
+    }, 450);
+  };
+  cv.onpointerup = cv.onpointerleave = cv.onpointercancel = () => clearTimeout(uzun);
+  cv.oncontextmenu = e => e.preventDefault();
+  cv.onclick = e => {
+    if (uzunOldu) { uzunOldu = false; return; }
+    if (!KM.zaman && kzMuzikAcik()) kzMuzikBaslat(KZ.alan.id);
+    const i = hucreBul(e); if (i < 0) return;
+    kzKaz(i);
   };
   $("#kz-muzik").onclick = () => {
     D.kzMuzik = !kzMuzikAcik(); kaydet();
@@ -886,6 +913,7 @@ function kzCiz() {
   kzArkCiz(ctx);
   if (KZ.toz && KZ.toz.length) kzTozCiz(ctx);
   $("#kz-vurus").textContent = KZ.vurus; $("#kz-puan").textContent = KZ.puan;
+  if (KZ.sezon && typeof sezonAnlik === "function") sezonAnlik();
   $("#kz-bulunanlar").innerHTML = KZ.bulunan.map(b => `<span>${esc(kzAd(b))}</span>`).join("");
 }
 /* Arkeolog: tıklanan hücreye hızla yürür (adım sesleri), kazma sallar. Kazı anında işlenir; yürüyüş yalnız görüntü. */
@@ -1126,6 +1154,7 @@ function kzSon(hepsi) {
   if (!KZ || KZ.bitti) return;
   KZ.bitti = true;
   kzMuzikDur();
+  if (KZ.sezon && typeof sezonKaziBitti === "function") return sezonKaziBitti(hepsi);
   setTimeout(() => oyunSesi("bitis"), 150);
   const bonus = hepsi ? KZ.vurus * 5 : 0;
   KZ.puan += bonus;
