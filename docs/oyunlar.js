@@ -139,6 +139,20 @@ function oyunSesi(tur, ek = 0) {
   else if (tur === "kazan") [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => ton(f, i * 0.09, 0.25, "triangle", 0.16));
   else if (tur === "kaybet") [392, 330, 262, 196].forEach((f, i) => ton(f, i * 0.16, 0.3, "triangle", 0.12));
   else if (tur === "ipucu") { ton(880, 0, 0.2, "sine", 0.15); ton(1320, 0.1, 0.3, "sine", 0.12); }
+  /* Kazı Sezonu ve Kayıp Eser (kazi-sezon.js) */
+  else if (tur === "sabah") [523, 659, 784, 1047].forEach((f, i) => { ton(f, i * 0.16, 0.6, "sine", 0.12); ton(f * 2, i * 0.16 + 0.02, 0.3, "sine", 0.03); });   // sabah çanları
+  else if (tur === "olay") { ton(147, 0, 0.5, "sawtooth", 0.06); [294, 349, 415].forEach((f, i) => ton(f, 0.05 + i * 0.12, 0.35, "triangle", 0.12)); }   // gerilimli vuruş
+  else if (tur === "secim") { ton(587, 0, 0.09, "triangle", 0.12); ton(880, 0.08, 0.16, "triangle", 0.12); }
+  else if (tur === "kesif") { [392, 523, 659, 784].forEach((f, i) => ton(f, i * 0.12, 0.3, "triangle", 0.15)); ton(1047, 0.5, 0.7, "triangle", 0.16); ton(131, 0.5, 0.8, "sine", 0.2); ton(196, 0.5, 0.8, "sine", 0.12); }   // keşif borusu
+  else if (tur === "unvan") { [523, 523, 523, 698].forEach((f, i) => ton(f, i * 0.13, i === 3 ? 0.7 : 0.11, "square", 0.07)); ton(175, 0.39, 0.8, "triangle", 0.18); }
+  else if (tur === "daktilo") ton(1500 + Math.random() * 400, 0, 0.012, "square", 0.025);
+  else if (tur === "tas") { ton(90, 0, 0.18, "sine", 0.35, -30); gurultu(0, 0.08, 500, 0.4); }   // taş oturma
+  else if (tur === "sayfa") { gurultu(0, 0.12, 4000, 0.12); gurultu(0.08, 0.1, 3000, 0.08); }   // kâğıt hışırtısı
+  else if (tur === "para") { ton(1568, 0, 0.08, "square", 0.05); ton(2093, 0.06, 0.18, "square", 0.04); }   // bozuk para
+  else if (tur === "yuzey") { gurultu(0, 0.1, 2400, 0.18); gurultu(0.12, 0.1, 2000, 0.14); }   // çimde yürüme
+  else if (tur === "lab") [1200, 1500, 1000].forEach((f, i) => ton(f, i * 0.05, 0.06, "sine", 0.08));   // laboratuvar bip
+  else if (tur === "tuzak") { gurultu(0, 0.5, 220, 0.7); ton(70, 0, 0.6, "sawtooth", 0.08, -30); gurultu(0.15, 0.3, 600, 0.3); }   // toprak çökmesi
+  else if (tur === "sicak") ton([300, 450, 650, 900][ek] || 300, 0, 0.12, "sine", 0.14);   // 0 soğuk … 3 çok sıcak
 }
 function oyunSesDugmesi(id = "oyun-ses") {
   return `<button class="kz-muzik" id="${id}" aria-label="${tx("Ses")}" title="${tx("Ses")}">${oyunSesAcik() ? "🔊" : "🔇"}</button>`;

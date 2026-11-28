@@ -994,6 +994,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .sz-arsiv { margin: 10px 16px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--cizgi); background: var(--kagit-2); }
 .sz-arsiv summary { cursor: pointer; min-height: 32px; } .sz-arsiv[open] summary { margin-bottom: 10px; }
 .kz-alan.sz-kilitli b { color: var(--soluk); }
+.sz-ses { display: inline-flex; gap: 4px; vertical-align: middle; } .sz-durum .sz-ses { margin-left: auto; } .sz-ses .kz-muzik { margin-left: 0; }
 #kz-tuval { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 @media (prefers-reduced-motion: reduce) { .sz-cubuk i { transition: none; } .sz-sayfa-kagit { transform: none; } }
 .nasil-sayfa { text-align: center; }

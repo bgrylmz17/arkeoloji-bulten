@@ -16,6 +16,33 @@ const szL = o => !o ? "" : typeof o === "string" ? o : DIL === "en" ? (o.en ?? o
 const szYonetici = () => typeof oyunYoneticisi === "function" && oyunYoneticisi();
 const sinirla = (x, a, b) => Math.max(a, Math.min(b, x));
 
+/* ---------------------------------------------------------------- müzik ve ses */
+/* Özgün kısa döngüler (kazi-oyun.js › kzMuzikBaslat motoru). Sezon ekranında alanın kendi müziği çalar. */
+Object.assign(MUZIK, {
+  sezon:   { bpm: 72, kok: 131, olcek: [0, 2, 4, 7, 9], dalga: "triangle", melodi: [0, 2, 4, 2, 3, -1, 2, 0, 1, 2, 4, -1, 3, 2, 0, -1], bas: [0, -1, 3, -1] },
+  yuzey:   { bpm: 104, kok: 147, olcek: [0, 2, 4, 5, 7, 9, 11], dalga: "triangle", melodi: [0, 2, 4, 2, 5, 4, 2, -1, 1, 3, 5, 3, 4, -1, 2, -1], bas: [0, 4, 3, 4], davul: [1, 0, 0, 0, 1, 0, 0, 0] },
+  lab:     { bpm: 90, kok: 196, olcek: [0, 3, 5, 7, 10], dalga: "sine", melodi: [0, -1, 2, -1, 4, -1, 3, 1, 0, -1, 2, -1, 1, -1, -1, -1], bas: [0, -1, -1, -1], damla: true },
+  restore: { bpm: 66, kok: 110, olcek: [0, 2, 3, 5, 7, 8, 10], dalga: "triangle", melodi: [4, -1, 3, 2, 3, -1, 0, -1, 2, -1, 3, 4, 5, -1, 4, -1], bas: [0, -1, 5, -1], davul: [1, 0, 0, 0, 0, 0, 0, 0] },
+  hazine:  { bpm: 118, kok: 147, olcek: [0, 1, 4, 5, 7, 8, 10], dalga: "sawtooth", melodi: [0, 1, 2, 1, 0, -1, 4, -1, 3, 2, 1, 2, 0, -1, -1, -1, 4, 5, 6, 5, 4, -1, 3, -1, 2, 3, 2, 1, 0, -1, -1, -1],
+             bas: [0, 0, 3, 0], davul: [1, 0, 1, 0, 1, 0, 1, 1] },
+});
+let SZ_MUZIK = null;
+function szMuzik(id) {
+  SZ_MUZIK = id;
+  if (!kzMuzikAcik()) return;
+  if (KM.zaman && KM.alan === id) return;   // aynı döngü sürüyorsa baştan başlatma
+  kzMuzikBaslat(id);
+}
+const szSesHtml = () => `<span class="sz-ses"><button class="kz-muzik" id="sz-muzik" aria-label="${szM("Müzik", "Music")}" title="${szM("Müzik", "Music")}">${kzMuzikAcik() ? "♪" : "♪̸"}</button>${oyunSesDugmesi("sz-ses")}</span>`;
+function szSesBagla() {
+  const m = $("#sz-muzik");
+  if (m) m.onclick = () => { D.kzMuzik = !kzMuzikAcik(); kaydet(); m.textContent = kzMuzikAcik() ? "♪" : "♪̸"; if (kzMuzikAcik() && SZ_MUZIK) kzMuzikBaslat(SZ_MUZIK); else kzMuzikDur(); };
+  oyunSesBagla("sz-ses");
+}
+const szSayfasi = () => /^#oyun\/kazi\/(sezon|hazine|arsiv)$/.test(location.hash);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && szSayfasi() && SZ_MUZIK && kzMuzikAcik()) kzMuzikBaslat(SZ_MUZIK); });
+const titret = d => { if (navigator.vibrate) try { navigator.vibrate(d); } catch (e) {} };
+
 /* ---------------------------------------------------------------- kariyer */
 const KZ_UNVANLAR = [
   { i: 0, tr: "Arkeoloji öğrencisi", en: "Archaeology student" },
@@ -100,13 +127,13 @@ function araSahne(alan, satirlar, sonra, dugme) {
       if (x < 70) x += 0.6;
       const zip = x < 70 ? Math.floor(performance.now() / 120) % 2 : 0;
       spriteCiz(ctx, ark ? ark.sprite : "ark_saha", Math.round(x), 24 - zip, 1, false, renk);
-      if (harf < metin.length) { harf = Math.min(metin.length, harf + 2); yazi.textContent = metin.slice(0, harf); }
+      if (harf < metin.length) { harf = Math.min(metin.length, harf + 2); yazi.textContent = metin.slice(0, harf); if (harf % 6 === 0 && /\S/.test(metin[harf - 1] || "")) oyunSesi("daktilo"); }
       else if (!bitti) { bitti = true; yazi.textContent = metin; }
       dongu = requestAnimationFrame(kare);
     };
     kare();
     const gec = () => { cancelAnimationFrame(dongu); levhaKapat(); if (sonra) sonra(); };
-    lv.querySelector("#sz-sahne-devam").onclick = () => { if (harf < metin.length) { harf = metin.length; yazi.textContent = metin; } else gec(); };
+    lv.querySelector("#sz-sahne-devam").onclick = () => { if (harf < metin.length) { harf = metin.length; yazi.textContent = metin; } else { oyunSesi("tus"); gec(); } };
   });
 }
 
@@ -364,7 +391,7 @@ function sayfaSezon() {
       <span><b>${esc(kzAlanAd(a))}</b><small>${szM("Gün {g}/{n}", "Day {g}/{n}", { g: s.gun, n: s.sure })}${b ? ` · ${(KZ_HAVA[b.hava] || KZ_HAVA.gunes).simge} ${esc(havaAd(KZ_HAVA[b.hava] || KZ_HAVA.gunes))}` : ""}</small></span>
       <span class="sz-sayac" title="${szM("Bütçe", "Budget")}">💰 <b>${s.butce}</b></span>
       <span class="sz-sayac" title="${szM("Ekip morali", "Team morale")}">🙂 <b>${s.moral}</b></span>
-      <span class="sz-sayac" title="${szM("Sezon puanı", "Season score")}">⭐ <b>${s.puan}</b></span></div>
+      <span class="sz-sayac" title="${szM("Sezon puanı", "Season score")}">⭐ <b>${s.puan}</b></span>${szSesHtml()}</div>
     <div class="sz-cubuklar"><label>${szM("Bütçe", "Budget")}<span class="sz-cubuk"><i style="width:${Math.min(100, s.butce / s.butce0 * 100)}%"></i></span></label>
       <label>${szM("Moral", "Morale")}<span class="sz-cubuk moral"><i style="width:${s.moral}%"></i></span></label></div>
     <section class="sz-bugun" id="sz-bugun"></section>
@@ -373,11 +400,12 @@ function sayfaSezon() {
     <p class="kz-alt-dugmeler"><a class="ikincil-dugme" href="#oyun/kazi">${szM("Kazı Başı'na dön", "Back to Dig Site")}</a>
       <button class="ikincil-dugme" id="sz-nasil">❔ ${szM("Nasıl oynanır?", "How to play")}</button>
       <button class="ikincil-dugme" id="sz-kapat">${szM("Sezonu kapat", "Close the season")}</button></p></div>`;
+  szMuzik(a.id); szSesBagla();
   kzSahne($("#sz-sahne").getContext("2d"), a, 160);
   spriteCiz($("#sz-sahne").getContext("2d"), (arkeolog() || ARKEOLOGLAR[0]).sprite, 72, 24, 1, false, kiyafetRenk());
   $("#sz-nasil").onclick = sezonNasil;
   $("#sz-kapat").onclick = () => { if (confirm(szM("Sezon şimdi kapansın mı? Kalan günler kullanılmaz.", "Close the season now? The remaining days are lost."))) sezonSonu(); };
-  $$("[data-not]").forEach(t => t.onchange = () => { const d = (s.defter || []).find(x => String(x.g) === t.dataset.not); if (d) { d.not = t.value.slice(0, 280); kaydet(); bildir(szM("Not deftere yazıldı", "Note saved to the notebook")); } });
+  $$("[data-not]").forEach(t => t.onchange = () => { const d = (s.defter || []).find(x => String(x.g) === t.dataset.not); if (d) { d.not = t.value.slice(0, 280); kaydet(); oyunSesi("sayfa"); bildir(szM("Not deftere yazıldı", "Note saved to the notebook")); } });
   szBugunCiz();
 }
 function szDefterHtml(d) {
@@ -422,7 +450,7 @@ function szBugunCiz() {
     <p class="sz-eylem"><button class="buyuk-dugme" id="sz-gunu-kapat">${s.gun >= s.sure || s.butce < 2 ? szM("Sezonu bitir", "End the season") : szM("Günü kapat", "Close the day")}</button></p>`;
   $("#sz-gunu-kapat").onclick = () => {
     const not = $("#sz-gun-not").value.trim().slice(0, 280);
-    if (not) { const x = (s.defter || []).find(y => y.g === s.gun); if (x) x.not = not; }
+    if (not) { const x = (s.defter || []).find(y => y.g === s.gun); if (x) x.not = not; oyunSesi("sayfa"); }
     if (s.gun >= s.sure || s.butce < 2) { kaydet(); return sezonSonu(); }
     s.gun++; s.bugun = null; kaydet(); oyunSesi("tus"); sayfaSezon();
   };
@@ -439,19 +467,21 @@ function szGuneBasla() {
   const h = KZ_HAVA[s.bugun.hava];
   const satir = [szM("Gün {g}. {simge} {hava}.", "Day {g}. {simge} {hava}.", { g: s.gun, simge: h.simge, hava: havaAd(h) }) + (havaAciklama(h) ? " " + havaAciklama(h) : "")];
   if (s.gun === 1) satir.unshift(szL(SAHNELER[a.id]));
+  oyunSesi("sabah");
   araSahne(a, satir, () => sayfaSezon());
 }
 function szOlayGoster() {
   const s = D.kzSezon, o = OLAYLAR.find(x => x.id === s.bugun.olay);
   if (!o) { s.bugun.olayBitti = true; kaydet(); return szBugunCiz(); }
-  oyunSesi("ipucu"); if (navigator.vibrate) try { navigator.vibrate([20, 40, 20]); } catch (e) {}
+  oyunSesi("olay"); titret([20, 40, 20]);
   levhaAc(`<div class="sz-olay"><p class="kz-yeni">❗ ${szM("Gün {g}", "Day {g}", { g: s.gun })}</p><h3>${esc(szL(o.metin))}</h3>
     <div class="sz-secenekler">${o.secenek.map((x, i) => `<button class="sz-secenek" data-s="${i}"><b>${esc(szL(x.ad))}</b><span>${etkiYaz(x.etki)}</span></button>`).join("")}</div></div>`, lv => {
     lv.querySelectorAll("[data-s]").forEach(d => d.onclick = () => {
       const x = o.secenek[+d.dataset.s];
       szUygula(s, x.etki); s.bugun.olayBitti = true;
       szDefter(s, { olay: `${szL(o.metin)} → ${szL(x.ad)}. ${szL(x.sonuc)}`, puan: (x.etki && x.etki.puan) || 0 });
-      kaydet(); oyunSesi("tus");
+      kaydet(); oyunSesi("secim");
+      setTimeout(() => oyunSesi(Object.values(x.etki || {}).reduce((t, v) => t + v, 0) >= 0 ? "sik" : "sil"), 220);
       lv.innerHTML = `<div class="sz-olay"><h3>${esc(szL(x.ad))}</h3><p>${esc(szL(x.sonuc))}</p><p>${etkiYaz(x.etki)}</p>
         <p style="margin-top:14px"><button class="buyuk-dugme" id="sz-olay-tamam">${szM("Tamam", "OK")}</button></p></div>`;
       lv.querySelector("#sz-olay-tamam").onclick = () => { levhaKapat(); sayfaSezon(); };
@@ -467,7 +497,7 @@ function szIsBasla(id) {
   s.butce -= x.butce; s.moral = sinirla(s.moral + x.moral, 0, 100);
   s.bugun.is = id;
   if (id === "kaz") s.bugun.vurus = szKazVurus(s);
-  kaydet(); oyunSesi("tus");
+  kaydet(); oyunSesi("para");
   if (id === "dinlen") return szIsBitti({ metin: szM("Dinlenme günü. Ekip çamaşır yıkadı, buluntu fişleri yazıldı, akşam kazı evinde uzun bir sohbet oldu.", "A rest day. The team did laundry, filled in find cards and talked long into the evening at the dig house.") });
   szIsDevam();
 }
@@ -502,13 +532,14 @@ function sezonSecimi() {
         <span><b>${acik ? esc(kzAlanAd(a)) : "🔒 " + szM("Keşfedilmemiş alan", "Undiscovered site")}</b><small>${acik ? `${esc(kzAlanIl(a))} · ${esc(DIL === "en" ? a.donem_en : a.donem)}` : szM("Yüzey araştırmasıyla keşfet", "Discover it with a field survey")}</small>
         ${acik ? `<em>${YAPILAR[a.id] ? "🏛 " + esc(szL(YAPILAR[a.id].ad)) : ""}${k.yapilar[a.id] ? " ✓" : ""}</em>` : ""}</span></button>`; }).join("")}</div>
     <p class="kz-alt-dugmeler"><a class="ikincil-dugme" href="#oyun/kazi">${szM("Kazı Başı'na dön", "Back to Dig Site")}</a>${(D.kzArsiv || []).length ? `<a class="ikincil-dugme" href="#oyun/kazi/arsiv">📚 ${szM("Geçmiş sezonlar", "Past seasons")}</a>` : ""}</p></div>`;
-  $$("[data-bolge]").forEach(b => b.onclick = () => { D.kzBolge = b.dataset.bolge; kaydet(); sezonSecimi(); });
+  szMuzik("sezon");
+  $$("[data-bolge]").forEach(b => b.onclick = () => { D.kzBolge = b.dataset.bolge; kaydet(); oyunSesi("tus"); sezonSecimi(); });
   $$("[data-sz-alan]").forEach(b => {
     const a = KZ_ALANLAR.find(x => x.id === b.dataset.szAlan), acik = alanKesfedildi(a), ctx = b.querySelector("canvas").getContext("2d");
     kzSahne(ctx, a, 160);
     if (!acik) { ctx.fillStyle = "rgba(40,30,22,.72)"; ctx.fillRect(0, 0, 160, 48); }
     b.onclick = () => {
-      if (!acik) { bildir(szM("Bu alan henüz keşfedilmedi. Bir sezonda yüzey araştırması yap.", "This site isn't discovered yet. Do a field survey during a season.")); return; }
+      if (!acik) { oyunSesi("yok"); bildir(szM("Bu alan henüz keşfedilmedi. Bir sezonda yüzey araştırması yap.", "This site isn't discovered yet. Do a field survey during a season.")); return; }
       const basla = () => sezonBaslat(a);
       arkeolog() ? basla() : arkeologSecimi(basla);
     };
@@ -536,6 +567,7 @@ function sezonSonu() {
   try { skorGonder("kazi", kd.toplam, `${kd.kosular.length} kazı`); } catch (e) {}
   try { if (typeof rozetVer === "function") { rozetVer("ilk_sezon"); if (yeniUnvan && unvanSira() >= 5) rozetVer("kazi_baskani"); } } catch (e) {}
   oyunSesi("bitis");
+  if (yeniUnvan) setTimeout(() => oyunSesi("unvan"), 1400);
   araSahne(a, [szM("Sezon kapandı. Açma örtüldü, buluntular envantere girdi ve müzeye teslim edilecek; sezon raporu yazılıyor.", "The season is over. The trench is covered, the finds are inventoried for the museum and the season report is being written.")], () => {
     levhaAc(`<div class="kz-buluntu"><h3>🗓 ${szM("Sezon raporu", "Season report")}</h3>
       <p>${esc(kzAlanAd(a))} · ${szM("{g} gün", "{g} days", { g: s.gun })} · ${szM("{n} buluntu", "{n} finds", { n: (s.bulunan || []).length })}</p>
@@ -566,6 +598,7 @@ function sayfaSezonArsiv() {
         <p><button class="ikincil-dugme" data-paylas="${i}">${szM("Paylaş", "Share")}</button></p></details>`; }).join("")
       : bosHtml(szM("Henüz sezon yok", "No seasons yet"), "")}
     <p class="kz-alt-dugmeler"><a class="ikincil-dugme" href="#oyun/kazi">${szM("Kazı Başı'na dön", "Back to Dig Site")}</a></p></div>`;
+  szMuzik("sezon");
   $$("[data-paylas]").forEach(b => b.onclick = () => sezonPaylas(l[+b.dataset.paylas]));
 }
 function sezonNasil() {
@@ -633,15 +666,16 @@ function yuzeyOyunu() {
   const ZEMIN = { t: "#c9b27a", c: "#a7b06e", s: "#b3a796", d: "#8fb0b8" };
   $("#baslik").textContent = szL(IS.yuzey.ad);
   $("#sayfa").innerHTML = `<div class="kazi-oyun sz"><div class="kz-ust"><p>${szM("Ekibinle vadiyi tara. Dokunduğun karede yerdeki seramik ve taş parçalarını sayarsın: yerleşime yaklaştıkça yüzey buluntusu artar.", "Walk the valley with your team. Each square you tap counts the pottery and stone on the surface: the closer to a settlement, the more you find.")}</p>
-    <p class="kz-izin">${szM("Kalan tarama: {n}", "Survey walks left: {n}", { n: YZ_ADIM - adim })} · 🟤 ${szM("3: yerleşim · 2: çok yakın · 1: yakın", "3: settlement · 2: very close · 1: close")}</p></div>
+    <p class="kz-izin">${szSesHtml()} ${szM("Kalan tarama: {n}", "Survey walks left: {n}", { n: YZ_ADIM - adim })} · 🟤 ${szM("3: yerleşim · 2: çok yakın · 1: yakın", "3: settlement · 2: very close · 1: close")}</p></div>
     <div class="sz-yuzey" style="--n:${YZ_N}">${y.zemin.map((z, i) => { const v = y.acik[i];
       return `<button data-y="${i}" style="background:${ZEMIN[z] || ZEMIN.t}" ${v != null || bulundu || adim >= YZ_ADIM ? "disabled" : ""} aria-label="${szM("Kare {n}", "Square {n}", { n: i + 1 })}">${v == null ? "" : v === 3 ? "🏚" : "🟤".repeat(v) || "0"}</button>`; }).join("")}</div>
     <p class="kz-alt-dugmeler">${bulundu || adim >= YZ_ADIM ? `<button class="buyuk-dugme" id="yz-bitir">${szM("Günü tamamla", "Finish the day")}</button>` : ""}</p></div>`;
+  szMuzik("yuzey"); szSesBagla();
   $$("[data-y]").forEach(d => d.onclick = () => {
     const i = +d.dataset.y, u = uzak(i);
     y.acik[i] = u === 0 ? 3 : u === 1 ? 2 : u === 2 ? 1 : 0;
-    oyunSesi(u === 0 ? "buluntu" : u <= 2 ? "sik" : "adim");
-    if (navigator.vibrate) try { navigator.vibrate(u === 0 ? [30, 50, 30] : 8); } catch (e) {}
+    oyunSesi("yuzey"); setTimeout(() => oyunSesi("sicak", u === 0 ? 3 : u === 1 ? 2 : u === 2 ? 1 : 0), 160);
+    titret(u === 0 ? [30, 50, 30] : 8);
     kaydet(); yuzeyOyunu();
     if (u === 0) setTimeout(yuzeyKesif, 400);
   });
@@ -654,6 +688,7 @@ function yuzeyKesif() {
   const yeni = (ayni.length ? ayni : ilk)[Math.floor(Math.random() * (ayni.length || ilk.length))];
   if (!yeni) return yuzeyBitir(true, null);
   kariyer().kesif[yeni.id] = oyunGunu(); kaydet();
+  oyunSesi("kesif"); titret([40, 60, 40, 60, 80]);
   try { if (typeof rozetVer === "function") rozetVer("kesif"); } catch (e) {}
   araSahne(yeni, [szM("Yeni alan keşfedildi: {a}!", "New site discovered: {a}!", { a: kzAlanAd(yeni) }), szL(SAHNELER[yeni.id])], () => yuzeyBitir(true, yeni));
 }
@@ -685,10 +720,11 @@ function labOyunu() {
   }
   $("#baslik").textContent = szL(IS.lab.ad);
   $("#sayfa").innerHTML = `<div class="kazi-oyun sz"><div class="sz-lab">
-    <p class="kz-izin">${szM("Buluntu {i}/{n}", "Find {i}/{n}", { i: l.sira + 1, n: l.liste.length })}</p>
+    <p class="kz-izin">${szSesHtml()} ${szM("Buluntu {i}/{n}", "Find {i}/{n}", { i: l.sira + 1, n: l.liste.length })}</p>
     <canvas width="144" height="144" id="lab-tuval"></canvas><h3>${esc(kzAd(bul))}</h3>
     <p><b>${soru}</b></p><div class="kz-tanim-secenek">${secenek.map((x, i) => `<button class="ikincil-dugme" data-l="${i}">${esc(x)}</button>`).join("")}</div>
     <p class="aciklama" id="lab-yorum"></p><p id="lab-ileri"></p></div></div>`;
+  szMuzik("lab"); szSesBagla(); oyunSesi("lab");
   const ctx = $("#lab-tuval").getContext("2d"); ctx.fillStyle = (alan || a0).toprak[3]; ctx.fillRect(0, 0, 144, 144); spriteCiz(ctx, id, 0, 0, 12);
   $$("[data-l]").forEach(d => d.onclick = () => {
     const ok = secenek[+d.dataset.l] === dogru;
@@ -698,10 +734,10 @@ function labOyunu() {
     s.tarihlenen = s.tarihlenen || {}; s.tarihlenen[id] = ok ? 1 : 0;
     l.notlar.push(`${kzAd(bul)}: ${dogru}.`);
     l.sira++; kaydet();
-    oyunSesi(ok ? "yerinde" : "sil", 3);
+    oyunSesi(ok ? "kazan" : "hata"); titret(ok ? 10 : 40);
     $("#lab-yorum").textContent = `${ok ? "✓ +" + p + " " : ""}${kzBilgi(bul)}`;
     $("#lab-ileri").innerHTML = `<button class="buyuk-dugme" id="lab-devam">${l.sira >= l.liste.length ? szM("Raporu yaz", "Write the report") : szM("Sıradaki buluntu", "Next find")}</button>`;
-    $("#lab-devam").onclick = labOyunu;
+    $("#lab-devam").onclick = () => { oyunSesi("tus"); labOyunu(); };
   });
 }
 
@@ -730,23 +766,24 @@ function restorasyonOyunu() {
     <p class="aciklama">${y.sirali ? szM("Plan yok: dönemleri bilginle sırala. Kesit alttan üste kurulur; en eski katman en altta. Bir dokunuş bütün katmanı serer.", "No plan here: order the periods from what you know. A section is built bottom up, oldest layer at the bottom. One tap lays the whole layer.")
       : y.duz ? szM("Plana bak, doğru parçayı doğru yuvaya koy.", "Read the plan and put the right piece in the right slot.")
       : szM("Plana bak, parçayı seç ve yuvasına koy. Yapı alttan üste kurulur: bir taş ancak altı ya da yanı doluysa oturur.", "Read the plan, pick a piece and place it. Build from the bottom up: a stone sits only on or beside another.")}</p>
-    <p class="kz-izin">${szM("Hata: {n}", "Mistakes: {n}", { n: r.hata })}</p></div>
+    <p class="kz-izin">${szSesHtml()} ${szM("Hata: {n}", "Mistakes: {n}", { n: r.hata })}</p></div>
     ${y.sirali ? "" : `<div class="sz-yapi-ust"><div class="sz-plan" style="--w:${W}" aria-label="${szM("Plan", "Plan")}">${[...plan].map(c => `<i style="${c === "." ? "" : `background:${renk(c)}`}"></i>`).join("")}</div>
       <p class="aciklama">${szM("Plan", "Plan")}</p></div>`}
     <div class="sz-yapi" style="--w:${W}">${[...plan].map((c, i) => c === "." ? `<span></span>` : `<button data-yv="${i}" class="${r.dolu[i] ? "dolu" : ""}" style="${r.dolu[i] ? `background:${renk(c)}` : ""}" ${r.dolu[i] || bitti ? "disabled" : ""} aria-label="${r.dolu[i] ? esc(ad(c)) : szM("Boş yuva", "Empty slot")}"></button>`).join("")}</div>
     <div class="sz-parcalar">${tipler.map(t => `<button data-tip="${t}" aria-pressed="${r.sec === t}" ${kalan(t) ? "" : "disabled"}><i style="background:${renk(t)}"></i><span>${esc(ad(t))}</span><b>×${kalan(t)}</b></button>`).join("")}</div>
     ${bitti ? `<div class="sz-yapi-son"><p class="kz-yeni">✨ ${szM("Restorasyon tamamlandı!", "Restoration complete!")}</p><p>${esc(szL(y.bilgi))}</p>
       <p><button class="buyuk-dugme" id="rs-bitir">${szM("Günü tamamla", "Finish the day")}</button></p></div>` : ""}</div>`;
+  szMuzik("restore"); szSesBagla();
   $$("[data-tip]").forEach(d => d.onclick = () => { r.sec = d.dataset.tip; kaydet(); oyunSesi("tus"); restorasyonOyunu(); });
   $$("[data-yv]").forEach(d => d.onclick = () => {
     const i = +d.dataset.yv, beklenen = plan[i];
     if (!r.sec) { bildir(szM("Önce aşağıdan bir parça seç", "Pick a piece below first")); return; }
-    if (!destek(i)) { r.hata++; kaydet(); oyunSesi("sil"); bildir(y.sirali ? szM("Kesit alttan kurulur: önce alttaki katman", "A section is built from the bottom: the lower layer first") : szM("Bu taş havada kalır: önce altını ya da yanını kur", "This stone would float: build below or beside it first")); return restorasyonOyunu(); }
-    if (r.sec !== beklenen) { r.hata++; kaydet(); oyunSesi("sil"); if (navigator.vibrate) try { navigator.vibrate(40); } catch (e) {} bildir(szM("Bu yuvaya {t} gelmez; plana bak", "{t} doesn't go here; check the plan", { t: ad(r.sec) })); return restorasyonOyunu(); }
+    if (!destek(i)) { r.hata++; kaydet(); oyunSesi("hata"); titret(40); bildir(y.sirali ? szM("Kesit alttan kurulur: önce alttaki katman", "A section is built from the bottom: the lower layer first") : szM("Bu taş havada kalır: önce altını ya da yanını kur", "This stone would float: build below or beside it first")); return restorasyonOyunu(); }
+    if (r.sec !== beklenen) { r.hata++; kaydet(); oyunSesi("hata"); titret(40); bildir(szM("Bu yuvaya {t} gelmez; plana bak", "{t} doesn't go here; check the plan", { t: ad(r.sec) })); return restorasyonOyunu(); }
     if (y.sirali) { const s0 = i - i % W; for (let k = s0; k < s0 + W; k++) r.dolu[k] = 1; }   // kesit: bir dokunuş bütün katmanı serer
     else r.dolu[i] = 1;
-    if (!kalan(r.sec)) r.sec = null; kaydet(); oyunSesi("yerinde", 2);
-    if (navigator.vibrate) try { navigator.vibrate(6); } catch (e) {}
+    if (!kalan(r.sec)) r.sec = null; kaydet(); oyunSesi("tas"); titret(12);
+    if ([...plan].every((c, k) => c === "." || r.dolu[k])) setTimeout(() => oyunSesi("kazan"), 250);
     restorasyonOyunu();
   });
   const bt = $("#rs-bitir");
@@ -755,6 +792,7 @@ function restorasyonOyunu() {
     s.restore = { puan, hata: r.hata };
     const k = kariyer(); k.yapilar[a.id] = Math.max(k.yapilar[a.id] || 0, puan);
     try { if (r.hata === 0 && typeof rozetVer === "function") rozetVer("mimar"); } catch (e) {}
+    oyunSesi("bitis");
     szIsBitti({ metin: szM("Mimari restorasyon: {y} yeniden kuruldu ({h} hata).", "Architectural restoration: {y} rebuilt ({h} mistakes).", { y: szL(y.ad), h: r.hata }), puan, itibar: r.hata === 0 ? 10 : 0 });
   };
 }
@@ -781,6 +819,7 @@ function sayfaHazine() {
   const g = oyunGunu(), gun = hazineGunu(g);
   if (!hazineDurumu()) { D.kzHazine = { gun: g, asama: "giris", tahminler: [], kazilar: [], puan: 0 }; kaydet(); }
   const h = D.kzHazine, a = gun.alan;
+  szMuzik("hazine");
   if (h.asama === "giris") {
     h.asama = "tahmin"; kaydet();
     return araSahne(a, [szM("Defineciler eski bir kazı defterinin sayfasını çaldı. Sayfada bir eserin yeri işaretli.", "Looters have stolen a page from an old dig notebook. It marks where an object lies."),
@@ -796,13 +835,14 @@ function sayfaHazine() {
     $("#sayfa").innerHTML = `<div class="kazi-oyun sz"><div class="sz-hazine">
       <div class="sz-sayfa-kagit"><canvas width="96" height="96" id="hz-siluet"></canvas>
         ${ipucu.slice(0, acikIpucu).map(x => `<p>${x.s} ${esc(x.t)}</p>`).join("")}</div>
-      <p><b>${szM("Eser hangi alanda?", "Which site is it at?")}</b> <small class="aciklama">${szM("Deneme: {n}/3 · ilk denemede 300 puan", "Guess {n}/3 · 300 points on the first try", { n: h.tahminler.length + 1 })}</small></p>
+      <p>${szSesHtml()} <b>${szM("Eser hangi alanda?", "Which site is it at?")}</b> <small class="aciklama">${szM("Deneme: {n}/3 · ilk denemede 300 puan", "Guess {n}/3 · 300 points on the first try", { n: h.tahminler.length + 1 })}</small></p>
       <div class="sz-hz-alanlar">${KZ_ALANLAR.map(x => `<button class="ikincil-dugme${h.tahminler.includes(x.id) ? " yanlis" : ""}" data-hz="${x.id}" ${h.tahminler.includes(x.id) ? "disabled" : ""}>${esc(kzAlanAd(x))}</button>`).join("")}</div>
       <p class="kz-alt-dugmeler"><a class="ikincil-dugme" href="#oyun/kazi">${szM("Kazı Başı'na dön", "Back to Dig Site")}</a></p></div></div>`;
+    szSesBagla();
     const ctx = $("#hz-siluet").getContext("2d"); ctx.fillStyle = "#efe2c4"; ctx.fillRect(0, 0, 96, 96); spriteCiz(ctx, gun.bul.id, 0, 0, 8, true);
     $$("[data-hz]").forEach(d => d.onclick = () => {
-      if (d.dataset.hz === a.id) { h.puan += [300, 200, 100][h.tahminler.length] || 0; h.asama = "kazi"; kaydet(); oyunSesi("buluntu"); bildir(szM("Doğru! {a}. Şimdi eseri bul.", "Correct! {a}. Now find the object.", { a: kzAlanAd(a) })); return sayfaHazine(); }
-      h.tahminler.push(d.dataset.hz); oyunSesi("sil"); if (navigator.vibrate) try { navigator.vibrate(30); } catch (e) {}
+      if (d.dataset.hz === a.id) { h.puan += [300, 200, 100][h.tahminler.length] || 0; h.asama = "kazi"; kaydet(); oyunSesi("kazan"); titret([20, 40, 20]); bildir(szM("Doğru! {a}. Şimdi eseri bul.", "Correct! {a}. Now find the object.", { a: kzAlanAd(a) })); return sayfaHazine(); }
+      h.tahminler.push(d.dataset.hz); oyunSesi("hata"); titret(30); setTimeout(() => oyunSesi("sayfa"), 300);
       if (h.tahminler.length >= 3) { h.asama = "kazi"; bildir(szM("Alan {a} çıktı. Defineciler bir adım önde!", "It was {a}. The looters are a step ahead!", { a: kzAlanAd(a) })); }
       kaydet(); sayfaHazine();
     });
@@ -819,20 +859,21 @@ function sayfaHazine() {
     return u <= 1 ? ["🔥", szM("Çok sıcak", "Very hot")] : u === 2 ? ["♨️", szM("Sıcak", "Hot")] : u === 3 ? ["🌤", szM("Ilık", "Warm")] : ["❄️", szM("Soğuk", "Cold")]; };
   $("#sayfa").innerHTML = `<div class="kazi-oyun sz"><div class="sz-hazine">
     <canvas class="sz-buyuk-sahne" width="160" height="48" id="hz-sahne"></canvas>
-    <p><b>${esc(kzAlanAd(a))}</b> · ⛏ ${szM("Kalan kazma: {n}", "Digs left: {n}", { n: kalan })} · ⭐ ${h.puan}</p>
+    <p>${szSesHtml()} <b>${esc(kzAlanAd(a))}</b> · ⛏ ${szM("Kalan kazma: {n}", "Digs left: {n}", { n: kalan })} · ⭐ ${h.puan}</p>
     <p class="aciklama">${szM("Bir kareye dokun ve kaz. Boş çıkarsa ok eserin yönünü, simge ne kadar yakın olduğunu gösterir. Defineci çukurlarına dikkat: gevşek toprak 2 kazma yer.", "Tap a square to dig. If it's empty, the arrow points to the object and the icon tells how close it is. Watch for looters' pits: loose soil costs 2 digs.")}</p>
     <div class="sz-hz-izgara" style="--n:${HZ_N}">${Array.from({ length: HZ_N * HZ_N }, (_, i) => { const k = h.kazilar.includes(i);
       const ic = !k ? "" : i === gun.hedef ? "💎" : gun.tuzak.has(i) ? "🕳" : `${isi(i)[0]}<small>${yon(i)}</small>`;
       return `<button data-hk="${i}" class="${k ? "kazildi" : ""}" ${k || bitti ? "disabled" : ""} title="${k && i !== gun.hedef && !gun.tuzak.has(i) ? esc(isi(i)[1]) : ""}">${ic}</button>`; }).join("")}</div>
     <div id="hz-son"></div>
     <p class="kz-alt-dugmeler"><a class="ikincil-dugme" href="#oyun/kazi">${szM("Kazı Başı'na dön", "Back to Dig Site")}</a></p></div></div>`;
-  kzSahne($("#hz-sahne").getContext("2d"), a, 160);
+  kzSahne($("#hz-sahne").getContext("2d"), a, 160); szSesBagla();
   $$("[data-hk]").forEach(d => d.onclick = () => {
     const i = +d.dataset.hk; if (h.kazilar.includes(i)) return;
     h.kazilar.push(i); kaydet();
-    if (i === gun.hedef) { oyunSesi("buluntu"); if (navigator.vibrate) try { navigator.vibrate([30, 60, 30, 60, 60]); } catch (e) {} }
-    else if (gun.tuzak.has(i)) { oyunSesi("kirik"); bildir(szM("Defineci çukuru! Gevşek toprak: 1 kazma daha gitti.", "A looters' pit! Loose soil: one more dig lost.")); if (navigator.vibrate) try { navigator.vibrate(60); } catch (e) {} }
-    else { oyunSesi("kazma", 1); if (navigator.vibrate) try { navigator.vibrate(8); } catch (e) {} bildir(`${isi(i)[0]} ${isi(i)[1]} ${yon(i)}`); }
+    if (i === gun.hedef) { oyunSesi("kazma", 2); setTimeout(() => oyunSesi("kesif"), 150); titret([30, 60, 30, 60, 60]); }
+    else if (gun.tuzak.has(i)) { oyunSesi("tuzak"); titret([60, 40, 60]); bildir(szM("Defineci çukuru! Gevşek toprak: 1 kazma daha gitti.", "A looters' pit! Loose soil: one more dig lost.")); if (navigator.vibrate) try { navigator.vibrate(60); } catch (e) {} }
+    else { const u = Math.max(Math.abs(gun.hedef % HZ_N - i % HZ_N), Math.abs(Math.floor(gun.hedef / HZ_N) - Math.floor(i / HZ_N)));
+      oyunSesi("kazma", 1); setTimeout(() => oyunSesi("sicak", u <= 1 ? 3 : u === 2 ? 2 : u === 3 ? 1 : 0), 140); titret(8); bildir(`${isi(i)[0]} ${isi(i)[1]} ${yon(i)}`); }
     sayfaHazine();
   });
   if (bitti && h.asama !== "bitti") {
@@ -844,7 +885,7 @@ function sayfaHazine() {
     }
     const kd = kaziDurumu(); kd.toplam += h.puan; kd.kosular.push({ alan: a.id, puan: h.puan, hazine: 1 }); kaydet();
     try { skorGonder("kazi", kd.toplam, `${kd.kosular.length} kazı`); } catch (e) {}
-    setTimeout(() => oyunSesi("bitis"), 300);
+    setTimeout(() => { oyunSesi(bulundu ? "bitis" : "kaybet"); if (!bulundu) kzMuzikDur(); }, bulundu ? 1100 : 300);
   }
   if (h.asama === "bitti") {
     $("#hz-son").innerHTML = `<div class="kz-buluntu sz-hz-son"><canvas width="144" height="144" id="hz-bul"></canvas><h3>${h.bulundu ? "💎 " + esc(kzAd(gun.bul)) : szM("Defineciler önce davrandı", "The looters got there first")}</h3>
